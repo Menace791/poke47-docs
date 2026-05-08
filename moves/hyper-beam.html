@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hyper Beam - pokeemerald-expansion</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script>
+    // Lowercase, strip diacritics (é→e), and drop non-alphanumerics so a query
+    // like "basculinwhitestriped" still matches "Basculin (White-Striped)".
+    // Defined in <head> so per-page IIFEs in the content can call it.
+    window.obstagoonNormalize = (s) => (s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+    // Per-tab index state (search, chips, sort) restored on back/forward and
+    // reload only — fresh clicks of nav links start clean.
+    window.obstagoonShouldRestoreState = () => {
+      const nav = performance.getEntriesByType('navigation')[0];
+      return !!(nav && (nav.type === 'back_forward' || nav.type === 'reload'));
+    };
+    window.obstagoonLoadState = (key) => {
+      if (!obstagoonShouldRestoreState()) return {};
+      try { return JSON.parse(sessionStorage.getItem('obstagoon:' + key) || '{}'); }
+      catch (e) { return {}; }
+    };
+    window.obstagoonSaveState = (key, state) => {
+      // Private browsing / quota-exceeded throws; degrade silently.
+      try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
+      catch (e) {}
+    };
+    // Shared search+chips+sort filter binding for index pages. Each page
+    // passes its element ids, a haystack-by-chip-kind map (for filtering),
+    // suggestion sources, and optionally a table selector to enable
+    // click-to-sort. State persists in sessionStorage under stateKey. Defined
+    // in <head> so per-page IIFEs in the content can call it.
+    window.obstagoonBindIndexPage = (opts) => {
+      const input = document.getElementById(opts.inputId);
+      const dropdown = document.getElementById(opts.dropdownId);
+      const chipsBox = document.getElementById(opts.chipsBoxId);
+      const empty = opts.emptyId ? document.getElementById(opts.emptyId) : null;
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      const rows = Array.from(document.querySelectorAll(opts.rowsSelector));
+      const haystackByKind = opts.haystackByKind || {};
+      const sources = opts.sources || [];
+      const defaultKind = opts.defaultKind || null;
+      const saved = obstagoonLoadState(opts.stateKey);
+      const chips = (Array.isArray(saved.chips) ? saved.chips : [])
+        .map((c) => c.kind ? c : {kind: defaultKind || 'Pokémon', name: c.name});
+      if (saved.search) input.value = saved.search;
+      let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
+      let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : 'asc';
+      const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const persist = () => obstagoonSaveState(opts.stateKey, {
+        search: input.value, chips,
+        ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
+      });
+
+      const applyFilters = () => {
+        const q = obstagoonNormalize(input.value);
+        let visible = 0;
+        rows.forEach((el) => {
+          const text = obstagoonNormalize(el.dataset.searchText || '');
+          let show = !q || text.includes(q);
+          if (show) for (const c of chips) {
+            const haystack = el.dataset[haystackByKind[c.kind]];
+            if (!haystack || !haystack.includes(`|${c.name}|`)) { show = false; break; }
+          }
+          el.classList.toggle('filter-hidden', !show);
+          if (show) visible += 1;
+        });
+        if (empty) empty.style.display = visible === 0 ? '' : 'none';
+        if (countEl) countEl.textContent = visible;
+        persist();
+      };
+      const renderChips = () => {
+        chipsBox.innerHTML = chips.map((c, i) =>
+          `<span class="filter-chip"><span class="chip-kind">${c.kind}</span> ${esc(c.name)}<button type="button" class="chip-remove" data-idx="${i}" aria-label="Remove">×</button></span>`
+        ).join('');
+        chipsBox.querySelectorAll('.chip-remove').forEach((btn) => btn.addEventListener('click', () => {
+          chips.splice(parseInt(btn.dataset.idx, 10), 1); renderChips(); applyFilters();
+        }));
+      };
+      const renderSuggestions = () => {
+        const q = obstagoonNormalize(input.value);
+        if (q.length < 3) { dropdown.hidden = true; return; }
+        const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
+        const matches = [];
+        for (const [kind, list] of sources) {
+          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+        }
+        if (matches.length === 0) { dropdown.hidden = true; return; }
+        dropdown.innerHTML = matches.slice(0, 30).map((m) =>
+          `<button type="button" class="suggestion" data-kind="${m.kind}" data-name="${esc(m.name)}"><span class="suggestion-kind">${m.kind}</span> ${esc(m.name)}</button>`
+        ).join('');
+        dropdown.hidden = false;
+        dropdown.querySelectorAll('.suggestion').forEach((btn) => btn.addEventListener('click', () => {
+          chips.push({kind: btn.dataset.kind, name: btn.dataset.name});
+          input.value = ''; dropdown.hidden = true; renderChips(); applyFilters();
+        }));
+      };
+      input.addEventListener('input', () => { renderSuggestions(); applyFilters(); });
+      input.addEventListener('focus', renderSuggestions);
+      document.addEventListener('click', (e) => { if (!dropdown.contains(e.target) && e.target !== input) dropdown.hidden = true; });
+      renderChips();
+      applyFilters();
+
+      if (opts.tableSelector) {
+        const tbody = document.querySelector(opts.tableSelector + ' tbody');
+        const headers = Array.from(document.querySelectorAll(opts.tableSelector + ' thead th'));
+        const original = Array.from(tbody.querySelectorAll('tr'));
+        const cellValue = (tr, i, kind) => {
+          const text = tr.cells[i].textContent.trim();
+          if (kind === 'number') { const n = parseFloat(text); return isNaN(n) ? -Infinity : n; }
+          return text.toLowerCase();
+        };
+        const applySort = () => {
+          headers.forEach((h, j) => {
+            h.classList.toggle('sort-asc', activeDir === 'asc' && j === activeCol);
+            h.classList.toggle('sort-desc', activeDir === 'desc' && j === activeCol);
+          });
+          if (!activeDir) { original.forEach((tr) => tbody.appendChild(tr)); return; }
+          const kind = headers[activeCol]?.dataset.sort || 'text';
+          const sign = activeDir === 'asc' ? 1 : -1;
+          [...original].sort((a, b) => {
+            const av = cellValue(a, activeCol, kind), bv = cellValue(b, activeCol, kind);
+            return av < bv ? -sign : av > bv ? sign : 0;
+          }).forEach((tr) => tbody.appendChild(tr));
+        };
+        headers.forEach((th, i) => {
+          if (!th.dataset.sort) return;
+          th.classList.add('sortable');
+          th.addEventListener('click', () => {
+            activeDir = i !== activeCol ? 'asc' : activeDir === 'asc' ? 'desc' : activeDir === 'desc' ? '' : 'asc';
+            activeCol = activeDir ? i : -1;
+            applySort();
+            persist();
+          });
+        });
+        applySort();
+      }
+    };
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../index.html">pokeemerald-expansion</a>
+      <nav>
+        <a href="../pokedex/index.html">Pokédex</a>
+        <a href="../moves/index.html">Moves</a>
+        <a href="../abilities/index.html">Abilities</a>
+        <a href="../forms/index.html">Forms</a>
+        <a href="../encounters/index.html">Encounters</a>
+        <a href="../itemdex/index.html">Itemdex</a>
+        <a href="../trainerdex/index.html">Trainers</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+<h1>Hyper Beam</h1>
+<p class="muted">MOVE_HYPER_BEAM</p>
+<div class="card">
+  <p><strong>Type:</strong> <span class="type-badge type-normal">Normal</span></p>
+  <p><strong>Power:</strong> 135</p>
+  <p><strong>Accuracy:</strong> 90</p>
+  <p><strong>PP:</strong> 5</p>
+  <p><strong>Category:</strong> Special <img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"></p>
+  <p><strong>Flags:</strong> —</p>
+  <p><strong>Description:</strong> Leaves the user immobile if target is not KO&#x27;d.</p>
+</div>
+<section class="card">
+  <h2>Learned by <span class="muted small-text">215</span></h2>
+  <ul class="cross-link-grid">
+<li><a href="../pokedex/abomasnow.html">
+<img src="../assets/game/graphics/pokemon/abomasnow/anim_front.png" alt="" class="sprite">  <span class="name">Abomasnow</span>
+</a></li><li><a href="../pokedex/accelgor.html">
+<img src="../assets/game/graphics/pokemon/accelgor/anim_front.png" alt="" class="sprite">  <span class="name">Accelgor</span>
+</a></li><li><a href="../pokedex/aegislash.html">
+<img src="../assets/game/graphics/pokemon/aegislash/anim_front.png" alt="" class="sprite">  <span class="name">Aegislash</span>
+</a></li><li><a href="../pokedex/alomomola.html">
+<img src="../assets/game/graphics/pokemon/alomomola/anim_front.png" alt="" class="sprite">  <span class="name">Alomomola</span>
+</a></li><li><a href="../pokedex/amaura.html">
+<img src="../assets/game/graphics/pokemon/amaura/anim_front.png" alt="" class="sprite">  <span class="name">Amaura</span>
+</a></li><li><a href="../pokedex/amoonguss.html">
+<img src="../assets/game/graphics/pokemon/amoonguss/anim_front.png" alt="" class="sprite">  <span class="name">Amoonguss</span>
+</a></li><li><a href="../pokedex/araquanid.html">
+<img src="../assets/game/graphics/pokemon/araquanid/anim_front.png" alt="" class="sprite">  <span class="name">Araquanid</span>
+</a></li><li><a href="../pokedex/archeops.html">
+<img src="../assets/game/graphics/pokemon/archeops/anim_front.png" alt="" class="sprite">  <span class="name">Archeops</span>
+</a></li><li><a href="../pokedex/aromatisse.html">
+<img src="../assets/game/graphics/pokemon/aromatisse/anim_front.png" alt="" class="sprite">  <span class="name">Aromatisse</span>
+</a></li><li><a href="../pokedex/audino.html">
+<img src="../assets/game/graphics/pokemon/audino/anim_front.png" alt="" class="sprite">  <span class="name">Audino</span>
+</a></li><li><a href="../pokedex/aurorus.html">
+<img src="../assets/game/graphics/pokemon/aurorus/anim_front.png" alt="" class="sprite">  <span class="name">Aurorus</span>
+</a></li><li><a href="../pokedex/avalugg.html">
+<img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="" class="sprite">  <span class="name">Avalugg</span>
+</a></li><li><a href="../pokedex/avalugg-hisui.html">
+<img src="../assets/game/graphics/pokemon/avalugg/hisui/front.png" alt="" class="sprite">  <span class="name">Avalugg (Hisuian)</span>
+</a></li><li><a href="../pokedex/barbaracle.html">
+<img src="../assets/game/graphics/pokemon/barbaracle/anim_front.png" alt="" class="sprite">  <span class="name">Barbaracle</span>
+</a></li><li><a href="../pokedex/basculegion.html">
+<img src="../assets/game/graphics/pokemon/basculegion/front.png" alt="" class="sprite">  <span class="name">Basculegion</span>
+</a></li><li><a href="../pokedex/basculin-blue-striped.html">
+<img src="../assets/game/graphics/pokemon/basculin/blue_striped/anim_front.png" alt="" class="sprite">  <span class="name">Basculin (Blue-Striped)</span>
+</a></li><li><a href="../pokedex/basculin.html">
+<img src="../assets/game/graphics/pokemon/basculin/anim_front.png" alt="" class="sprite">  <span class="name">Basculin (Red-Striped)</span>
+</a></li><li><a href="../pokedex/bastiodon.html">
+<img src="../assets/game/graphics/pokemon/bastiodon/anim_front.png" alt="" class="sprite">  <span class="name">Bastiodon</span>
+</a></li><li><a href="../pokedex/beartic.html">
+<img src="../assets/game/graphics/pokemon/beartic/anim_front.png" alt="" class="sprite">  <span class="name">Beartic</span>
+</a></li><li><a href="../pokedex/beheeyem.html">
+<img src="../assets/game/graphics/pokemon/beheeyem/anim_front.png" alt="" class="sprite">  <span class="name">Beheeyem</span>
+</a></li><li><a href="../pokedex/bewear.html">
+<img src="../assets/game/graphics/pokemon/bewear/anim_front.png" alt="" class="sprite">  <span class="name">Bewear</span>
+</a></li><li><a href="../pokedex/bibarel.html">
+<img src="../assets/game/graphics/pokemon/bibarel/anim_front.png" alt="" class="sprite">  <span class="name">Bibarel</span>
+</a></li><li><a href="../pokedex/bisharp.html">
+<img src="../assets/game/graphics/pokemon/bisharp/anim_front.png" alt="" class="sprite">  <span class="name">Bisharp</span>
+</a></li><li><a href="../pokedex/braviary.html">
+<img src="../assets/game/graphics/pokemon/braviary/anim_front.png" alt="" class="sprite">  <span class="name">Braviary</span>
+</a></li><li><a href="../pokedex/braviary-hisui.html">
+<img src="../assets/game/graphics/pokemon/braviary/hisui/front.png" alt="" class="sprite">  <span class="name">Braviary (Hisuian)</span>
+</a></li><li><a href="../pokedex/bronzong.html">
+<img src="../assets/game/graphics/pokemon/bronzong/anim_front.png" alt="" class="sprite">  <span class="name">Bronzong</span>
+</a></li><li><a href="../pokedex/bruxish.html">
+<img src="../assets/game/graphics/pokemon/bruxish/front.png" alt="" class="sprite">  <span class="name">Bruxish</span>
+</a></li><li><a href="../pokedex/carbink.html">
+<img src="../assets/game/graphics/pokemon/carbink/anim_front.png" alt="" class="sprite">  <span class="name">Carbink</span>
+</a></li><li><a href="../pokedex/carnivine.html">
+<img src="../assets/game/graphics/pokemon/carnivine/anim_front.png" alt="" class="sprite">  <span class="name">Carnivine</span>
+</a></li><li><a href="../pokedex/carracosta.html">
+<img src="../assets/game/graphics/pokemon/carracosta/anim_front.png" alt="" class="sprite">  <span class="name">Carracosta</span>
+</a></li><li><a href="../pokedex/chandelure.html">
+<img src="../assets/game/graphics/pokemon/chandelure/anim_front.png" alt="" class="sprite">  <span class="name">Chandelure</span>
+</a></li><li><a href="../pokedex/cherrim.html">
+<img src="../assets/game/graphics/pokemon/cherrim/anim_front.png" alt="" class="sprite">  <span class="name">Cherrim</span>
+</a></li><li><a href="../pokedex/chesnaught.html">
+<img src="../assets/game/graphics/pokemon/chesnaught/anim_front.png" alt="" class="sprite">  <span class="name">Chesnaught</span>
+</a></li><li><a href="../pokedex/cinccino.html">
+<img src="../assets/game/graphics/pokemon/cinccino/anim_front.png" alt="" class="sprite">  <span class="name">Cinccino</span>
+</a></li><li><a href="../pokedex/clawitzer.html">
+<img src="../assets/game/graphics/pokemon/clawitzer/anim_front.png" alt="" class="sprite">  <span class="name">Clawitzer</span>
+</a></li><li><a href="../pokedex/cofagrigus.html">
+<img src="../assets/game/graphics/pokemon/cofagrigus/anim_front.png" alt="" class="sprite">  <span class="name">Cofagrigus</span>
+</a></li><li><a href="../pokedex/comfey.html">
+<img src="../assets/game/graphics/pokemon/comfey/front.png" alt="" class="sprite">  <span class="name">Comfey</span>
+</a></li><li><a href="../pokedex/conkeldurr.html">
+<img src="../assets/game/graphics/pokemon/conkeldurr/anim_front.png" alt="" class="sprite">  <span class="name">Conkeldurr</span>
+</a></li><li><a href="../pokedex/crabominable.html">
+<img src="../assets/game/graphics/pokemon/crabominable/front.png" alt="" class="sprite">  <span class="name">Crabominable</span>
+</a></li><li><a href="../pokedex/cresselia.html">
+<img src="../assets/game/graphics/pokemon/cresselia/anim_front.png" alt="" class="sprite">  <span class="name">Cresselia</span>
+</a></li><li><a href="../pokedex/crustle.html">
+<img src="../assets/game/graphics/pokemon/crustle/anim_front.png" alt="" class="sprite">  <span class="name">Crustle</span>
+</a></li><li><a href="../pokedex/cryogonal.html">
+<img src="../assets/game/graphics/pokemon/cryogonal/anim_front.png" alt="" class="sprite">  <span class="name">Cryogonal</span>
+</a></li><li><a href="../pokedex/darkrai.html">
+<img src="../assets/game/graphics/pokemon/darkrai/anim_front.png" alt="" class="sprite">  <span class="name">Darkrai</span>
+</a></li><li><a href="../pokedex/darmanitan.html">
+<img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="" class="sprite">  <span class="name">Darmanitan</span>
+</a></li><li><a href="../pokedex/darmanitan-galar.html">
+<img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="" class="sprite">  <span class="name">Darmanitan (Galarian)</span>
+</a></li><li><a href="../pokedex/decidueye.html">
+<img src="../assets/game/graphics/pokemon/decidueye/anim_front.png" alt="" class="sprite">  <span class="name">Decidueye</span>
+</a></li><li><a href="../pokedex/decidueye-hisui.html">
+<img src="../assets/game/graphics/pokemon/decidueye/hisui/front.png" alt="" class="sprite">  <span class="name">Decidueye (Hisuian)</span>
+</a></li><li><a href="../pokedex/dedenne.html">
+<img src="../assets/game/graphics/pokemon/dedenne/anim_front.png" alt="" class="sprite">  <span class="name">Dedenne</span>
+</a></li><li><a href="../pokedex/delphox.html">
+<img src="../assets/game/graphics/pokemon/delphox/anim_front.png" alt="" class="sprite">  <span class="name">Delphox</span>
+</a></li><li><a href="../pokedex/dhelmise.html">
+<img src="../assets/game/graphics/pokemon/dhelmise/front.png" alt="" class="sprite">  <span class="name">Dhelmise</span>
+</a></li><li><a href="../pokedex/diggersby.html">
+<img src="../assets/game/graphics/pokemon/diggersby/anim_front.png" alt="" class="sprite">  <span class="name">Diggersby</span>
+</a></li><li><a href="../pokedex/dragalge.html">
+<img src="../assets/game/graphics/pokemon/dragalge/anim_front.png" alt="" class="sprite">  <span class="name">Dragalge</span>
+</a></li><li><a href="../pokedex/drampa.html">
+<img src="../assets/game/graphics/pokemon/drampa/anim_front.png" alt="" class="sprite">  <span class="name">Drampa</span>
+</a></li><li><a href="../pokedex/drapion.html">
+<img src="../assets/game/graphics/pokemon/drapion/anim_front.png" alt="" class="sprite">  <span class="name">Drapion</span>
+</a></li><li><a href="../pokedex/drifblim.html">
+<img src="../assets/game/graphics/pokemon/drifblim/anim_front.png" alt="" class="sprite">  <span class="name">Drifblim</span>
+</a></li><li><a href="../pokedex/druddigon.html">
+<img src="../assets/game/graphics/pokemon/druddigon/anim_front.png" alt="" class="sprite">  <span class="name">Druddigon</span>
+</a></li><li><a href="../pokedex/dugtrio.html">
+<img src="../assets/game/graphics/pokemon/dugtrio/anim_front.png" alt="" class="sprite">  <span class="name">Dugtrio</span>
+</a></li><li><a href="../pokedex/dugtrio-alola.html">
+<img src="../assets/game/graphics/pokemon/dugtrio/alola/front.png" alt="" class="sprite">  <span class="name">Dugtrio (Alolan)</span>
+</a></li><li><a href="../pokedex/eelektross.html">
+<img src="../assets/game/graphics/pokemon/eelektross/anim_front.png" alt="" class="sprite">  <span class="name">Eelektross</span>
+</a></li><li><a href="../pokedex/emboar.html">
+<img src="../assets/game/graphics/pokemon/emboar/anim_front.png" alt="" class="sprite">  <span class="name">Emboar</span>
+</a></li><li><a href="../pokedex/empoleon.html">
+<img src="../assets/game/graphics/pokemon/empoleon/anim_front.png" alt="" class="sprite">  <span class="name">Empoleon</span>
+</a></li><li><a href="../pokedex/escavalier.html">
+<img src="../assets/game/graphics/pokemon/escavalier/anim_front.png" alt="" class="sprite">  <span class="name">Escavalier</span>
+</a></li><li><a href="../pokedex/excadrill.html">
+<img src="../assets/game/graphics/pokemon/excadrill/anim_front.png" alt="" class="sprite">  <span class="name">Excadrill</span>
+</a></li><li><a href="../pokedex/exeggutor.html">
+<img src="../assets/game/graphics/pokemon/exeggutor/anim_front.png" alt="" class="sprite">  <span class="name">Exeggutor</span>
+</a></li><li><a href="../pokedex/exeggutor-alola.html">
+<img src="../assets/game/graphics/pokemon/exeggutor/alola/anim_front.png" alt="" class="sprite">  <span class="name">Exeggutor (Alolan)</span>
+</a></li><li><a href="../pokedex/exploud.html">
+<img src="../assets/game/graphics/pokemon/exploud/anim_front.png" alt="" class="sprite">  <span class="name">Exploud</span>
+</a></li><li><a href="../pokedex/ferrothorn.html">
+<img src="../assets/game/graphics/pokemon/ferrothorn/anim_front.png" alt="" class="sprite">  <span class="name">Ferrothorn</span>
+</a></li><li><a href="../pokedex/floatzel.html">
+<img src="../assets/game/graphics/pokemon/floatzel/anim_front.png" alt="" class="sprite">  <span class="name">Floatzel</span>
+</a></li><li><a href="../pokedex/floette.html">
+<img src="../assets/game/graphics/pokemon/floette/anim_front.png" alt="" class="sprite">  <span class="name">Floette</span>
+</a></li><li><a href="../pokedex/florges.html">
+<img src="../assets/game/graphics/pokemon/florges/anim_front.png" alt="" class="sprite">  <span class="name">Florges</span>
+</a></li><li><a href="../pokedex/furfrou.html">
+<img src="../assets/game/graphics/pokemon/furfrou/anim_front.png" alt="" class="sprite">  <span class="name">Furfrou</span>
+</a></li><li><a href="../pokedex/galvantula.html">
+<img src="../assets/game/graphics/pokemon/galvantula/anim_front.png" alt="" class="sprite">  <span class="name">Galvantula</span>
+</a></li><li><a href="../pokedex/garbodor.html">
+<img src="../assets/game/graphics/pokemon/garbodor/anim_front.png" alt="" class="sprite">  <span class="name">Garbodor</span>
+</a></li><li><a href="../pokedex/garchomp.html">
+<img src="../assets/game/graphics/pokemon/garchomp/anim_front.png" alt="" class="sprite">  <span class="name">Garchomp</span>
+</a></li><li><a href="../pokedex/gastrodon.html">
+<img src="../assets/game/graphics/pokemon/gastrodon/anim_front.png" alt="" class="sprite">  <span class="name">Gastrodon</span>
+</a></li><li><a href="../pokedex/genesect.html">
+<img src="../assets/game/graphics/pokemon/genesect/anim_front.png" alt="" class="sprite">  <span class="name">Genesect</span>
+</a></li><li><a href="../pokedex/gigalith.html">
+<img src="../assets/game/graphics/pokemon/gigalith/anim_front.png" alt="" class="sprite">  <span class="name">Gigalith</span>
+</a></li><li><a href="../pokedex/gogoat.html">
+<img src="../assets/game/graphics/pokemon/gogoat/anim_front.png" alt="" class="sprite">  <span class="name">Gogoat</span>
+</a></li><li><a href="../pokedex/golem.html">
+<img src="../assets/game/graphics/pokemon/golem/anim_front.png" alt="" class="sprite">  <span class="name">Golem</span>
+</a></li><li><a href="../pokedex/golem-alola.html">
+<img src="../assets/game/graphics/pokemon/golem/alola/front.png" alt="" class="sprite">  <span class="name">Golem (Alolan)</span>
+</a></li><li><a href="../pokedex/golisopod.html">
+<img src="../assets/game/graphics/pokemon/golisopod/anim_front.png" alt="" class="sprite">  <span class="name">Golisopod</span>
+</a></li><li><a href="../pokedex/golurk.html">
+<img src="../assets/game/graphics/pokemon/golurk/anim_front.png" alt="" class="sprite">  <span class="name">Golurk</span>
+</a></li><li><a href="../pokedex/goodra.html">
+<img src="../assets/game/graphics/pokemon/goodra/anim_front.png" alt="" class="sprite">  <span class="name">Goodra</span>
+</a></li><li><a href="../pokedex/goodra-hisui.html">
+<img src="../assets/game/graphics/pokemon/goodra/hisui/front.png" alt="" class="sprite">  <span class="name">Goodra (Hisuian)</span>
+</a></li><li><a href="../pokedex/gothitelle.html">
+<img src="../assets/game/graphics/pokemon/gothitelle/anim_front.png" alt="" class="sprite">  <span class="name">Gothitelle</span>
+</a></li><li><a href="../pokedex/gourgeist.html">
+<img src="../assets/game/graphics/pokemon/gourgeist/anim_front.png" alt="" class="sprite">  <span class="name">Gourgeist</span>
+</a></li><li><a href="../pokedex/greninja.html">
+<img src="../assets/game/graphics/pokemon/greninja/anim_front.png" alt="" class="sprite">  <span class="name">Greninja</span>
+</a></li><li><a href="../pokedex/greninja-ash.html">
+<img src="../assets/game/graphics/pokemon/greninja/ash/anim_front.png" alt="" class="sprite">  <span class="name">Greninja (Ash)</span>
+</a></li><li><a href="../pokedex/grimer-alola.html">
+<img src="../assets/game/graphics/pokemon/grimer/alola/front.png" alt="" class="sprite">  <span class="name">Grimer (Alolan)</span>
+</a></li><li><a href="../pokedex/gumshoos.html">
+<img src="../assets/game/graphics/pokemon/gumshoos/front.png" alt="" class="sprite">  <span class="name">Gumshoos</span>
+</a></li><li><a href="../pokedex/hawlucha.html">
+<img src="../assets/game/graphics/pokemon/hawlucha/anim_front.png" alt="" class="sprite">  <span class="name">Hawlucha</span>
+</a></li><li><a href="../pokedex/haxorus.html">
+<img src="../assets/game/graphics/pokemon/haxorus/anim_front.png" alt="" class="sprite">  <span class="name">Haxorus</span>
+</a></li><li><a href="../pokedex/heliolisk.html">
+<img src="../assets/game/graphics/pokemon/heliolisk/anim_front.png" alt="" class="sprite">  <span class="name">Heliolisk</span>
+</a></li><li><a href="../pokedex/hippowdon.html">
+<img src="../assets/game/graphics/pokemon/hippowdon/anim_front.png" alt="" class="sprite">  <span class="name">Hippowdon</span>
+</a></li><li><a href="../pokedex/hydreigon.html">
+<img src="../assets/game/graphics/pokemon/hydreigon/anim_front.png" alt="" class="sprite">  <span class="name">Hydreigon</span>
+</a></li><li><a href="../pokedex/incineroar.html">
+<img src="../assets/game/graphics/pokemon/incineroar/front.png" alt="" class="sprite">  <span class="name">Incineroar</span>
+</a></li><li><a href="../pokedex/infernape.html">
+<img src="../assets/game/graphics/pokemon/infernape/anim_front.png" alt="" class="sprite">  <span class="name">Infernape</span>
+</a></li><li><a href="../pokedex/jellicent.html">
+<img src="../assets/game/graphics/pokemon/jellicent/anim_front.png" alt="" class="sprite">  <span class="name">Jellicent</span>
+</a></li><li><a href="../pokedex/kingambit.html">
+<img src="../assets/game/graphics/pokemon/kingambit/front.png" alt="" class="sprite">  <span class="name">Kingambit</span>
+</a></li><li><a href="../pokedex/klang.html">
+<img src="../assets/game/graphics/pokemon/klang/anim_front.png" alt="" class="sprite">  <span class="name">Klang</span>
+</a></li><li><a href="../pokedex/klefki.html">
+<img src="../assets/game/graphics/pokemon/klefki/anim_front.png" alt="" class="sprite">  <span class="name">Klefki</span>
+</a></li><li><a href="../pokedex/klink.html">
+<img src="../assets/game/graphics/pokemon/klink/anim_front.png" alt="" class="sprite">  <span class="name">Klink</span>
+</a></li><li><a href="../pokedex/klinklang.html">
+<img src="../assets/game/graphics/pokemon/klinklang/anim_front.png" alt="" class="sprite">  <span class="name">Klinklang</span>
+</a></li><li><a href="../pokedex/komala.html">
+<img src="../assets/game/graphics/pokemon/komala/front.png" alt="" class="sprite">  <span class="name">Komala</span>
+</a></li><li><a href="../pokedex/kommo-o.html">
+<img src="../assets/game/graphics/pokemon/kommo_o/anim_front.png" alt="" class="sprite">  <span class="name">Kommo-o</span>
+</a></li><li><a href="../pokedex/kricketune.html">
+<img src="../assets/game/graphics/pokemon/kricketune/anim_front.png" alt="" class="sprite">  <span class="name">Kricketune</span>
+</a></li><li><a href="../pokedex/krookodile.html">
+<img src="../assets/game/graphics/pokemon/krookodile/anim_front.png" alt="" class="sprite">  <span class="name">Krookodile</span>
+</a></li><li><a href="../pokedex/kyurem.html">
+<img src="../assets/game/graphics/pokemon/kyurem/anim_front.png" alt="" class="sprite">  <span class="name">Kyurem</span>
+</a></li><li><a href="../pokedex/kyurem-black.html">
+<img src="../assets/game/graphics/pokemon/kyurem/black/anim_front.png" alt="" class="sprite">  <span class="name">Kyurem (Black)</span>
+</a></li><li><a href="../pokedex/kyurem-white.html">
+<img src="../assets/game/graphics/pokemon/kyurem/white/anim_front.png" alt="" class="sprite">  <span class="name">Kyurem (White)</span>
+</a></li><li><a href="../pokedex/landorus.html">
+<img src="../assets/game/graphics/pokemon/landorus/anim_front.png" alt="" class="sprite">  <span class="name">Landorus</span>
+</a></li><li><a href="../pokedex/leavanny.html">
+<img src="../assets/game/graphics/pokemon/leavanny/anim_front.png" alt="" class="sprite">  <span class="name">Leavanny</span>
+</a></li><li><a href="../pokedex/liepard.html">
+<img src="../assets/game/graphics/pokemon/liepard/anim_front.png" alt="" class="sprite">  <span class="name">Liepard</span>
+</a></li><li><a href="../pokedex/lilligant.html">
+<img src="../assets/game/graphics/pokemon/lilligant/anim_front.png" alt="" class="sprite">  <span class="name">Lilligant</span>
+</a></li><li><a href="../pokedex/lilligant-hisui.html">
+<img src="../assets/game/graphics/pokemon/lilligant/hisui/front.png" alt="" class="sprite">  <span class="name">Lilligant (Hisuian)</span>
+</a></li><li><a href="../pokedex/lopunny.html">
+<img src="../assets/game/graphics/pokemon/lopunny/anim_front.png" alt="" class="sprite">  <span class="name">Lopunny</span>
+</a></li><li><a href="../pokedex/lucario.html">
+<img src="../assets/game/graphics/pokemon/lucario/anim_front.png" alt="" class="sprite">  <span class="name">Lucario</span>
+</a></li><li><a href="../pokedex/lumineon.html">
+<img src="../assets/game/graphics/pokemon/lumineon/anim_front.png" alt="" class="sprite">  <span class="name">Lumineon</span>
+</a></li><li><a href="../pokedex/lurantis.html">
+<img src="../assets/game/graphics/pokemon/lurantis/anim_front.png" alt="" class="sprite">  <span class="name">Lurantis</span>
+</a></li><li><a href="../pokedex/luxray.html">
+<img src="../assets/game/graphics/pokemon/luxray/anim_front.png" alt="" class="sprite">  <span class="name">Luxray</span>
+</a></li><li><a href="../pokedex/malamar.html">
+<img src="../assets/game/graphics/pokemon/malamar/anim_front.png" alt="" class="sprite">  <span class="name">Malamar</span>
+</a></li><li><a href="../pokedex/manaphy.html">
+<img src="../assets/game/graphics/pokemon/manaphy/anim_front.png" alt="" class="sprite">  <span class="name">Manaphy</span>
+</a></li><li><a href="../pokedex/mandibuzz.html">
+<img src="../assets/game/graphics/pokemon/mandibuzz/anim_front.png" alt="" class="sprite">  <span class="name">Mandibuzz</span>
+</a></li><li><a href="../pokedex/marowak.html">
+<img src="../assets/game/graphics/pokemon/marowak/anim_front.png" alt="" class="sprite">  <span class="name">Marowak</span>
+</a></li><li><a href="../pokedex/marowak-alola.html">
+<img src="../assets/game/graphics/pokemon/marowak/alola/front.png" alt="" class="sprite">  <span class="name">Marowak (Alolan)</span>
+</a></li><li><a href="../pokedex/marshadow.html">
+<img src="../assets/game/graphics/pokemon/marshadow/anim_front.png" alt="" class="sprite">  <span class="name">Marshadow</span>
+</a></li><li><a href="../pokedex/melmetal.html">
+<img src="../assets/game/graphics/pokemon/melmetal/front.png" alt="" class="sprite">  <span class="name">Melmetal</span>
+</a></li><li><a href="../pokedex/meowstic-f.html">
+<img src="../assets/game/graphics/pokemon/meowstic/f/anim_front.png" alt="" class="sprite">  <span class="name">Meowstic (F)</span>
+</a></li><li><a href="../pokedex/meowstic.html">
+<img src="../assets/game/graphics/pokemon/meowstic/anim_front.png" alt="" class="sprite">  <span class="name">Meowstic (M)</span>
+</a></li><li><a href="../pokedex/mienshao.html">
+<img src="../assets/game/graphics/pokemon/mienshao/anim_front.png" alt="" class="sprite">  <span class="name">Mienshao</span>
+</a></li><li><a href="../pokedex/mimikyu.html">
+<img src="../assets/game/graphics/pokemon/mimikyu/front.png" alt="" class="sprite">  <span class="name">Mimikyu</span>
+</a></li><li><a href="../pokedex/minior-red.html">
+<img src="../assets/game/graphics/pokemon/minior/front.png" alt="" class="sprite">  <span class="name">Minior</span>
+</a></li><li><a href="../pokedex/mothim.html">
+<img src="../assets/game/graphics/pokemon/mothim/anim_front.png" alt="" class="sprite">  <span class="name">Mothim</span>
+</a></li><li><a href="../pokedex/mudsdale.html">
+<img src="../assets/game/graphics/pokemon/mudsdale/front.png" alt="" class="sprite">  <span class="name">Mudsdale</span>
+</a></li><li><a href="../pokedex/muk.html">
+<img src="../assets/game/graphics/pokemon/muk/anim_front.png" alt="" class="sprite">  <span class="name">Muk</span>
+</a></li><li><a href="../pokedex/muk-alola.html">
+<img src="../assets/game/graphics/pokemon/muk/alola/front.png" alt="" class="sprite">  <span class="name">Muk (Alolan)</span>
+</a></li><li><a href="../pokedex/musharna.html">
+<img src="../assets/game/graphics/pokemon/musharna/anim_front.png" alt="" class="sprite">  <span class="name">Musharna</span>
+</a></li><li><a href="../pokedex/naganadel.html">
+<img src="../assets/game/graphics/pokemon/naganadel/front.png" alt="" class="sprite">  <span class="name">Naganadel</span>
+</a></li><li><a href="../pokedex/ninetales.html">
+<img src="../assets/game/graphics/pokemon/ninetales/anim_front.png" alt="" class="sprite">  <span class="name">Ninetales</span>
+</a></li><li><a href="../pokedex/ninetales-alola.html">
+<img src="../assets/game/graphics/pokemon/ninetales/alola/front.png" alt="" class="sprite">  <span class="name">Ninetales (Alolan)</span>
+</a></li><li><a href="../pokedex/noivern.html">
+<img src="../assets/game/graphics/pokemon/noivern/anim_front.png" alt="" class="sprite">  <span class="name">Noivern</span>
+</a></li><li><a href="../pokedex/oranguru.html">
+<img src="../assets/game/graphics/pokemon/oranguru/anim_front.png" alt="" class="sprite">  <span class="name">Oranguru</span>
+</a></li><li><a href="../pokedex/pachirisu.html">
+<img src="../assets/game/graphics/pokemon/pachirisu/anim_front.png" alt="" class="sprite">  <span class="name">Pachirisu</span>
+</a></li><li><a href="../pokedex/palossand.html">
+<img src="../assets/game/graphics/pokemon/palossand/front.png" alt="" class="sprite">  <span class="name">Palossand</span>
+</a></li><li><a href="../pokedex/pangoro.html">
+<img src="../assets/game/graphics/pokemon/pangoro/anim_front.png" alt="" class="sprite">  <span class="name">Pangoro</span>
+</a></li><li><a href="../pokedex/passimian.html">
+<img src="../assets/game/graphics/pokemon/passimian/anim_front.png" alt="" class="sprite">  <span class="name">Passimian</span>
+</a></li><li><a href="../pokedex/persian.html">
+<img src="../assets/game/graphics/pokemon/persian/anim_front.png" alt="" class="sprite">  <span class="name">Persian</span>
+</a></li><li><a href="../pokedex/persian-alola.html">
+<img src="../assets/game/graphics/pokemon/persian/alola/front.png" alt="" class="sprite">  <span class="name">Persian (Alolan)</span>
+</a></li><li><a href="../pokedex/primarina.html">
+<img src="../assets/game/graphics/pokemon/primarina/front.png" alt="" class="sprite">  <span class="name">Primarina</span>
+</a></li><li><a href="../pokedex/purugly.html">
+<img src="../assets/game/graphics/pokemon/purugly/anim_front.png" alt="" class="sprite">  <span class="name">Purugly</span>
+</a></li><li><a href="../pokedex/pyroar.html">
+<img src="../assets/game/graphics/pokemon/pyroar/anim_front.png" alt="" class="sprite">  <span class="name">Pyroar</span>
+</a></li><li><a href="../pokedex/raichu.html">
+<img src="../assets/game/graphics/pokemon/raichu/anim_front.png" alt="" class="sprite">  <span class="name">Raichu</span>
+</a></li><li><a href="../pokedex/raichu-alola.html">
+<img src="../assets/game/graphics/pokemon/raichu/alola/front.png" alt="" class="sprite">  <span class="name">Raichu (Alolan)</span>
+</a></li><li><a href="../pokedex/rampardos.html">
+<img src="../assets/game/graphics/pokemon/rampardos/anim_front.png" alt="" class="sprite">  <span class="name">Rampardos</span>
+</a></li><li><a href="../pokedex/raticate.html">
+<img src="../assets/game/graphics/pokemon/raticate/anim_front.png" alt="" class="sprite">  <span class="name">Raticate</span>
+</a></li><li><a href="../pokedex/raticate-alola.html">
+<img src="../assets/game/graphics/pokemon/raticate/alola/front.png" alt="" class="sprite">  <span class="name">Raticate (Alolan)</span>
+</a></li><li><a href="../pokedex/reshiram.html">
+<img src="../assets/game/graphics/pokemon/reshiram/anim_front.png" alt="" class="sprite">  <span class="name">Reshiram</span>
+</a></li><li><a href="../pokedex/reuniclus.html">
+<img src="../assets/game/graphics/pokemon/reuniclus/anim_front.png" alt="" class="sprite">  <span class="name">Reuniclus</span>
+</a></li><li><a href="../pokedex/ribombee.html">
+<img src="../assets/game/graphics/pokemon/ribombee/anim_front.png" alt="" class="sprite">  <span class="name">Ribombee</span>
+</a></li><li><a href="../pokedex/roserade.html">
+<img src="../assets/game/graphics/pokemon/roserade/anim_front.png" alt="" class="sprite">  <span class="name">Roserade</span>
+</a></li><li><a href="../pokedex/rotom.html">
+<img src="../assets/game/graphics/pokemon/rotom/anim_front.png" alt="" class="sprite">  <span class="name">Rotom</span>
+</a></li><li><a href="../pokedex/runerigus.html">
+<img src="../assets/game/graphics/pokemon/runerigus/front.png" alt="" class="sprite">  <span class="name">Runerigus</span>
+</a></li><li><a href="../pokedex/salazzle.html">
+<img src="../assets/game/graphics/pokemon/salazzle/anim_front.png" alt="" class="sprite">  <span class="name">Salazzle</span>
+</a></li><li><a href="../pokedex/samurott.html">
+<img src="../assets/game/graphics/pokemon/samurott/anim_front.png" alt="" class="sprite">  <span class="name">Samurott</span>
+</a></li><li><a href="../pokedex/samurott-hisui.html">
+<img src="../assets/game/graphics/pokemon/samurott/hisui/front.png" alt="" class="sprite">  <span class="name">Samurott (Hisuian)</span>
+</a></li><li><a href="../pokedex/sandslash.html">
+<img src="../assets/game/graphics/pokemon/sandslash/anim_front.png" alt="" class="sprite">  <span class="name">Sandslash</span>
+</a></li><li><a href="../pokedex/sandslash-alola.html">
+<img src="../assets/game/graphics/pokemon/sandslash/alola/front.png" alt="" class="sprite">  <span class="name">Sandslash (Alolan)</span>
+</a></li><li><a href="../pokedex/sawsbuck.html">
+<img src="../assets/game/graphics/pokemon/sawsbuck/anim_front.png" alt="" class="sprite">  <span class="name">Sawsbuck</span>
+</a></li><li><a href="../pokedex/scolipede.html">
+<img src="../assets/game/graphics/pokemon/scolipede/anim_front.png" alt="" class="sprite">  <span class="name">Scolipede</span>
+</a></li><li><a href="../pokedex/scrafty.html">
+<img src="../assets/game/graphics/pokemon/scrafty/anim_front.png" alt="" class="sprite">  <span class="name">Scrafty</span>
+</a></li><li><a href="../pokedex/seismitoad.html">
+<img src="../assets/game/graphics/pokemon/seismitoad/anim_front.png" alt="" class="sprite">  <span class="name">Seismitoad</span>
+</a></li><li><a href="../pokedex/serperior.html">
+<img src="../assets/game/graphics/pokemon/serperior/anim_front.png" alt="" class="sprite">  <span class="name">Serperior</span>
+</a></li><li><a href="../pokedex/shiinotic.html">
+<img src="../assets/game/graphics/pokemon/shiinotic/front.png" alt="" class="sprite">  <span class="name">Shiinotic</span>
+</a></li><li><a href="../pokedex/sigilyph.html">
+<img src="../assets/game/graphics/pokemon/sigilyph/anim_front.png" alt="" class="sprite">  <span class="name">Sigilyph</span>
+</a></li><li><a href="../pokedex/silvally.html">
+<img src="../assets/game/graphics/pokemon/silvally/front.png" alt="" class="sprite">  <span class="name">Silvally</span>
+</a></li><li><a href="../pokedex/skuntank.html">
+<img src="../assets/game/graphics/pokemon/skuntank/anim_front.png" alt="" class="sprite">  <span class="name">Skuntank</span>
+</a></li><li><a href="../pokedex/slurpuff.html">
+<img src="../assets/game/graphics/pokemon/slurpuff/anim_front.png" alt="" class="sprite">  <span class="name">Slurpuff</span>
+</a></li><li><a href="../pokedex/spiritomb.html">
+<img src="../assets/game/graphics/pokemon/spiritomb/anim_front.png" alt="" class="sprite">  <span class="name">Spiritomb</span>
+</a></li><li><a href="../pokedex/staraptor.html">
+<img src="../assets/game/graphics/pokemon/staraptor/anim_front.png" alt="" class="sprite">  <span class="name">Staraptor</span>
+</a></li><li><a href="../pokedex/stoutland.html">
+<img src="../assets/game/graphics/pokemon/stoutland/anim_front.png" alt="" class="sprite">  <span class="name">Stoutland</span>
+</a></li><li><a href="../pokedex/swanna.html">
+<img src="../assets/game/graphics/pokemon/swanna/anim_front.png" alt="" class="sprite">  <span class="name">Swanna</span>
+</a></li><li><a href="../pokedex/swoobat.html">
+<img src="../assets/game/graphics/pokemon/swoobat/anim_front.png" alt="" class="sprite">  <span class="name">Swoobat</span>
+</a></li><li><a href="../pokedex/talonflame.html">
+<img src="../assets/game/graphics/pokemon/talonflame/anim_front.png" alt="" class="sprite">  <span class="name">Talonflame</span>
+</a></li><li><a href="../pokedex/tapu-bulu.html">
+<img src="../assets/game/graphics/pokemon/tapu_bulu/anim_front.png" alt="" class="sprite">  <span class="name">Tapu Bulu</span>
+</a></li><li><a href="../pokedex/tapu-fini.html">
+<img src="../assets/game/graphics/pokemon/tapu_fini/anim_front.png" alt="" class="sprite">  <span class="name">Tapu Fini</span>
+</a></li><li><a href="../pokedex/tapu-koko.html">
+<img src="../assets/game/graphics/pokemon/tapu_koko/anim_front.png" alt="" class="sprite">  <span class="name">Tapu Koko</span>
+</a></li><li><a href="../pokedex/tapu-lele.html">
+<img src="../assets/game/graphics/pokemon/tapu_lele/anim_front.png" alt="" class="sprite">  <span class="name">Tapu Lele</span>
+</a></li><li><a href="../pokedex/thundurus.html">
+<img src="../assets/game/graphics/pokemon/thundurus/anim_front.png" alt="" class="sprite">  <span class="name">Thundurus</span>
+</a></li><li><a href="../pokedex/togedemaru.html">
+<img src="../assets/game/graphics/pokemon/togedemaru/anim_front.png" alt="" class="sprite">  <span class="name">Togedemaru</span>
+</a></li><li><a href="../pokedex/tornadus.html">
+<img src="../assets/game/graphics/pokemon/tornadus/anim_front.png" alt="" class="sprite">  <span class="name">Tornadus</span>
+</a></li><li><a href="../pokedex/torterra.html">
+<img src="../assets/game/graphics/pokemon/torterra/anim_front.png" alt="" class="sprite">  <span class="name">Torterra</span>
+</a></li><li><a href="../pokedex/toucannon.html">
+<img src="../assets/game/graphics/pokemon/toucannon/anim_front.png" alt="" class="sprite">  <span class="name">Toucannon</span>
+</a></li><li><a href="../pokedex/toxapex.html">
+<img src="../assets/game/graphics/pokemon/toxapex/front.png" alt="" class="sprite">  <span class="name">Toxapex</span>
+</a></li><li><a href="../pokedex/toxicroak.html">
+<img src="../assets/game/graphics/pokemon/toxicroak/anim_front.png" alt="" class="sprite">  <span class="name">Toxicroak</span>
+</a></li><li><a href="../pokedex/trevenant.html">
+<img src="../assets/game/graphics/pokemon/trevenant/anim_front.png" alt="" class="sprite">  <span class="name">Trevenant</span>
+</a></li><li><a href="../pokedex/tsareena.html">
+<img src="../assets/game/graphics/pokemon/tsareena/front.png" alt="" class="sprite">  <span class="name">Tsareena</span>
+</a></li><li><a href="../pokedex/turtonator.html">
+<img src="../assets/game/graphics/pokemon/turtonator/anim_front.png" alt="" class="sprite">  <span class="name">Turtonator</span>
+</a></li><li><a href="../pokedex/type-null.html">
+<img src="../assets/game/graphics/pokemon/type_null/front.png" alt="" class="sprite">  <span class="name">Type: Null</span>
+</a></li><li><a href="../pokedex/tyrantrum.html">
+<img src="../assets/game/graphics/pokemon/tyrantrum/anim_front.png" alt="" class="sprite">  <span class="name">Tyrantrum</span>
+</a></li><li><a href="../pokedex/unfezant.html">
+<img src="../assets/game/graphics/pokemon/unfezant/anim_front.png" alt="" class="sprite">  <span class="name">Unfezant</span>
+</a></li><li><a href="../pokedex/vanilluxe.html">
+<img src="../assets/game/graphics/pokemon/vanilluxe/anim_front.png" alt="" class="sprite">  <span class="name">Vanilluxe</span>
+</a></li><li><a href="../pokedex/vespiquen.html">
+<img src="../assets/game/graphics/pokemon/vespiquen/anim_front.png" alt="" class="sprite">  <span class="name">Vespiquen</span>
+</a></li><li><a href="../pokedex/vikavolt.html">
+<img src="../assets/game/graphics/pokemon/vikavolt/anim_front.png" alt="" class="sprite">  <span class="name">Vikavolt</span>
+</a></li><li><a href="../pokedex/vivillon.html">
+<img src="../assets/game/graphics/pokemon/vivillon/anim_front.png" alt="" class="sprite">  <span class="name">Vivillon</span>
+</a></li><li><a href="../pokedex/volcarona.html">
+<img src="../assets/game/graphics/pokemon/volcarona/anim_front.png" alt="" class="sprite">  <span class="name">Volcarona</span>
+</a></li><li><a href="../pokedex/watchog.html">
+<img src="../assets/game/graphics/pokemon/watchog/anim_front.png" alt="" class="sprite">  <span class="name">Watchog</span>
+</a></li><li><a href="../pokedex/whimsicott.html">
+<img src="../assets/game/graphics/pokemon/whimsicott/anim_front.png" alt="" class="sprite">  <span class="name">Whimsicott</span>
+</a></li><li><a href="../pokedex/wormadam.html">
+<img src="../assets/game/graphics/pokemon/wormadam/anim_front.png" alt="" class="sprite">  <span class="name">Wormadam (Plant Cloak)</span>
+</a></li><li><a href="../pokedex/wormadam-sandy.html">
+<img src="../assets/game/graphics/pokemon/wormadam/sandy/anim_front.png" alt="" class="sprite">  <span class="name">Wormadam (Sandy Cloak)</span>
+</a></li><li><a href="../pokedex/wormadam-trash.html">
+<img src="../assets/game/graphics/pokemon/wormadam/trash/anim_front.png" alt="" class="sprite">  <span class="name">Wormadam (Trash Cloak)</span>
+</a></li><li><a href="../pokedex/zebstrika.html">
+<img src="../assets/game/graphics/pokemon/zebstrika/anim_front.png" alt="" class="sprite">  <span class="name">Zebstrika</span>
+</a></li><li><a href="../pokedex/zekrom.html">
+<img src="../assets/game/graphics/pokemon/zekrom/anim_front.png" alt="" class="sprite">  <span class="name">Zekrom</span>
+</a></li><li><a href="../pokedex/zoroark.html">
+<img src="../assets/game/graphics/pokemon/zoroark/anim_front.png" alt="" class="sprite">  <span class="name">Zoroark</span>
+</a></li><li><a href="../pokedex/zoroark-hisui.html">
+<img src="../assets/game/graphics/pokemon/zoroark/hisui/front.png" alt="" class="sprite">  <span class="name">Zoroark (Hisuian)</span>
+</a></li><li><a href="../pokedex/zorua-hisui.html">
+<img src="../assets/game/graphics/pokemon/zorua/hisui/front.png" alt="" class="sprite">  <span class="name">Zorua (Hisuian)</span>
+</a></li>  </ul>
+</section>
+  </main>
+  <script>
+    function obstagoonBindFilters() {
+      const inputs = document.querySelectorAll('[data-filter-input]');
+      inputs.forEach((input) => {
+        const selector = input.getAttribute('data-filter-target');
+        const emptyTextSelector = input.getAttribute('data-filter-empty');
+        const countSelector = input.getAttribute('data-filter-count');
+        const items = Array.from(document.querySelectorAll(selector || ''));
+        const emptyNode = emptyTextSelector ? document.querySelector(emptyTextSelector) : null;
+        const countNode = countSelector ? document.querySelector(countSelector) : null;
+        const stateKey = input.id || selector || '';
+        const apply = () => {
+          const query = obstagoonNormalize(input.value);
+          let visible = 0;
+          items.forEach((item) => {
+            const haystack = obstagoonNormalize(item.getAttribute('data-search-text') || item.textContent || '');
+            const match = !query || haystack.includes(query);
+            item.classList.toggle('filter-hidden', !match);
+            if (match) visible += 1;
+          });
+          if (emptyNode) emptyNode.style.display = visible === 0 ? '' : 'none';
+          if (countNode) countNode.textContent = visible;
+          if (stateKey) obstagoonSaveState(stateKey, {search: input.value});
+        };
+        if (stateKey) {
+          const saved = obstagoonLoadState(stateKey);
+          if (saved.search) input.value = saved.search;
+        }
+        input.addEventListener('input', apply);
+        apply();
+      });
+    }
+    function obstagoonBindRowLinks() {
+      // Elements with data-href behave as buttons: clicking anywhere navigates,
+      // except clicks on nested links/buttons which retain their own behavior
+      // (e.g. ability links inside a pokedex row stay individually clickable).
+      document.querySelectorAll('tr[data-href], li[data-href]').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('a, button')) return;
+          window.location = row.getAttribute('data-href');
+        });
+      });
+    }
+    function obstagoonBindLinkedHotspots() {
+      // Mirror hover between encounter-map hotspots and the section's link-grid
+      // tile by matching href. Hovering one outlines the other so it's clear
+      // which spot on the map corresponds to which list entry.
+      const partners = new Map();
+      document.querySelectorAll('.region-map a[href], .link-grid > li > a[href]').forEach((a) => {
+        const key = a.getAttribute('href');
+        if (!partners.has(key)) partners.set(key, []);
+        partners.get(key).push(a);
+      });
+      partners.forEach((group) => {
+        if (group.length < 2) return;
+        group.forEach((el) => {
+          el.addEventListener('mouseenter', () => group.forEach((other) => { if (other !== el) other.classList.add('linked-hover'); }));
+          el.addEventListener('mouseleave', () => group.forEach((other) => other.classList.remove('linked-hover')));
+        });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+    } else {
+      obstagoonBindFilters();
+      obstagoonBindRowLinks();
+      obstagoonBindLinkedHotspots();
+    }
+  </script>
+</body>
+</html>

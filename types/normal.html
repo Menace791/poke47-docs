@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Normal - pokeemerald-expansion</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script>
+    // Lowercase, strip diacritics (é→e), and drop non-alphanumerics so a query
+    // like "basculinwhitestriped" still matches "Basculin (White-Striped)".
+    // Defined in <head> so per-page IIFEs in the content can call it.
+    window.obstagoonNormalize = (s) => (s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+    // Per-tab index state (search, chips, sort) restored on back/forward and
+    // reload only — fresh clicks of nav links start clean.
+    window.obstagoonShouldRestoreState = () => {
+      const nav = performance.getEntriesByType('navigation')[0];
+      return !!(nav && (nav.type === 'back_forward' || nav.type === 'reload'));
+    };
+    window.obstagoonLoadState = (key) => {
+      if (!obstagoonShouldRestoreState()) return {};
+      try { return JSON.parse(sessionStorage.getItem('obstagoon:' + key) || '{}'); }
+      catch (e) { return {}; }
+    };
+    window.obstagoonSaveState = (key, state) => {
+      // Private browsing / quota-exceeded throws; degrade silently.
+      try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
+      catch (e) {}
+    };
+    // Shared search+chips+sort filter binding for index pages. Each page
+    // passes its element ids, a haystack-by-chip-kind map (for filtering),
+    // suggestion sources, and optionally a table selector to enable
+    // click-to-sort. State persists in sessionStorage under stateKey. Defined
+    // in <head> so per-page IIFEs in the content can call it.
+    window.obstagoonBindIndexPage = (opts) => {
+      const input = document.getElementById(opts.inputId);
+      const dropdown = document.getElementById(opts.dropdownId);
+      const chipsBox = document.getElementById(opts.chipsBoxId);
+      const empty = opts.emptyId ? document.getElementById(opts.emptyId) : null;
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      const rows = Array.from(document.querySelectorAll(opts.rowsSelector));
+      const haystackByKind = opts.haystackByKind || {};
+      const sources = opts.sources || [];
+      const defaultKind = opts.defaultKind || null;
+      const saved = obstagoonLoadState(opts.stateKey);
+      const chips = (Array.isArray(saved.chips) ? saved.chips : [])
+        .map((c) => c.kind ? c : {kind: defaultKind || 'Pokémon', name: c.name});
+      if (saved.search) input.value = saved.search;
+      let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
+      let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : 'asc';
+      const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const persist = () => obstagoonSaveState(opts.stateKey, {
+        search: input.value, chips,
+        ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
+      });
+
+      const applyFilters = () => {
+        const q = obstagoonNormalize(input.value);
+        let visible = 0;
+        rows.forEach((el) => {
+          const text = obstagoonNormalize(el.dataset.searchText || '');
+          let show = !q || text.includes(q);
+          if (show) for (const c of chips) {
+            const haystack = el.dataset[haystackByKind[c.kind]];
+            if (!haystack || !haystack.includes(`|${c.name}|`)) { show = false; break; }
+          }
+          el.classList.toggle('filter-hidden', !show);
+          if (show) visible += 1;
+        });
+        if (empty) empty.style.display = visible === 0 ? '' : 'none';
+        if (countEl) countEl.textContent = visible;
+        persist();
+      };
+      const renderChips = () => {
+        chipsBox.innerHTML = chips.map((c, i) =>
+          `<span class="filter-chip"><span class="chip-kind">${c.kind}</span> ${esc(c.name)}<button type="button" class="chip-remove" data-idx="${i}" aria-label="Remove">×</button></span>`
+        ).join('');
+        chipsBox.querySelectorAll('.chip-remove').forEach((btn) => btn.addEventListener('click', () => {
+          chips.splice(parseInt(btn.dataset.idx, 10), 1); renderChips(); applyFilters();
+        }));
+      };
+      const renderSuggestions = () => {
+        const q = obstagoonNormalize(input.value);
+        if (q.length < 3) { dropdown.hidden = true; return; }
+        const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
+        const matches = [];
+        for (const [kind, list] of sources) {
+          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+        }
+        if (matches.length === 0) { dropdown.hidden = true; return; }
+        dropdown.innerHTML = matches.slice(0, 30).map((m) =>
+          `<button type="button" class="suggestion" data-kind="${m.kind}" data-name="${esc(m.name)}"><span class="suggestion-kind">${m.kind}</span> ${esc(m.name)}</button>`
+        ).join('');
+        dropdown.hidden = false;
+        dropdown.querySelectorAll('.suggestion').forEach((btn) => btn.addEventListener('click', () => {
+          chips.push({kind: btn.dataset.kind, name: btn.dataset.name});
+          input.value = ''; dropdown.hidden = true; renderChips(); applyFilters();
+        }));
+      };
+      input.addEventListener('input', () => { renderSuggestions(); applyFilters(); });
+      input.addEventListener('focus', renderSuggestions);
+      document.addEventListener('click', (e) => { if (!dropdown.contains(e.target) && e.target !== input) dropdown.hidden = true; });
+      renderChips();
+      applyFilters();
+
+      if (opts.tableSelector) {
+        const tbody = document.querySelector(opts.tableSelector + ' tbody');
+        const headers = Array.from(document.querySelectorAll(opts.tableSelector + ' thead th'));
+        const original = Array.from(tbody.querySelectorAll('tr'));
+        const cellValue = (tr, i, kind) => {
+          const text = tr.cells[i].textContent.trim();
+          if (kind === 'number') { const n = parseFloat(text); return isNaN(n) ? -Infinity : n; }
+          return text.toLowerCase();
+        };
+        const applySort = () => {
+          headers.forEach((h, j) => {
+            h.classList.toggle('sort-asc', activeDir === 'asc' && j === activeCol);
+            h.classList.toggle('sort-desc', activeDir === 'desc' && j === activeCol);
+          });
+          if (!activeDir) { original.forEach((tr) => tbody.appendChild(tr)); return; }
+          const kind = headers[activeCol]?.dataset.sort || 'text';
+          const sign = activeDir === 'asc' ? 1 : -1;
+          [...original].sort((a, b) => {
+            const av = cellValue(a, activeCol, kind), bv = cellValue(b, activeCol, kind);
+            return av < bv ? -sign : av > bv ? sign : 0;
+          }).forEach((tr) => tbody.appendChild(tr));
+        };
+        headers.forEach((th, i) => {
+          if (!th.dataset.sort) return;
+          th.classList.add('sortable');
+          th.addEventListener('click', () => {
+            activeDir = i !== activeCol ? 'asc' : activeDir === 'asc' ? 'desc' : activeDir === 'desc' ? '' : 'asc';
+            activeCol = activeDir ? i : -1;
+            applySort();
+            persist();
+          });
+        });
+        applySort();
+      }
+    };
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../index.html">pokeemerald-expansion</a>
+      <nav>
+        <a href="../pokedex/index.html">Pokédex</a>
+        <a href="../moves/index.html">Moves</a>
+        <a href="../abilities/index.html">Abilities</a>
+        <a href="../forms/index.html">Forms</a>
+        <a href="../encounters/index.html">Encounters</a>
+        <a href="../itemdex/index.html">Itemdex</a>
+        <a href="../trainerdex/index.html">Trainers</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+<h1><span class="type-badge type-normal">Normal</span></h1>
+<div class="grid two">
+  <section class="card">
+    <h2>Species</h2>
+    <ul>
+        <li>Rattata</li>
+        <li>Raticate</li>
+        <li>Rattata</li>
+        <li>Raticate</li>
+        <li>Raticate</li>
+        <li>Meowth</li>
+        <li>Persian</li>
+        <li>Meowth</li>
+        <li>Ditto</li>
+        <li>Smeargle</li>
+        <li>Whismur</li>
+        <li>Loudred</li>
+        <li>Exploud</li>
+        <li>Starly</li>
+        <li>Staravia</li>
+        <li>Staraptor</li>
+        <li>Bidoof</li>
+        <li>Bibarel</li>
+        <li>Buneary</li>
+        <li>Lopunny</li>
+        <li>Lopunny</li>
+        <li>Glameow</li>
+        <li>Purugly</li>
+        <li>Chatot</li>
+        <li>Patrat</li>
+        <li>Watchog</li>
+        <li>Lillipup</li>
+        <li>Herdier</li>
+        <li>Stoutland</li>
+        <li>Pidove</li>
+        <li>Tranquill</li>
+        <li>Unfezant</li>
+        <li>Audino</li>
+        <li>Audino</li>
+        <li>Zorua</li>
+        <li>Zoroark</li>
+        <li>Minccino</li>
+        <li>Cinccino</li>
+        <li>Deerling</li>
+        <li>Sawsbuck</li>
+        <li>Bouffalant</li>
+        <li>Rufflet</li>
+        <li>Braviary</li>
+        <li>Bunnelby</li>
+        <li>Diggersby</li>
+        <li>Fletchling</li>
+        <li>Litleo</li>
+        <li>Pyroar</li>
+        <li>Furfrou</li>
+        <li>Furfrou</li>
+        <li>Furfrou</li>
+        <li>Furfrou</li>
+        <li>Furfrou</li>
+        <li>Furfrou</li>
+        <li>Furfrou</li>
+        <li>Furfrou</li>
+        <li>Furfrou</li>
+        <li>Furfrou</li>
+        <li>Helioptile</li>
+        <li>Heliolisk</li>
+        <li>Pikipek</li>
+        <li>Trumbeak</li>
+        <li>Toucannon</li>
+        <li>Yungoos</li>
+        <li>Gumshoos</li>
+        <li>Gumshoos</li>
+        <li>Stufful</li>
+        <li>Bewear</li>
+        <li>Oranguru</li>
+        <li>Type: Null</li>
+        <li>Silvally</li>
+        <li>Komala</li>
+        <li>Drampa</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>Moves</h2>
+    <ul>
+        <li>Pound</li>
+        <li>Double Slap</li>
+        <li>Comet Punch</li>
+        <li>Mega Punch</li>
+        <li>Pay Day</li>
+        <li>Scratch</li>
+        <li>Vise Grip</li>
+        <li>Guillotine</li>
+        <li>Razor Wind</li>
+        <li>Swords Dance</li>
+        <li>Cut</li>
+        <li>Whirlwind</li>
+        <li>Bind</li>
+        <li>Slam</li>
+        <li>Stomp</li>
+        <li>Mega Kick</li>
+        <li>Headbutt</li>
+        <li>Horn Attack</li>
+        <li>Fury Attack</li>
+        <li>Horn Drill</li>
+        <li>Tackle</li>
+        <li>Body Slam</li>
+        <li>Wrap</li>
+        <li>Take Down</li>
+        <li>Thrash</li>
+        <li>Double-Edge</li>
+        <li>Tail Whip</li>
+        <li>Leer</li>
+        <li>Growl</li>
+        <li>Roar</li>
+        <li>Sing</li>
+        <li>Supersonic</li>
+        <li>Sonic Boom</li>
+        <li>Disable</li>
+        <li>Hyper Beam</li>
+        <li>Strength</li>
+        <li>Growth</li>
+        <li>Quick Attack</li>
+        <li>Rage</li>
+        <li>Mimic</li>
+        <li>Screech</li>
+        <li>Double Team</li>
+        <li>Recover</li>
+        <li>Harden</li>
+        <li>Minimize</li>
+        <li>Smokescreen</li>
+        <li>Defense Curl</li>
+        <li>Focus Energy</li>
+        <li>Bide</li>
+        <li>Metronome</li>
+        <li>Self-Destruct</li>
+        <li>Egg Bomb</li>
+        <li>Swift</li>
+        <li>Skull Bash</li>
+        <li>Spike Cannon</li>
+        <li>Constrict</li>
+        <li>Soft-Boiled</li>
+        <li>Glare</li>
+        <li>Barrage</li>
+        <li>Lovely Kiss</li>
+        <li>Transform</li>
+        <li>Dizzy Punch</li>
+        <li>Flash</li>
+        <li>Splash</li>
+        <li>Explosion</li>
+        <li>Fury Swipes</li>
+        <li>Hyper Fang</li>
+        <li>Sharpen</li>
+        <li>Conversion</li>
+        <li>Tri Attack</li>
+        <li>Super Fang</li>
+        <li>Slash</li>
+        <li>Substitute</li>
+        <li>Struggle</li>
+        <li>Sketch</li>
+        <li>Mind Reader</li>
+        <li>Snore</li>
+        <li>Flail</li>
+        <li>Conversion 2</li>
+        <li>Protect</li>
+        <li>Scary Face</li>
+        <li>Belly Drum</li>
+        <li>Foresight</li>
+        <li>Perish Song</li>
+        <li>Lock-On</li>
+        <li>Endure</li>
+        <li>False Swipe</li>
+        <li>Swagger</li>
+        <li>Milk Drink</li>
+        <li>Mean Look</li>
+        <li>Attract</li>
+        <li>Sleep Talk</li>
+        <li>Heal Bell</li>
+        <li>Return</li>
+        <li>Present</li>
+        <li>Frustration</li>
+        <li>Safeguard</li>
+        <li>Pain Split</li>
+        <li>Baton Pass</li>
+        <li>Encore</li>
+        <li>Rapid Spin</li>
+        <li>Sweet Scent</li>
+        <li>Morning Sun</li>
+        <li>Hidden Power</li>
+        <li>Psych Up</li>
+        <li>Extreme Speed</li>
+        <li>Fake Out</li>
+        <li>Uproar</li>
+        <li>Stockpile</li>
+        <li>Spit Up</li>
+        <li>Swallow</li>
+        <li>Facade</li>
+        <li>Smelling Salts</li>
+        <li>Follow Me</li>
+        <li>Nature Power</li>
+        <li>Helping Hand</li>
+        <li>Wish</li>
+        <li>Assist</li>
+        <li>Recycle</li>
+        <li>Yawn</li>
+        <li>Endeavor</li>
+        <li>Refresh</li>
+        <li>Secret Power</li>
+        <li>Camouflage</li>
+        <li>Teeter Dance</li>
+        <li>Slack Off</li>
+        <li>Hyper Voice</li>
+        <li>Crush Claw</li>
+        <li>Weather Ball</li>
+        <li>Odor Sleuth</li>
+        <li>Tickle</li>
+        <li>Block</li>
+        <li>Howl</li>
+        <li>Covet</li>
+        <li>Natural Gift</li>
+        <li>Feint</li>
+        <li>Acupressure</li>
+        <li>Trump Card</li>
+        <li>Wring Out</li>
+        <li>Lucky Chant</li>
+        <li>Me First</li>
+        <li>Copycat</li>
+        <li>Last Resort</li>
+        <li>Giga Impact</li>
+        <li>Rock Climb</li>
+        <li>Captivate</li>
+        <li>Judgment</li>
+        <li>Double Hit</li>
+        <li>Crush Grip</li>
+        <li>Simple Beam</li>
+        <li>Entrainment</li>
+        <li>After You</li>
+        <li>Round</li>
+        <li>Echoed Voice</li>
+        <li>Chip Away</li>
+        <li>Shell Smash</li>
+        <li>Reflect Type</li>
+        <li>Retaliate</li>
+        <li>Bestow</li>
+        <li>Work Up</li>
+        <li>Tail Slap</li>
+        <li>Head Charge</li>
+        <li>Techno Blast</li>
+        <li>Relic Song</li>
+        <li>Noble Roar</li>
+        <li>Boomburst</li>
+        <li>Play Nice</li>
+        <li>Confide</li>
+        <li>Happy Hour</li>
+        <li>Celebrate</li>
+        <li>Hold Hands</li>
+        <li>Hold Back</li>
+        <li>Spotlight</li>
+        <li>Laser Focus</li>
+        <li>Revelation Dance</li>
+        <li>Tearful Look</li>
+        <li>Multi-Attack</li>
+        <li>Veevee Volley</li>
+        <li>Stuff Cheeks</li>
+        <li>Teatime</li>
+        <li>Court Change</li>
+        <li>Terrain Pulse</li>
+        <li>Power Shift</li>
+        <li>Tera Blast</li>
+        <li>Population Bomb</li>
+        <li>Revival Blessing</li>
+        <li>Doodle</li>
+        <li>Fillet Away</li>
+        <li>Raging Bull</li>
+        <li>Shed Tail</li>
+        <li>Tidy Up</li>
+        <li>Hyper Drill</li>
+        <li>Tera Starstorm</li>
+        <li>Breakneck Blitz</li>
+        <li>Extreme Evoboost</li>
+        <li>Pulverizing Pancake</li>
+        <li>Max Guard</li>
+        <li>Max Strike</li>
+        <li>G-Max Gold Rush</li>
+        <li>G-Max Cuddle</li>
+        <li>G-Max Replenish</li>
+        <li>Chien Pow</li>
+    </ul>
+  </section>
+</div>
+  </main>
+  <script>
+    function obstagoonBindFilters() {
+      const inputs = document.querySelectorAll('[data-filter-input]');
+      inputs.forEach((input) => {
+        const selector = input.getAttribute('data-filter-target');
+        const emptyTextSelector = input.getAttribute('data-filter-empty');
+        const countSelector = input.getAttribute('data-filter-count');
+        const items = Array.from(document.querySelectorAll(selector || ''));
+        const emptyNode = emptyTextSelector ? document.querySelector(emptyTextSelector) : null;
+        const countNode = countSelector ? document.querySelector(countSelector) : null;
+        const stateKey = input.id || selector || '';
+        const apply = () => {
+          const query = obstagoonNormalize(input.value);
+          let visible = 0;
+          items.forEach((item) => {
+            const haystack = obstagoonNormalize(item.getAttribute('data-search-text') || item.textContent || '');
+            const match = !query || haystack.includes(query);
+            item.classList.toggle('filter-hidden', !match);
+            if (match) visible += 1;
+          });
+          if (emptyNode) emptyNode.style.display = visible === 0 ? '' : 'none';
+          if (countNode) countNode.textContent = visible;
+          if (stateKey) obstagoonSaveState(stateKey, {search: input.value});
+        };
+        if (stateKey) {
+          const saved = obstagoonLoadState(stateKey);
+          if (saved.search) input.value = saved.search;
+        }
+        input.addEventListener('input', apply);
+        apply();
+      });
+    }
+    function obstagoonBindRowLinks() {
+      // Elements with data-href behave as buttons: clicking anywhere navigates,
+      // except clicks on nested links/buttons which retain their own behavior
+      // (e.g. ability links inside a pokedex row stay individually clickable).
+      document.querySelectorAll('tr[data-href], li[data-href]').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('a, button')) return;
+          window.location = row.getAttribute('data-href');
+        });
+      });
+    }
+    function obstagoonBindLinkedHotspots() {
+      // Mirror hover between encounter-map hotspots and the section's link-grid
+      // tile by matching href. Hovering one outlines the other so it's clear
+      // which spot on the map corresponds to which list entry.
+      const partners = new Map();
+      document.querySelectorAll('.region-map a[href], .link-grid > li > a[href]').forEach((a) => {
+        const key = a.getAttribute('href');
+        if (!partners.has(key)) partners.set(key, []);
+        partners.get(key).push(a);
+      });
+      partners.forEach((group) => {
+        if (group.length < 2) return;
+        group.forEach((el) => {
+          el.addEventListener('mouseenter', () => group.forEach((other) => { if (other !== el) other.classList.add('linked-hover'); }));
+          el.addEventListener('mouseleave', () => group.forEach((other) => other.classList.remove('linked-hover')));
+        });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+    } else {
+      obstagoonBindFilters();
+      obstagoonBindRowLinks();
+      obstagoonBindLinkedHotspots();
+    }
+  </script>
+</body>
+</html>

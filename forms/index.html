@@ -1,0 +1,1187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Forms - pokeemerald-expansion</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script>
+    // Lowercase, strip diacritics (é→e), and drop non-alphanumerics so a query
+    // like "basculinwhitestriped" still matches "Basculin (White-Striped)".
+    // Defined in <head> so per-page IIFEs in the content can call it.
+    window.obstagoonNormalize = (s) => (s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+    // Per-tab index state (search, chips, sort) restored on back/forward and
+    // reload only — fresh clicks of nav links start clean.
+    window.obstagoonShouldRestoreState = () => {
+      const nav = performance.getEntriesByType('navigation')[0];
+      return !!(nav && (nav.type === 'back_forward' || nav.type === 'reload'));
+    };
+    window.obstagoonLoadState = (key) => {
+      if (!obstagoonShouldRestoreState()) return {};
+      try { return JSON.parse(sessionStorage.getItem('obstagoon:' + key) || '{}'); }
+      catch (e) { return {}; }
+    };
+    window.obstagoonSaveState = (key, state) => {
+      // Private browsing / quota-exceeded throws; degrade silently.
+      try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
+      catch (e) {}
+    };
+    // Shared search+chips+sort filter binding for index pages. Each page
+    // passes its element ids, a haystack-by-chip-kind map (for filtering),
+    // suggestion sources, and optionally a table selector to enable
+    // click-to-sort. State persists in sessionStorage under stateKey. Defined
+    // in <head> so per-page IIFEs in the content can call it.
+    window.obstagoonBindIndexPage = (opts) => {
+      const input = document.getElementById(opts.inputId);
+      const dropdown = document.getElementById(opts.dropdownId);
+      const chipsBox = document.getElementById(opts.chipsBoxId);
+      const empty = opts.emptyId ? document.getElementById(opts.emptyId) : null;
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      const rows = Array.from(document.querySelectorAll(opts.rowsSelector));
+      const haystackByKind = opts.haystackByKind || {};
+      const sources = opts.sources || [];
+      const defaultKind = opts.defaultKind || null;
+      const saved = obstagoonLoadState(opts.stateKey);
+      const chips = (Array.isArray(saved.chips) ? saved.chips : [])
+        .map((c) => c.kind ? c : {kind: defaultKind || 'Pokémon', name: c.name});
+      if (saved.search) input.value = saved.search;
+      let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
+      let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : 'asc';
+      const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const persist = () => obstagoonSaveState(opts.stateKey, {
+        search: input.value, chips,
+        ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
+      });
+
+      const applyFilters = () => {
+        const q = obstagoonNormalize(input.value);
+        let visible = 0;
+        rows.forEach((el) => {
+          const text = obstagoonNormalize(el.dataset.searchText || '');
+          let show = !q || text.includes(q);
+          if (show) for (const c of chips) {
+            const haystack = el.dataset[haystackByKind[c.kind]];
+            if (!haystack || !haystack.includes(`|${c.name}|`)) { show = false; break; }
+          }
+          el.classList.toggle('filter-hidden', !show);
+          if (show) visible += 1;
+        });
+        if (empty) empty.style.display = visible === 0 ? '' : 'none';
+        if (countEl) countEl.textContent = visible;
+        persist();
+      };
+      const renderChips = () => {
+        chipsBox.innerHTML = chips.map((c, i) =>
+          `<span class="filter-chip"><span class="chip-kind">${c.kind}</span> ${esc(c.name)}<button type="button" class="chip-remove" data-idx="${i}" aria-label="Remove">×</button></span>`
+        ).join('');
+        chipsBox.querySelectorAll('.chip-remove').forEach((btn) => btn.addEventListener('click', () => {
+          chips.splice(parseInt(btn.dataset.idx, 10), 1); renderChips(); applyFilters();
+        }));
+      };
+      const renderSuggestions = () => {
+        const q = obstagoonNormalize(input.value);
+        if (q.length < 3) { dropdown.hidden = true; return; }
+        const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
+        const matches = [];
+        for (const [kind, list] of sources) {
+          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+        }
+        if (matches.length === 0) { dropdown.hidden = true; return; }
+        dropdown.innerHTML = matches.slice(0, 30).map((m) =>
+          `<button type="button" class="suggestion" data-kind="${m.kind}" data-name="${esc(m.name)}"><span class="suggestion-kind">${m.kind}</span> ${esc(m.name)}</button>`
+        ).join('');
+        dropdown.hidden = false;
+        dropdown.querySelectorAll('.suggestion').forEach((btn) => btn.addEventListener('click', () => {
+          chips.push({kind: btn.dataset.kind, name: btn.dataset.name});
+          input.value = ''; dropdown.hidden = true; renderChips(); applyFilters();
+        }));
+      };
+      input.addEventListener('input', () => { renderSuggestions(); applyFilters(); });
+      input.addEventListener('focus', renderSuggestions);
+      document.addEventListener('click', (e) => { if (!dropdown.contains(e.target) && e.target !== input) dropdown.hidden = true; });
+      renderChips();
+      applyFilters();
+
+      if (opts.tableSelector) {
+        const tbody = document.querySelector(opts.tableSelector + ' tbody');
+        const headers = Array.from(document.querySelectorAll(opts.tableSelector + ' thead th'));
+        const original = Array.from(tbody.querySelectorAll('tr'));
+        const cellValue = (tr, i, kind) => {
+          const text = tr.cells[i].textContent.trim();
+          if (kind === 'number') { const n = parseFloat(text); return isNaN(n) ? -Infinity : n; }
+          return text.toLowerCase();
+        };
+        const applySort = () => {
+          headers.forEach((h, j) => {
+            h.classList.toggle('sort-asc', activeDir === 'asc' && j === activeCol);
+            h.classList.toggle('sort-desc', activeDir === 'desc' && j === activeCol);
+          });
+          if (!activeDir) { original.forEach((tr) => tbody.appendChild(tr)); return; }
+          const kind = headers[activeCol]?.dataset.sort || 'text';
+          const sign = activeDir === 'asc' ? 1 : -1;
+          [...original].sort((a, b) => {
+            const av = cellValue(a, activeCol, kind), bv = cellValue(b, activeCol, kind);
+            return av < bv ? -sign : av > bv ? sign : 0;
+          }).forEach((tr) => tbody.appendChild(tr));
+        };
+        headers.forEach((th, i) => {
+          if (!th.dataset.sort) return;
+          th.classList.add('sortable');
+          th.addEventListener('click', () => {
+            activeDir = i !== activeCol ? 'asc' : activeDir === 'asc' ? 'desc' : activeDir === 'desc' ? '' : 'asc';
+            activeCol = activeDir ? i : -1;
+            applySort();
+            persist();
+          });
+        });
+        applySort();
+      }
+    };
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../index.html">pokeemerald-expansion</a>
+      <nav>
+        <a href="../pokedex/index.html">Pokédex</a>
+        <a href="../moves/index.html">Moves</a>
+        <a href="../abilities/index.html">Abilities</a>
+        <a href="../forms/index.html">Forms</a>
+        <a href="../encounters/index.html">Encounters</a>
+        <a href="../itemdex/index.html">Itemdex</a>
+        <a href="../trainerdex/index.html">Trainers</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+<h1>Forms</h1>
+  <section class="card">
+    <h2>  <a href="../pokedex/aegislash.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/aegislash/anim_front.png" alt="Aegislash" class="form-sprite-base">    <span>Aegislash</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/aegislash-blade.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/aegislash/blade/anim_front.png" alt="Aegislash (Blade)" class="form-sprite">    <span>Aegislash (Blade)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/audino.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/audino/anim_front.png" alt="Audino" class="form-sprite-base">    <span>Audino</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/audino-mega.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/audino/mega/front.png" alt="Audino (Mega)" class="form-sprite">    <span>Audino (Mega)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/avalugg.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="Avalugg" class="form-sprite-base">    <span>Avalugg</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/avalugg-hisui.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/avalugg/hisui/front.png" alt="Avalugg (Hisuian)" class="form-sprite">    <span>Avalugg (Hisuian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/basculegion.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/basculegion/front.png" alt="Basculegion" class="form-sprite-base">    <span>Basculegion</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/basculegion-f.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/basculegion/f/front.png" alt="Basculegion (F)" class="form-sprite">    <span>Basculegion (F)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/basculin.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/basculin/anim_front.png" alt="Basculin" class="form-sprite-base">    <span>Basculin</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/basculin-blue-striped.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/basculin/blue_striped/anim_front.png" alt="Basculin (Blue-Striped)" class="form-sprite">    <span>Basculin (Blue-Striped)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/basculin-white-striped.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/basculin/white_striped/anim_front.png" alt="Basculin (White-Striped)" class="form-sprite">    <span>Basculin (White-Striped)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/braviary.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/braviary/anim_front.png" alt="Braviary" class="form-sprite-base">    <span>Braviary</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/braviary-hisui.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/braviary/hisui/front.png" alt="Braviary (Hisuian)" class="form-sprite">    <span>Braviary (Hisuian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/burmy.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/burmy/anim_front.png" alt="Burmy" class="form-sprite-base">    <span>Burmy</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/burmy-sandy.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/burmy/sandy/anim_front.png" alt="Burmy (Sandy Cloak)" class="form-sprite">    <span>Burmy (Sandy Cloak)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/burmy-trash.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/burmy/trash/anim_front.png" alt="Burmy (Trash Cloak)" class="form-sprite">    <span>Burmy (Trash Cloak)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/carbink.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/carbink/anim_front.png" alt="Carbink" class="form-sprite-base">    <span>Carbink</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/diancie.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/diancie/anim_front.png" alt="Diancie" class="form-sprite">    <span>Diancie</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/cherrim.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/cherrim/anim_front.png" alt="Cherrim" class="form-sprite-base">    <span>Cherrim</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/cherrim-sunshine.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/cherrim/sunshine/anim_front.png" alt="Cherrim (Sunshine)" class="form-sprite">    <span>Cherrim (Sunshine)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/crustle.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/crustle/anim_front.png" alt="Crustle" class="form-sprite-base">    <span>Crustle</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/crustle-knock-face.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/crustleKnockFace/anim_front.png" alt="Crustle (Knock Face)" class="form-sprite">    <span>Crustle (Knock Face)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/darmanitan.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="Darmanitan" class="form-sprite-base">    <span>Darmanitan</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/darmanitan-zen.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/darmanitan/zen/anim_front.png" alt="Darmanitan (Zen Mode)" class="form-sprite">    <span>Darmanitan (Zen Mode)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/darmanitan-galar.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="Darmanitan (Galarian)" class="form-sprite">    <span>Darmanitan (Galarian)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/darmanitan-galar-zen.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/darmanitan/galar_zen/front.png" alt="Darmanitan (Galarian Zen Mode)" class="form-sprite">    <span>Darmanitan (Galarian Zen Mode)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/darumaka.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/darumaka/anim_front.png" alt="Darumaka" class="form-sprite-base">    <span>Darumaka</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/darumaka-galar.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/darumaka/galar/front.png" alt="Darumaka (Galarian)" class="form-sprite">    <span>Darumaka (Galarian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/decidueye.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/decidueye/anim_front.png" alt="Decidueye" class="form-sprite-base">    <span>Decidueye</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/decidueye-hisui.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/decidueye/hisui/front.png" alt="Decidueye (Hisuian)" class="form-sprite">    <span>Decidueye (Hisuian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/deerling.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/deerling/anim_front.png" alt="Deerling" class="form-sprite-base">    <span>Deerling</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/deerling-summer.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/deerling/summer/anim_front.png" alt="Deerling (Summer)" class="form-sprite">    <span>Deerling (Summer)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/deerling-autumn.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/deerling/autumn/anim_front.png" alt="Deerling (Autumn)" class="form-sprite">    <span>Deerling (Autumn)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/deerling-winter.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/deerling/winter/anim_front.png" alt="Deerling (Winter)" class="form-sprite">    <span>Deerling (Winter)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/drifblim.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/drifblim/anim_front.png" alt="Drifblim" class="form-sprite-base">    <span>Drifblim</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/drifblim-yamask.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/drifblim/DrifblimYamask/anim_front.png" alt="Drifblim (Grasping)" class="form-sprite">    <span>Drifblim (Grasping)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/drifblim-litwick.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/drifblim/DrifblimLitwick/anim_front.png" alt="Drifblim (Gripping)" class="form-sprite">    <span>Drifblim (Gripping)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/flabebe.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/flabebe/anim_front.png" alt="Flabébé" class="form-sprite-base">    <span>Flabébé</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/flabebe-yellow.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/flabebe/yellow/anim_front.png" alt="Flabébé (Yellow Flower)" class="form-sprite">    <span>Flabébé (Yellow Flower)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/flabebe-orange.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/flabebe/orange/anim_front.png" alt="Flabébé (Orange Flower)" class="form-sprite">    <span>Flabébé (Orange Flower)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/flabebe-blue.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/flabebe/blue/anim_front.png" alt="Flabébé (Blue Flower)" class="form-sprite">    <span>Flabébé (Blue Flower)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/flabebe-white.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/flabebe/white/anim_front.png" alt="Flabébé (White Flower)" class="form-sprite">    <span>Flabébé (White Flower)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/floette.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/floette/anim_front.png" alt="Floette" class="form-sprite-base">    <span>Floette</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/floette-yellow.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/floette/yellow/anim_front.png" alt="Floette (Yellow Flower)" class="form-sprite">    <span>Floette (Yellow Flower)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/floette-orange.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/floette/orange/anim_front.png" alt="Floette (Orange Flower)" class="form-sprite">    <span>Floette (Orange Flower)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/floette-blue.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/floette/blue/anim_front.png" alt="Floette (Blue Flower)" class="form-sprite">    <span>Floette (Blue Flower)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/floette-white.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/floette/white/anim_front.png" alt="Floette (White Flower)" class="form-sprite">    <span>Floette (White Flower)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/florges.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/florges/anim_front.png" alt="Florges" class="form-sprite-base">    <span>Florges</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/florges-yellow.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/florges/yellow/anim_front.png" alt="Florges (Yellow Flower)" class="form-sprite">    <span>Florges (Yellow Flower)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/florges-orange.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/florges/orange/anim_front.png" alt="Florges (Orange Flower)" class="form-sprite">    <span>Florges (Orange Flower)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/florges-blue.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/florges/blue/anim_front.png" alt="Florges (Blue Flower)" class="form-sprite">    <span>Florges (Blue Flower)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/florges-white.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/florges/white/anim_front.png" alt="Florges (White Flower)" class="form-sprite">    <span>Florges (White Flower)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/furfrou.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/furfrou/anim_front.png" alt="Furfrou" class="form-sprite-base">    <span>Furfrou</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/furfrou-heart.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/furfrou/heart/anim_front.png" alt="Furfrou (Heart Trim)" class="form-sprite">    <span>Furfrou (Heart Trim)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/furfrou-star.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/furfrou/star/anim_front.png" alt="Furfrou (Star Trim)" class="form-sprite">    <span>Furfrou (Star Trim)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/furfrou-diamond.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/furfrou/diamond/anim_front.png" alt="Furfrou (Diamond Trim)" class="form-sprite">    <span>Furfrou (Diamond Trim)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/furfrou-debutante.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/furfrou/debutante/anim_front.png" alt="Furfrou (Debutante Trim)" class="form-sprite">    <span>Furfrou (Debutante Trim)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/furfrou-matron.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/furfrou/matron/anim_front.png" alt="Furfrou (Matron Trim)" class="form-sprite">    <span>Furfrou (Matron Trim)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/furfrou-dandy.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/furfrou/dandy/anim_front.png" alt="Furfrou (Dandy Trim)" class="form-sprite">    <span>Furfrou (Dandy Trim)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/furfrou-la-reine.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/furfrou/la_reine/anim_front.png" alt="Furfrou (La Reine Trim)" class="form-sprite">    <span>Furfrou (La Reine Trim)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/furfrou-kabuki.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/furfrou/kabuki/anim_front.png" alt="Furfrou (Kabuki Trim)" class="form-sprite">    <span>Furfrou (Kabuki Trim)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/furfrou-pharaoh.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/furfrou/pharaoh/anim_front.png" alt="Furfrou (Pharaoh Trim)" class="form-sprite">    <span>Furfrou (Pharaoh Trim)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/gastrodon.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/gastrodon/anim_front.png" alt="Gastrodon" class="form-sprite-base">    <span>Gastrodon</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/gastrodon-east.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/gastrodon/east/anim_front.png" alt="Gastrodon (East Sea)" class="form-sprite">    <span>Gastrodon (East Sea)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/genesect.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/genesect/anim_front.png" alt="Genesect" class="form-sprite-base">    <span>Genesect</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/genesect-douse.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/genesect/douse_drive/anim_front.png" alt="Genesect (Douse Drive)" class="form-sprite">    <span>Genesect (Douse Drive)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/genesect-shock.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/genesect/shock_drive/anim_front.png" alt="Genesect (Shock Drive)" class="form-sprite">    <span>Genesect (Shock Drive)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/genesect-burn.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/genesect/burn_drive/anim_front.png" alt="Genesect (Burn Drive)" class="form-sprite">    <span>Genesect (Burn Drive)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/genesect-chill.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/genesect/chill_drive/anim_front.png" alt="Genesect (Chill Drive)" class="form-sprite">    <span>Genesect (Chill Drive)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/goodra.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/goodra/anim_front.png" alt="Goodra" class="form-sprite-base">    <span>Goodra</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/goodra-hisui.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/goodra/hisui/front.png" alt="Goodra (Hisuian)" class="form-sprite">    <span>Goodra (Hisuian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/gourgeist.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/gourgeist/anim_front.png" alt="Gourgeist" class="form-sprite-base">    <span>Gourgeist</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/gourgeist-small.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/gourgeist/small/anim_front.png" alt="Gourgeist (Small Size)" class="form-sprite">    <span>Gourgeist (Small Size)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/gourgeist-large.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/gourgeist/large/anim_front.png" alt="Gourgeist (Large Size)" class="form-sprite">    <span>Gourgeist (Large Size)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/gourgeist-super.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/gourgeist/super/anim_front.png" alt="Gourgeist (Super Size)" class="form-sprite">    <span>Gourgeist (Super Size)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/greninja.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/greninja/anim_front.png" alt="Greninja" class="form-sprite-base">    <span>Greninja</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/greninja-ash.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/greninja/ash/anim_front.png" alt="Greninja (Ash)" class="form-sprite">    <span>Greninja (Ash)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/kyurem.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/kyurem/anim_front.png" alt="Kyurem" class="form-sprite-base">    <span>Kyurem</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/kyurem-white.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/kyurem/white/anim_front.png" alt="Kyurem (White)" class="form-sprite">    <span>Kyurem (White)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/kyurem-black.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/kyurem/black/anim_front.png" alt="Kyurem (Black)" class="form-sprite">    <span>Kyurem (Black)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/landorus.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/landorus/anim_front.png" alt="Landorus" class="form-sprite-base">    <span>Landorus</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/landorus-therian.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/landorus/therian/anim_front.png" alt="Landorus (Therian)" class="form-sprite">    <span>Landorus (Therian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/lilligant.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/lilligant/anim_front.png" alt="Lilligant" class="form-sprite-base">    <span>Lilligant</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/lilligant-hisui.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/lilligant/hisui/front.png" alt="Lilligant (Hisuian)" class="form-sprite">    <span>Lilligant (Hisuian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/lycanroc.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/lycanroc/anim_front.png" alt="Lycanroc" class="form-sprite-base">    <span>Lycanroc</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/lycanroc-midnight.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/lycanroc/midnight/anim_front.png" alt="Lycanroc (Midnight)" class="form-sprite">    <span>Lycanroc (Midnight)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/lycanroc-dusk.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/lycanroc/dusk/anim_front.png" alt="Lycanroc (Dusk)" class="form-sprite">    <span>Lycanroc (Dusk)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/meowstic.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/meowstic/anim_front.png" alt="Meowstic" class="form-sprite-base">    <span>Meowstic</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/meowstic-f.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/meowstic/f/anim_front.png" alt="Meowstic (F)" class="form-sprite">    <span>Meowstic (F)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/mimikyu.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/mimikyu/front.png" alt="Mimikyu" class="form-sprite-base">    <span>Mimikyu</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/mimikyu-busted.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/mimikyu/busted/front.png" alt="Mimikyu (Busted)" class="form-sprite">    <span>Mimikyu (Busted)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/minior-red.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/minior/front.png" alt="Minior" class="form-sprite-base">    <span>Minior</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/minior-core.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/minior/core/red/front.png" alt="Minior (Red Core)" class="form-sprite">    <span>Minior (Red Core)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/minior-core-orange.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/minior/core/orange/front.png" alt="Minior (Orange Core)" class="form-sprite">    <span>Minior (Orange Core)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/minior-core-yellow.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/minior/core/yellow/front.png" alt="Minior (Yellow Core)" class="form-sprite">    <span>Minior (Yellow Core)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/minior-core-green.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/minior/core/green/front.png" alt="Minior (Green Core)" class="form-sprite">    <span>Minior (Green Core)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/minior-core-blue.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/minior/core/blue/front.png" alt="Minior (Blue Core)" class="form-sprite">    <span>Minior (Blue Core)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/minior-core-indigo.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/minior/core/indigo/front.png" alt="Minior (Indigo Core)" class="form-sprite">    <span>Minior (Indigo Core)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/minior-core-violet.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/minior/core/violet/front.png" alt="Minior (Violet Core)" class="form-sprite">    <span>Minior (Violet Core)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/oricorio.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/oricorio/front.png" alt="Oricorio" class="form-sprite-base">    <span>Oricorio</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/oricorio-pom-pom.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/oricorio/pom_pom/front.png" alt="Oricorio (Pom-Pom Style)" class="form-sprite">    <span>Oricorio (Pom-Pom Style)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/oricorio-pau.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/oricorio/pau/front.png" alt="Oricorio (Pa&#39;u Style)" class="form-sprite">    <span>Oricorio (Pa&#39;u Style)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/oricorio-sensu.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/oricorio/sensu/front.png" alt="Oricorio (Sensu Style)" class="form-sprite">    <span>Oricorio (Sensu Style)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/pumpkaboo.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/pumpkaboo/anim_front.png" alt="Pumpkaboo" class="form-sprite-base">    <span>Pumpkaboo</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/pumpkaboo-small.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/pumpkaboo/small/anim_front.png" alt="Pumpkaboo (Small Size)" class="form-sprite">    <span>Pumpkaboo (Small Size)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/pumpkaboo-large.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/pumpkaboo/large/anim_front.png" alt="Pumpkaboo (Large Size)" class="form-sprite">    <span>Pumpkaboo (Large Size)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/pumpkaboo-super.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/pumpkaboo/super/anim_front.png" alt="Pumpkaboo (Super Size)" class="form-sprite">    <span>Pumpkaboo (Super Size)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/rockruff.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/rockruff/anim_front.png" alt="Rockruff" class="form-sprite-base">    <span>Rockruff</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/rockruff-own-tempo.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/rockruff/anim_front.png" alt="Rockruff (Own Tempo)" class="form-sprite">    <span>Rockruff (Own Tempo)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/rotom.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/rotom/anim_front.png" alt="Rotom" class="form-sprite-base">    <span>Rotom</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/rotom-heat.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/rotom/heat/anim_front.png" alt="Rotom (Heat)" class="form-sprite">    <span>Rotom (Heat)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/rotom-wash.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/rotom/wash/anim_front.png" alt="Rotom (Wash)" class="form-sprite">    <span>Rotom (Wash)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/rotom-frost.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/rotom/frost/anim_front.png" alt="Rotom (Frost)" class="form-sprite">    <span>Rotom (Frost)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/rotom-fan.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/rotom/fan/anim_front.png" alt="Rotom (Fan)" class="form-sprite">    <span>Rotom (Fan)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/rotom-mow.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/rotom/mow/anim_front.png" alt="Rotom (Mow)" class="form-sprite">    <span>Rotom (Mow)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/samurott.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/samurott/anim_front.png" alt="Samurott" class="form-sprite-base">    <span>Samurott</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/samurott-hisui.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/samurott/hisui/front.png" alt="Samurott (Hisuian)" class="form-sprite">    <span>Samurott (Hisuian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/sawsbuck.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/sawsbuck/anim_front.png" alt="Sawsbuck" class="form-sprite-base">    <span>Sawsbuck</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/sawsbuck-summer.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/sawsbuck/summer/anim_front.png" alt="Sawsbuck (Summer)" class="form-sprite">    <span>Sawsbuck (Summer)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/sawsbuck-autumn.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/sawsbuck/autumn/anim_front.png" alt="Sawsbuck (Autumn)" class="form-sprite">    <span>Sawsbuck (Autumn)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/sawsbuck-winter.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/sawsbuck/winter/anim_front.png" alt="Sawsbuck (Winter)" class="form-sprite">    <span>Sawsbuck (Winter)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/shellos.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/shellos/anim_front.png" alt="Shellos" class="form-sprite-base">    <span>Shellos</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/shellos-east.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/shellos/east/anim_front.png" alt="Shellos (East Sea)" class="form-sprite">    <span>Shellos (East Sea)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/silvally.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/front.png" alt="Silvally" class="form-sprite-base">    <span>Silvally</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/silvally-fighting.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/fighting/front.png" alt="Silvally (Type: Fighting)" class="form-sprite">    <span>Silvally (Type: Fighting)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/silvally-flying.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/flying/front.png" alt="Silvally (Type: Flying)" class="form-sprite">    <span>Silvally (Type: Flying)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/silvally-poison.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/poison/front.png" alt="Silvally (Type: Poison)" class="form-sprite">    <span>Silvally (Type: Poison)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/silvally-ground.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/ground/front.png" alt="Silvally (Type: Ground)" class="form-sprite">    <span>Silvally (Type: Ground)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/silvally-rock.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/rock/front.png" alt="Silvally (Type: Rock)" class="form-sprite">    <span>Silvally (Type: Rock)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/silvally-bug.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/bug/front.png" alt="Silvally (Type: Bug)" class="form-sprite">    <span>Silvally (Type: Bug)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/silvally-ghost.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/ghost/front.png" alt="Silvally (Type: Ghost)" class="form-sprite">    <span>Silvally (Type: Ghost)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/silvally-steel.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/steel/front.png" alt="Silvally (Type: Steel)" class="form-sprite">    <span>Silvally (Type: Steel)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/silvally-fire.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/fire/front.png" alt="Silvally (Type: Fire)" class="form-sprite">    <span>Silvally (Type: Fire)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/silvally-water.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/water/front.png" alt="Silvally (Type: Water)" class="form-sprite">    <span>Silvally (Type: Water)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/silvally-grass.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/grass/front.png" alt="Silvally (Type: Grass)" class="form-sprite">    <span>Silvally (Type: Grass)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/silvally-electric.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/electric/front.png" alt="Silvally (Type: Electric)" class="form-sprite">    <span>Silvally (Type: Electric)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/silvally-psychic.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/psychic/front.png" alt="Silvally (Type: Psychic)" class="form-sprite">    <span>Silvally (Type: Psychic)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/silvally-ice.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/ice/front.png" alt="Silvally (Type: Ice)" class="form-sprite">    <span>Silvally (Type: Ice)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/silvally-dragon.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/dragon/front.png" alt="Silvally (Type: Dragon)" class="form-sprite">    <span>Silvally (Type: Dragon)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/silvally-dark.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/dark/front.png" alt="Silvally (Type: Dark)" class="form-sprite">    <span>Silvally (Type: Dark)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/silvally-fairy.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/silvally/fairy/front.png" alt="Silvally (Type: Fairy)" class="form-sprite">    <span>Silvally (Type: Fairy)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/simipour.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/simipour/anim_front.png" alt="Simipour" class="form-sprite-base">    <span>Simipour</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/simisage.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/simisage/anim_front.png" alt="Simisage" class="form-sprite">    <span>Simisage</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/simisage.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/simisage/anim_front.png" alt="Simisage" class="form-sprite-base">    <span>Simisage</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/simisear.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/simisear/anim_front.png" alt="Simisear" class="form-sprite">    <span>Simisear</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/simisear.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/simisear/anim_front.png" alt="Simisear" class="form-sprite-base">    <span>Simisear</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/simipour.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/simipour/anim_front.png" alt="Simipour" class="form-sprite">    <span>Simipour</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/sliggoo.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/sliggoo/anim_front.png" alt="Sliggoo" class="form-sprite-base">    <span>Sliggoo</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/sliggoo-hisui.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/sliggoo/hisui/front.png" alt="Sliggoo (Hisuian)" class="form-sprite">    <span>Sliggoo (Hisuian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/stunfisk.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/stunfisk/anim_front.png" alt="Stunfisk" class="form-sprite-base">    <span>Stunfisk</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/stunfisk-galar.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/stunfisk/galar/front.png" alt="Stunfisk (Galarian)" class="form-sprite">    <span>Stunfisk (Galarian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/thundurus.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/thundurus/anim_front.png" alt="Thundurus" class="form-sprite-base">    <span>Thundurus</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/thundurus-therian.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/thundurus/therian/anim_front.png" alt="Thundurus (Therian)" class="form-sprite">    <span>Thundurus (Therian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/tornadus.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/tornadus/anim_front.png" alt="Tornadus" class="form-sprite-base">    <span>Tornadus</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/tornadus-therian.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/tornadus/therian/anim_front.png" alt="Tornadus (Therian)" class="form-sprite">    <span>Tornadus (Therian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/vivillon.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/anim_front.png" alt="Vivillon" class="form-sprite-base">    <span>Vivillon</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/vivillon-polar.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/polar/anim_front.png" alt="Vivillon (Polar Pattern)" class="form-sprite">    <span>Vivillon (Polar Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-tundra.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/tundra/anim_front.png" alt="Vivillon (Tundra Pattern)" class="form-sprite">    <span>Vivillon (Tundra Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-continental.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/continental/anim_front.png" alt="Vivillon (Continental Pattern)" class="form-sprite">    <span>Vivillon (Continental Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-garden.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/garden/anim_front.png" alt="Vivillon (Garden Pattern)" class="form-sprite">    <span>Vivillon (Garden Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-elegant.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/elegant/anim_front.png" alt="Vivillon (Elegant Pattern)" class="form-sprite">    <span>Vivillon (Elegant Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-meadow.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/meadow/anim_front.png" alt="Vivillon (Meadow Pattern)" class="form-sprite">    <span>Vivillon (Meadow Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-modern.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/modern/anim_front.png" alt="Vivillon (Modern Pattern)" class="form-sprite">    <span>Vivillon (Modern Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-marine.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/marine/anim_front.png" alt="Vivillon (Marine Pattern)" class="form-sprite">    <span>Vivillon (Marine Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-archipelago.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/archipelago/anim_front.png" alt="Vivillon (Archipelago Pattern)" class="form-sprite">    <span>Vivillon (Archipelago Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-high-plains.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/high_plains/anim_front.png" alt="Vivillon (High Plains Pattern)" class="form-sprite">    <span>Vivillon (High Plains Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-sandstorm.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/sandstorm/anim_front.png" alt="Vivillon (Sandstorm Pattern)" class="form-sprite">    <span>Vivillon (Sandstorm Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-river.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/river/anim_front.png" alt="Vivillon (River Pattern)" class="form-sprite">    <span>Vivillon (River Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-monsoon.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/monsoon/anim_front.png" alt="Vivillon (Monsoon Pattern)" class="form-sprite">    <span>Vivillon (Monsoon Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-savanna.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/savanna/anim_front.png" alt="Vivillon (Savanna Pattern)" class="form-sprite">    <span>Vivillon (Savanna Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-sun.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/sun/anim_front.png" alt="Vivillon (Sun Pattern)" class="form-sprite">    <span>Vivillon (Sun Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-ocean.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/ocean/anim_front.png" alt="Vivillon (Ocean Pattern)" class="form-sprite">    <span>Vivillon (Ocean Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-jungle.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/jungle/anim_front.png" alt="Vivillon (Jungle Pattern)" class="form-sprite">    <span>Vivillon (Jungle Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-fancy.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/fancy/anim_front.png" alt="Vivillon (Fancy Pattern)" class="form-sprite">    <span>Vivillon (Fancy Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/vivillon-pokeball.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/vivillon/poke_ball/anim_front.png" alt="Vivillon (Poké Ball Pattern)" class="form-sprite">    <span>Vivillon (Poké Ball Pattern)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/wishiwashi.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/wishiwashi/front.png" alt="Wishiwashi" class="form-sprite-base">    <span>Wishiwashi</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/wishiwashi-school.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/wishiwashi/school/front.png" alt="Wishiwashi (School)" class="form-sprite">    <span>Wishiwashi (School)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/wishiwashi-mech.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/wishiwashi/mech/front.png" alt="Wishiwashi (Mech)" class="form-sprite">    <span>Wishiwashi (Mech)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/wormadam.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/wormadam/anim_front.png" alt="Wormadam" class="form-sprite-base">    <span>Wormadam</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/wormadam-sandy.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/wormadam/sandy/anim_front.png" alt="Wormadam (Sandy Cloak)" class="form-sprite">    <span>Wormadam (Sandy Cloak)</span>
+  </a>
+</li>
+        <li>  <a href="../pokedex/wormadam-trash.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/wormadam/trash/anim_front.png" alt="Wormadam (Trash Cloak)" class="form-sprite">    <span>Wormadam (Trash Cloak)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/yamask.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/yamask/anim_front.png" alt="Yamask" class="form-sprite-base">    <span>Yamask</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/yamask-galar.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/yamask/galar/front.png" alt="Yamask (Galarian)" class="form-sprite">    <span>Yamask (Galarian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/zoroark.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/zoroark/anim_front.png" alt="Zoroark" class="form-sprite-base">    <span>Zoroark</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/zoroark-hisui.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/zoroark/hisui/front.png" alt="Zoroark (Hisuian)" class="form-sprite">    <span>Zoroark (Hisuian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>  <a href="../pokedex/zorua.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/zorua/anim_front.png" alt="Zorua" class="form-sprite-base">    <span>Zorua</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/zorua-hisui.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/zorua/hisui/front.png" alt="Zorua (Hisuian)" class="form-sprite">    <span>Zorua (Hisuian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  </main>
+  <script>
+    function obstagoonBindFilters() {
+      const inputs = document.querySelectorAll('[data-filter-input]');
+      inputs.forEach((input) => {
+        const selector = input.getAttribute('data-filter-target');
+        const emptyTextSelector = input.getAttribute('data-filter-empty');
+        const countSelector = input.getAttribute('data-filter-count');
+        const items = Array.from(document.querySelectorAll(selector || ''));
+        const emptyNode = emptyTextSelector ? document.querySelector(emptyTextSelector) : null;
+        const countNode = countSelector ? document.querySelector(countSelector) : null;
+        const stateKey = input.id || selector || '';
+        const apply = () => {
+          const query = obstagoonNormalize(input.value);
+          let visible = 0;
+          items.forEach((item) => {
+            const haystack = obstagoonNormalize(item.getAttribute('data-search-text') || item.textContent || '');
+            const match = !query || haystack.includes(query);
+            item.classList.toggle('filter-hidden', !match);
+            if (match) visible += 1;
+          });
+          if (emptyNode) emptyNode.style.display = visible === 0 ? '' : 'none';
+          if (countNode) countNode.textContent = visible;
+          if (stateKey) obstagoonSaveState(stateKey, {search: input.value});
+        };
+        if (stateKey) {
+          const saved = obstagoonLoadState(stateKey);
+          if (saved.search) input.value = saved.search;
+        }
+        input.addEventListener('input', apply);
+        apply();
+      });
+    }
+    function obstagoonBindRowLinks() {
+      // Elements with data-href behave as buttons: clicking anywhere navigates,
+      // except clicks on nested links/buttons which retain their own behavior
+      // (e.g. ability links inside a pokedex row stay individually clickable).
+      document.querySelectorAll('tr[data-href], li[data-href]').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('a, button')) return;
+          window.location = row.getAttribute('data-href');
+        });
+      });
+    }
+    function obstagoonBindLinkedHotspots() {
+      // Mirror hover between encounter-map hotspots and the section's link-grid
+      // tile by matching href. Hovering one outlines the other so it's clear
+      // which spot on the map corresponds to which list entry.
+      const partners = new Map();
+      document.querySelectorAll('.region-map a[href], .link-grid > li > a[href]').forEach((a) => {
+        const key = a.getAttribute('href');
+        if (!partners.has(key)) partners.set(key, []);
+        partners.get(key).push(a);
+      });
+      partners.forEach((group) => {
+        if (group.length < 2) return;
+        group.forEach((el) => {
+          el.addEventListener('mouseenter', () => group.forEach((other) => { if (other !== el) other.classList.add('linked-hover'); }));
+          el.addEventListener('mouseleave', () => group.forEach((other) => other.classList.remove('linked-hover')));
+        });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+    } else {
+      obstagoonBindFilters();
+      obstagoonBindRowLinks();
+      obstagoonBindLinkedHotspots();
+    }
+  </script>
+</body>
+</html>

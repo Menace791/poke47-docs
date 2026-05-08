@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aromatherapy - pokeemerald-expansion</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script>
+    // Lowercase, strip diacritics (é→e), and drop non-alphanumerics so a query
+    // like "basculinwhitestriped" still matches "Basculin (White-Striped)".
+    // Defined in <head> so per-page IIFEs in the content can call it.
+    window.obstagoonNormalize = (s) => (s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+    // Per-tab index state (search, chips, sort) restored on back/forward and
+    // reload only — fresh clicks of nav links start clean.
+    window.obstagoonShouldRestoreState = () => {
+      const nav = performance.getEntriesByType('navigation')[0];
+      return !!(nav && (nav.type === 'back_forward' || nav.type === 'reload'));
+    };
+    window.obstagoonLoadState = (key) => {
+      if (!obstagoonShouldRestoreState()) return {};
+      try { return JSON.parse(sessionStorage.getItem('obstagoon:' + key) || '{}'); }
+      catch (e) { return {}; }
+    };
+    window.obstagoonSaveState = (key, state) => {
+      // Private browsing / quota-exceeded throws; degrade silently.
+      try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
+      catch (e) {}
+    };
+    // Shared search+chips+sort filter binding for index pages. Each page
+    // passes its element ids, a haystack-by-chip-kind map (for filtering),
+    // suggestion sources, and optionally a table selector to enable
+    // click-to-sort. State persists in sessionStorage under stateKey. Defined
+    // in <head> so per-page IIFEs in the content can call it.
+    window.obstagoonBindIndexPage = (opts) => {
+      const input = document.getElementById(opts.inputId);
+      const dropdown = document.getElementById(opts.dropdownId);
+      const chipsBox = document.getElementById(opts.chipsBoxId);
+      const empty = opts.emptyId ? document.getElementById(opts.emptyId) : null;
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      const rows = Array.from(document.querySelectorAll(opts.rowsSelector));
+      const haystackByKind = opts.haystackByKind || {};
+      const sources = opts.sources || [];
+      const defaultKind = opts.defaultKind || null;
+      const saved = obstagoonLoadState(opts.stateKey);
+      const chips = (Array.isArray(saved.chips) ? saved.chips : [])
+        .map((c) => c.kind ? c : {kind: defaultKind || 'Pokémon', name: c.name});
+      if (saved.search) input.value = saved.search;
+      let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
+      let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : 'asc';
+      const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const persist = () => obstagoonSaveState(opts.stateKey, {
+        search: input.value, chips,
+        ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
+      });
+
+      const applyFilters = () => {
+        const q = obstagoonNormalize(input.value);
+        let visible = 0;
+        rows.forEach((el) => {
+          const text = obstagoonNormalize(el.dataset.searchText || '');
+          let show = !q || text.includes(q);
+          if (show) for (const c of chips) {
+            const haystack = el.dataset[haystackByKind[c.kind]];
+            if (!haystack || !haystack.includes(`|${c.name}|`)) { show = false; break; }
+          }
+          el.classList.toggle('filter-hidden', !show);
+          if (show) visible += 1;
+        });
+        if (empty) empty.style.display = visible === 0 ? '' : 'none';
+        if (countEl) countEl.textContent = visible;
+        persist();
+      };
+      const renderChips = () => {
+        chipsBox.innerHTML = chips.map((c, i) =>
+          `<span class="filter-chip"><span class="chip-kind">${c.kind}</span> ${esc(c.name)}<button type="button" class="chip-remove" data-idx="${i}" aria-label="Remove">×</button></span>`
+        ).join('');
+        chipsBox.querySelectorAll('.chip-remove').forEach((btn) => btn.addEventListener('click', () => {
+          chips.splice(parseInt(btn.dataset.idx, 10), 1); renderChips(); applyFilters();
+        }));
+      };
+      const renderSuggestions = () => {
+        const q = obstagoonNormalize(input.value);
+        if (q.length < 3) { dropdown.hidden = true; return; }
+        const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
+        const matches = [];
+        for (const [kind, list] of sources) {
+          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+        }
+        if (matches.length === 0) { dropdown.hidden = true; return; }
+        dropdown.innerHTML = matches.slice(0, 30).map((m) =>
+          `<button type="button" class="suggestion" data-kind="${m.kind}" data-name="${esc(m.name)}"><span class="suggestion-kind">${m.kind}</span> ${esc(m.name)}</button>`
+        ).join('');
+        dropdown.hidden = false;
+        dropdown.querySelectorAll('.suggestion').forEach((btn) => btn.addEventListener('click', () => {
+          chips.push({kind: btn.dataset.kind, name: btn.dataset.name});
+          input.value = ''; dropdown.hidden = true; renderChips(); applyFilters();
+        }));
+      };
+      input.addEventListener('input', () => { renderSuggestions(); applyFilters(); });
+      input.addEventListener('focus', renderSuggestions);
+      document.addEventListener('click', (e) => { if (!dropdown.contains(e.target) && e.target !== input) dropdown.hidden = true; });
+      renderChips();
+      applyFilters();
+
+      if (opts.tableSelector) {
+        const tbody = document.querySelector(opts.tableSelector + ' tbody');
+        const headers = Array.from(document.querySelectorAll(opts.tableSelector + ' thead th'));
+        const original = Array.from(tbody.querySelectorAll('tr'));
+        const cellValue = (tr, i, kind) => {
+          const text = tr.cells[i].textContent.trim();
+          if (kind === 'number') { const n = parseFloat(text); return isNaN(n) ? -Infinity : n; }
+          return text.toLowerCase();
+        };
+        const applySort = () => {
+          headers.forEach((h, j) => {
+            h.classList.toggle('sort-asc', activeDir === 'asc' && j === activeCol);
+            h.classList.toggle('sort-desc', activeDir === 'desc' && j === activeCol);
+          });
+          if (!activeDir) { original.forEach((tr) => tbody.appendChild(tr)); return; }
+          const kind = headers[activeCol]?.dataset.sort || 'text';
+          const sign = activeDir === 'asc' ? 1 : -1;
+          [...original].sort((a, b) => {
+            const av = cellValue(a, activeCol, kind), bv = cellValue(b, activeCol, kind);
+            return av < bv ? -sign : av > bv ? sign : 0;
+          }).forEach((tr) => tbody.appendChild(tr));
+        };
+        headers.forEach((th, i) => {
+          if (!th.dataset.sort) return;
+          th.classList.add('sortable');
+          th.addEventListener('click', () => {
+            activeDir = i !== activeCol ? 'asc' : activeDir === 'asc' ? 'desc' : activeDir === 'desc' ? '' : 'asc';
+            activeCol = activeDir ? i : -1;
+            applySort();
+            persist();
+          });
+        });
+        applySort();
+      }
+    };
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../index.html">pokeemerald-expansion</a>
+      <nav>
+        <a href="../pokedex/index.html">Pokédex</a>
+        <a href="../moves/index.html">Moves</a>
+        <a href="../abilities/index.html">Abilities</a>
+        <a href="../forms/index.html">Forms</a>
+        <a href="../encounters/index.html">Encounters</a>
+        <a href="../itemdex/index.html">Itemdex</a>
+        <a href="../trainerdex/index.html">Trainers</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+<h1>Aromatherapy</h1>
+<p class="muted">MOVE_AROMATHERAPY</p>
+<div class="card">
+  <p><strong>Type:</strong> <span class="type-badge type-grass">Grass</span></p>
+  <p><strong>Power:</strong> —</p>
+  <p><strong>Accuracy:</strong> —</p>
+  <p><strong>PP:</strong> 5</p>
+  <p><strong>Category:</strong> Status <img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"></p>
+  <p><strong>Flags:</strong> Snatchable</p>
+  <p><strong>Description:</strong> Heals all status problems with a soothing scent.</p>
+</div>
+<section class="card">
+  <h2>Learned by <span class="muted small-text">31</span></h2>
+  <ul class="cross-link-grid">
+<li><a href="../pokedex/aromatisse.html">
+<img src="../assets/game/graphics/pokemon/aromatisse/anim_front.png" alt="" class="sprite">  <span class="name">Aromatisse</span>
+</a></li><li><a href="../pokedex/audino.html">
+<img src="../assets/game/graphics/pokemon/audino/anim_front.png" alt="" class="sprite">  <span class="name">Audino</span>
+</a></li><li><a href="../pokedex/bounsweet.html">
+<img src="../assets/game/graphics/pokemon/bounsweet/front.png" alt="" class="sprite">  <span class="name">Bounsweet</span>
+</a></li><li><a href="../pokedex/cherrim.html">
+<img src="../assets/game/graphics/pokemon/cherrim/anim_front.png" alt="" class="sprite">  <span class="name">Cherrim</span>
+</a></li><li><a href="../pokedex/cherubi.html">
+<img src="../assets/game/graphics/pokemon/cherubi/anim_front.png" alt="" class="sprite">  <span class="name">Cherubi</span>
+</a></li><li><a href="../pokedex/comfey.html">
+<img src="../assets/game/graphics/pokemon/comfey/front.png" alt="" class="sprite">  <span class="name">Comfey</span>
+</a></li><li><a href="../pokedex/cutiefly.html">
+<img src="../assets/game/graphics/pokemon/cutiefly/anim_front.png" alt="" class="sprite">  <span class="name">Cutiefly</span>
+</a></li><li><a href="../pokedex/deerling.html">
+<img src="../assets/game/graphics/pokemon/deerling/anim_front.png" alt="" class="sprite">  <span class="name">Deerling</span>
+</a></li><li><a href="../pokedex/flabebe.html">
+<img src="../assets/game/graphics/pokemon/flabebe/anim_front.png" alt="" class="sprite">  <span class="name">Flabébé</span>
+</a></li><li><a href="../pokedex/floette.html">
+<img src="../assets/game/graphics/pokemon/floette/anim_front.png" alt="" class="sprite">  <span class="name">Floette</span>
+</a></li><li><a href="../pokedex/florges.html">
+<img src="../assets/game/graphics/pokemon/florges/anim_front.png" alt="" class="sprite">  <span class="name">Florges</span>
+</a></li><li><a href="../pokedex/fomantis.html">
+<img src="../assets/game/graphics/pokemon/fomantis/front.png" alt="" class="sprite">  <span class="name">Fomantis</span>
+</a></li><li><a href="../pokedex/leavanny.html">
+<img src="../assets/game/graphics/pokemon/leavanny/anim_front.png" alt="" class="sprite">  <span class="name">Leavanny</span>
+</a></li><li><a href="../pokedex/lilligant.html">
+<img src="../assets/game/graphics/pokemon/lilligant/anim_front.png" alt="" class="sprite">  <span class="name">Lilligant</span>
+</a></li><li><a href="../pokedex/lilligant-hisui.html">
+<img src="../assets/game/graphics/pokemon/lilligant/hisui/front.png" alt="" class="sprite">  <span class="name">Lilligant (Hisuian)</span>
+</a></li><li><a href="../pokedex/lurantis.html">
+<img src="../assets/game/graphics/pokemon/lurantis/anim_front.png" alt="" class="sprite">  <span class="name">Lurantis</span>
+</a></li><li><a href="../pokedex/munna.html">
+<img src="../assets/game/graphics/pokemon/munna/anim_front.png" alt="" class="sprite">  <span class="name">Munna</span>
+</a></li><li><a href="../pokedex/musharna.html">
+<img src="../assets/game/graphics/pokemon/musharna/anim_front.png" alt="" class="sprite">  <span class="name">Musharna</span>
+</a></li><li><a href="../pokedex/petilil.html">
+<img src="../assets/game/graphics/pokemon/petilil/anim_front.png" alt="" class="sprite">  <span class="name">Petilil</span>
+</a></li><li><a href="../pokedex/ribombee.html">
+<img src="../assets/game/graphics/pokemon/ribombee/anim_front.png" alt="" class="sprite">  <span class="name">Ribombee</span>
+</a></li><li><a href="../pokedex/roselia.html">
+<img src="../assets/game/graphics/pokemon/roselia/anim_front.png" alt="" class="sprite">  <span class="name">Roselia</span>
+</a></li><li><a href="../pokedex/roserade.html">
+<img src="../assets/game/graphics/pokemon/roserade/anim_front.png" alt="" class="sprite">  <span class="name">Roserade</span>
+</a></li><li><a href="../pokedex/sawsbuck.html">
+<img src="../assets/game/graphics/pokemon/sawsbuck/anim_front.png" alt="" class="sprite">  <span class="name">Sawsbuck</span>
+</a></li><li><a href="../pokedex/slurpuff.html">
+<img src="../assets/game/graphics/pokemon/slurpuff/anim_front.png" alt="" class="sprite">  <span class="name">Slurpuff</span>
+</a></li><li><a href="../pokedex/spritzee.html">
+<img src="../assets/game/graphics/pokemon/spritzee/anim_front.png" alt="" class="sprite">  <span class="name">Spritzee</span>
+</a></li><li><a href="../pokedex/steenee.html">
+<img src="../assets/game/graphics/pokemon/steenee/front.png" alt="" class="sprite">  <span class="name">Steenee</span>
+</a></li><li><a href="../pokedex/swirlix.html">
+<img src="../assets/game/graphics/pokemon/swirlix/anim_front.png" alt="" class="sprite">  <span class="name">Swirlix</span>
+</a></li><li><a href="../pokedex/tapu-lele.html">
+<img src="../assets/game/graphics/pokemon/tapu_lele/anim_front.png" alt="" class="sprite">  <span class="name">Tapu Lele</span>
+</a></li><li><a href="../pokedex/tsareena.html">
+<img src="../assets/game/graphics/pokemon/tsareena/front.png" alt="" class="sprite">  <span class="name">Tsareena</span>
+</a></li><li><a href="../pokedex/vespiquen.html">
+<img src="../assets/game/graphics/pokemon/vespiquen/anim_front.png" alt="" class="sprite">  <span class="name">Vespiquen</span>
+</a></li><li><a href="../pokedex/vivillon.html">
+<img src="../assets/game/graphics/pokemon/vivillon/anim_front.png" alt="" class="sprite">  <span class="name">Vivillon</span>
+</a></li>  </ul>
+</section>
+  </main>
+  <script>
+    function obstagoonBindFilters() {
+      const inputs = document.querySelectorAll('[data-filter-input]');
+      inputs.forEach((input) => {
+        const selector = input.getAttribute('data-filter-target');
+        const emptyTextSelector = input.getAttribute('data-filter-empty');
+        const countSelector = input.getAttribute('data-filter-count');
+        const items = Array.from(document.querySelectorAll(selector || ''));
+        const emptyNode = emptyTextSelector ? document.querySelector(emptyTextSelector) : null;
+        const countNode = countSelector ? document.querySelector(countSelector) : null;
+        const stateKey = input.id || selector || '';
+        const apply = () => {
+          const query = obstagoonNormalize(input.value);
+          let visible = 0;
+          items.forEach((item) => {
+            const haystack = obstagoonNormalize(item.getAttribute('data-search-text') || item.textContent || '');
+            const match = !query || haystack.includes(query);
+            item.classList.toggle('filter-hidden', !match);
+            if (match) visible += 1;
+          });
+          if (emptyNode) emptyNode.style.display = visible === 0 ? '' : 'none';
+          if (countNode) countNode.textContent = visible;
+          if (stateKey) obstagoonSaveState(stateKey, {search: input.value});
+        };
+        if (stateKey) {
+          const saved = obstagoonLoadState(stateKey);
+          if (saved.search) input.value = saved.search;
+        }
+        input.addEventListener('input', apply);
+        apply();
+      });
+    }
+    function obstagoonBindRowLinks() {
+      // Elements with data-href behave as buttons: clicking anywhere navigates,
+      // except clicks on nested links/buttons which retain their own behavior
+      // (e.g. ability links inside a pokedex row stay individually clickable).
+      document.querySelectorAll('tr[data-href], li[data-href]').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('a, button')) return;
+          window.location = row.getAttribute('data-href');
+        });
+      });
+    }
+    function obstagoonBindLinkedHotspots() {
+      // Mirror hover between encounter-map hotspots and the section's link-grid
+      // tile by matching href. Hovering one outlines the other so it's clear
+      // which spot on the map corresponds to which list entry.
+      const partners = new Map();
+      document.querySelectorAll('.region-map a[href], .link-grid > li > a[href]').forEach((a) => {
+        const key = a.getAttribute('href');
+        if (!partners.has(key)) partners.set(key, []);
+        partners.get(key).push(a);
+      });
+      partners.forEach((group) => {
+        if (group.length < 2) return;
+        group.forEach((el) => {
+          el.addEventListener('mouseenter', () => group.forEach((other) => { if (other !== el) other.classList.add('linked-hover'); }));
+          el.addEventListener('mouseleave', () => group.forEach((other) => other.classList.remove('linked-hover')));
+        });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+    } else {
+      obstagoonBindFilters();
+      obstagoonBindRowLinks();
+      obstagoonBindLinkedHotspots();
+    }
+  </script>
+</body>
+</html>

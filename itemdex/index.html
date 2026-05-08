@@ -1,0 +1,2768 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Itemdex - pokeemerald-expansion</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script>
+    // Lowercase, strip diacritics (é→e), and drop non-alphanumerics so a query
+    // like "basculinwhitestriped" still matches "Basculin (White-Striped)".
+    // Defined in <head> so per-page IIFEs in the content can call it.
+    window.obstagoonNormalize = (s) => (s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+    // Per-tab index state (search, chips, sort) restored on back/forward and
+    // reload only — fresh clicks of nav links start clean.
+    window.obstagoonShouldRestoreState = () => {
+      const nav = performance.getEntriesByType('navigation')[0];
+      return !!(nav && (nav.type === 'back_forward' || nav.type === 'reload'));
+    };
+    window.obstagoonLoadState = (key) => {
+      if (!obstagoonShouldRestoreState()) return {};
+      try { return JSON.parse(sessionStorage.getItem('obstagoon:' + key) || '{}'); }
+      catch (e) { return {}; }
+    };
+    window.obstagoonSaveState = (key, state) => {
+      // Private browsing / quota-exceeded throws; degrade silently.
+      try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
+      catch (e) {}
+    };
+    // Shared search+chips+sort filter binding for index pages. Each page
+    // passes its element ids, a haystack-by-chip-kind map (for filtering),
+    // suggestion sources, and optionally a table selector to enable
+    // click-to-sort. State persists in sessionStorage under stateKey. Defined
+    // in <head> so per-page IIFEs in the content can call it.
+    window.obstagoonBindIndexPage = (opts) => {
+      const input = document.getElementById(opts.inputId);
+      const dropdown = document.getElementById(opts.dropdownId);
+      const chipsBox = document.getElementById(opts.chipsBoxId);
+      const empty = opts.emptyId ? document.getElementById(opts.emptyId) : null;
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      const rows = Array.from(document.querySelectorAll(opts.rowsSelector));
+      const haystackByKind = opts.haystackByKind || {};
+      const sources = opts.sources || [];
+      const defaultKind = opts.defaultKind || null;
+      const saved = obstagoonLoadState(opts.stateKey);
+      const chips = (Array.isArray(saved.chips) ? saved.chips : [])
+        .map((c) => c.kind ? c : {kind: defaultKind || 'Pokémon', name: c.name});
+      if (saved.search) input.value = saved.search;
+      let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
+      let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : 'asc';
+      const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const persist = () => obstagoonSaveState(opts.stateKey, {
+        search: input.value, chips,
+        ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
+      });
+
+      const applyFilters = () => {
+        const q = obstagoonNormalize(input.value);
+        let visible = 0;
+        rows.forEach((el) => {
+          const text = obstagoonNormalize(el.dataset.searchText || '');
+          let show = !q || text.includes(q);
+          if (show) for (const c of chips) {
+            const haystack = el.dataset[haystackByKind[c.kind]];
+            if (!haystack || !haystack.includes(`|${c.name}|`)) { show = false; break; }
+          }
+          el.classList.toggle('filter-hidden', !show);
+          if (show) visible += 1;
+        });
+        if (empty) empty.style.display = visible === 0 ? '' : 'none';
+        if (countEl) countEl.textContent = visible;
+        persist();
+      };
+      const renderChips = () => {
+        chipsBox.innerHTML = chips.map((c, i) =>
+          `<span class="filter-chip"><span class="chip-kind">${c.kind}</span> ${esc(c.name)}<button type="button" class="chip-remove" data-idx="${i}" aria-label="Remove">×</button></span>`
+        ).join('');
+        chipsBox.querySelectorAll('.chip-remove').forEach((btn) => btn.addEventListener('click', () => {
+          chips.splice(parseInt(btn.dataset.idx, 10), 1); renderChips(); applyFilters();
+        }));
+      };
+      const renderSuggestions = () => {
+        const q = obstagoonNormalize(input.value);
+        if (q.length < 3) { dropdown.hidden = true; return; }
+        const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
+        const matches = [];
+        for (const [kind, list] of sources) {
+          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+        }
+        if (matches.length === 0) { dropdown.hidden = true; return; }
+        dropdown.innerHTML = matches.slice(0, 30).map((m) =>
+          `<button type="button" class="suggestion" data-kind="${m.kind}" data-name="${esc(m.name)}"><span class="suggestion-kind">${m.kind}</span> ${esc(m.name)}</button>`
+        ).join('');
+        dropdown.hidden = false;
+        dropdown.querySelectorAll('.suggestion').forEach((btn) => btn.addEventListener('click', () => {
+          chips.push({kind: btn.dataset.kind, name: btn.dataset.name});
+          input.value = ''; dropdown.hidden = true; renderChips(); applyFilters();
+        }));
+      };
+      input.addEventListener('input', () => { renderSuggestions(); applyFilters(); });
+      input.addEventListener('focus', renderSuggestions);
+      document.addEventListener('click', (e) => { if (!dropdown.contains(e.target) && e.target !== input) dropdown.hidden = true; });
+      renderChips();
+      applyFilters();
+
+      if (opts.tableSelector) {
+        const tbody = document.querySelector(opts.tableSelector + ' tbody');
+        const headers = Array.from(document.querySelectorAll(opts.tableSelector + ' thead th'));
+        const original = Array.from(tbody.querySelectorAll('tr'));
+        const cellValue = (tr, i, kind) => {
+          const text = tr.cells[i].textContent.trim();
+          if (kind === 'number') { const n = parseFloat(text); return isNaN(n) ? -Infinity : n; }
+          return text.toLowerCase();
+        };
+        const applySort = () => {
+          headers.forEach((h, j) => {
+            h.classList.toggle('sort-asc', activeDir === 'asc' && j === activeCol);
+            h.classList.toggle('sort-desc', activeDir === 'desc' && j === activeCol);
+          });
+          if (!activeDir) { original.forEach((tr) => tbody.appendChild(tr)); return; }
+          const kind = headers[activeCol]?.dataset.sort || 'text';
+          const sign = activeDir === 'asc' ? 1 : -1;
+          [...original].sort((a, b) => {
+            const av = cellValue(a, activeCol, kind), bv = cellValue(b, activeCol, kind);
+            return av < bv ? -sign : av > bv ? sign : 0;
+          }).forEach((tr) => tbody.appendChild(tr));
+        };
+        headers.forEach((th, i) => {
+          if (!th.dataset.sort) return;
+          th.classList.add('sortable');
+          th.addEventListener('click', () => {
+            activeDir = i !== activeCol ? 'asc' : activeDir === 'asc' ? 'desc' : activeDir === 'desc' ? '' : 'asc';
+            activeCol = activeDir ? i : -1;
+            applySort();
+            persist();
+          });
+        });
+        applySort();
+      }
+    };
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../index.html">pokeemerald-expansion</a>
+      <nav>
+        <a href="../pokedex/index.html">Pokédex</a>
+        <a href="../moves/index.html">Moves</a>
+        <a href="../abilities/index.html">Abilities</a>
+        <a href="../forms/index.html">Forms</a>
+        <a href="../encounters/index.html">Encounters</a>
+        <a href="../itemdex/index.html">Itemdex</a>
+        <a href="../trainerdex/index.html">Trainers</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+<h1>Itemdex</h1>
+<div class="itemdex-bag-frame">
+<div class="itemdex-bag" data-bag-frame>
+  <button type="button" class="itemdex-bag-hotspot" data-pocket="Pocket Key Items" data-sprite-y="128" aria-label="Key Items"
+          style="left:28%; top:26%; width:44%; height:26%;"></button>
+  <button type="button" class="itemdex-bag-hotspot" data-pocket="Pocket Poke Balls" data-sprite-y="192" aria-label="Poké Balls"
+          style="left:31%; top:73%; width:38%; height:24%;"></button>
+  <button type="button" class="itemdex-bag-hotspot" data-pocket="Pocket Items" data-sprite-y="64" aria-label="Items"
+          style="left:14%; top:66%; width:14%; height:24%;"></button>
+  <button type="button" class="itemdex-bag-hotspot" data-pocket="Pocket Tm Hm" data-sprite-y="256" aria-label="TMs &amp; HMs"
+          style="left:72%; top:66%; width:14%; height:24%;"></button>
+  <button type="button" class="itemdex-bag-hotspot" data-pocket="Pocket Berries" data-sprite-y="320" aria-label="Berries"
+          style="left:73%; top:52%; width:14%; height:13%;"></button>
+</div>
+</div>
+<div class="filter-bar">
+  <label class="filter-label" for="itemdex-search">Search Items</label>
+  <input id="itemdex-search" class="filter-input" type="search" placeholder="Filter by item name, location, or source" data-filter-input data-filter-target=".itemdex-pocket li[data-search-text]" data-filter-empty="#itemdex-empty">
+</div>
+<section class="itemdex-pocket is-active" data-pocket="Pocket Items">
+  <h2>Items <span class="muted small-text" data-pocket-count>256</span></h2>
+  <ul class="itemdex-grid">
+    <li data-search-text="Ability Capsule ITEM_ABILITY_CAPSULE Shop Slateport City">
+      <a href="ability-capsule.html">
+<img src="../assets/game/graphics/items/icons/ability_capsule.png" alt="Ability Capsule" class="item-icon">        <span>Ability Capsule</span>
+      </a>
+    </li>
+    <li data-search-text="Ability Patch ITEM_ABILITY_PATCH Shop Slateport City Pickup Lv. 41-60 Lv. 61-70 Lv. 71-80 Lv. 81-90 Lv. 91-100">
+      <a href="ability-patch.html">
+<img src="../assets/game/graphics/items/icons/ability_patch.png" alt="Ability Patch" class="item-icon">        <span>Ability Patch</span>
+      </a>
+    </li>
+    <li data-search-text="Ability Shield ITEM_ABILITY_SHIELD Overworld Meteor Falls - 1F 1R Route 136">
+      <a href="ability-shield.html">
+<img src="../assets/game/graphics/items/icons/ability_shield.png" alt="Ability Shield" class="item-icon">        <span>Ability Shield</span>
+      </a>
+    </li>
+    <li data-search-text="Absorb Bulb ITEM_ABSORB_BULB Overworld Route 137 Wild Held Items Cottonee Petilil">
+      <a href="absorb-bulb.html">
+<img src="../assets/game/graphics/items/icons/absorb_bulb.png" alt="Absorb Bulb" class="item-icon">        <span>Absorb Bulb</span>
+      </a>
+    </li>
+    <li data-search-text="Adamant Mint ITEM_ADAMANT_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="adamant-mint.html">
+<img src="../assets/game/graphics/items/icons/adamant_mint.png" alt="Adamant Mint" class="item-icon">        <span>Adamant Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Adrenaline Orb ITEM_ADRENALINE_ORB Overworld Route 137">
+      <a href="adrenaline-orb.html">
+<img src="../assets/game/graphics/items/icons/adrenaline_orb.png" alt="Adrenaline Orb" class="item-icon">        <span>Adrenaline Orb</span>
+      </a>
+    </li>
+    <li data-search-text="Air Balloon ITEM_AIR_BALLOON Wild Held Items Drifloon Trainer Held Item Rival Steven (Meteor Falls - Steven&#39;s Cave)">
+      <a href="air-balloon.html">
+<img src="../assets/game/graphics/items/icons/air_balloon.png" alt="Air Balloon" class="item-icon">        <span>Air Balloon</span>
+      </a>
+    </li>
+    <li data-search-text="Amaze Mulch ITEM_AMAZE_MULCH Berry Tree Pest Held Item Burmy (Plant Cloak) Cherubi Cutiefly Karrablast Pikipek Poipole">
+      <a href="amaze-mulch.html">
+<img src="../assets/game/graphics/items/icons/amaze_mulch.png" alt="Amaze Mulch" class="item-icon">        <span>Amaze Mulch</span>
+      </a>
+    </li>
+    <li data-search-text="Amulet Coin ITEM_AMULET_COIN Wild Held Items Southern Island - Interior">
+      <a href="amulet-coin.html">
+<img src="../assets/game/graphics/items/icons/amulet_coin.png" alt="Amulet Coin" class="item-icon">        <span>Amulet Coin</span>
+      </a>
+    </li>
+    <li data-search-text="Antidote ITEM_ANTIDOTE Shop Fallarbor Town - Mart Fortree City - Mart Lavaridge Town - Mart Mauville City - Mart Oldale Town - Mart Petalburg City - Mart Rustboro City - Mart Slateport City - Mart Trainer Hill - Entrance Verdanturf Town - Mart Hidden Item Route 104">
+      <a href="antidote.html">
+<img src="../assets/game/graphics/items/icons/antidote.png" alt="Antidote" class="item-icon">        <span>Antidote</span>
+      </a>
+    </li>
+    <li data-search-text="Armor Fossil ITEM_ARMOR_FOSSIL Hidden Item Underwater - Route 124">
+      <a href="armor-fossil.html">
+<img src="../assets/game/graphics/items/icons/armor_fossil.png" alt="Armor Fossil" class="item-icon">        <span>Armor Fossil</span>
+      </a>
+    </li>
+    <li data-search-text="Assault Vest ITEM_ASSAULT_VEST Shop Battle Frontier - Exchange Service Corner Trainer Held Item Champion Wallace (Ever Grande City - Champion&#39;s Room) Elite Four Drake (Ever Grande City - Drake&#39;s Room) Elite Four Sidney (Ever Grande City - Sidney&#39;s Room) Leader Glacia (Sootopolis City - Gym 1F)">
+      <a href="assault-vest.html">
+<img src="../assets/game/graphics/items/icons/assault_vest.png" alt="Assault Vest" class="item-icon">        <span>Assault Vest</span>
+      </a>
+    </li>
+    <li data-search-text="Awakening ITEM_AWAKENING Shop Fortree City - Mart Lavaridge Town - Mart Mauville City - Mart Oldale Town - Mart Petalburg City - Mart Trainer Hill - Entrance Verdanturf Town - Mart">
+      <a href="awakening.html">
+<img src="../assets/game/graphics/items/icons/awakening.png" alt="Awakening" class="item-icon">        <span>Awakening</span>
+      </a>
+    </li>
+    <li data-search-text="Bead Mail ITEM_BEAD_MAIL Shop Slateport City Overworld Route 110 - Trick House Puzzle 8">
+      <a href="bead-mail.html">
+<img src="../assets/game/graphics/items/icons/bead_mail.png" alt="Bead Mail" class="item-icon">        <span>Bead Mail</span>
+      </a>
+    </li>
+    <li data-search-text="Berry Juice ITEM_BERRY_JUICE NPC Mauville City - Game Corner Hidden Item Route 118">
+      <a href="berry-juice.html">
+<img src="../assets/game/graphics/items/icons/berry_juice.png" alt="Berry Juice" class="item-icon">        <span>Berry Juice</span>
+      </a>
+    </li>
+    <li data-search-text="Big Mushroom ITEM_BIG_MUSHROOM Wild Held Items Foongus Morelull Pickup Lv. 1-10 Lv. 11-20 Lv. 21-30">
+      <a href="big-mushroom.html">
+<img src="../assets/game/graphics/items/icons/big_mushroom.png" alt="Big Mushroom" class="item-icon">        <span>Big Mushroom</span>
+      </a>
+    </li>
+    <li data-search-text="Big Nugget ITEM_BIG_NUGGET Pickup Lv. 21-60 Lv. 61-70 Lv. 71-80 Lv. 81-90 Lv. 91-100">
+      <a href="big-nugget.html">
+<img src="../assets/game/graphics/items/icons/big_nugget.png" alt="Big Nugget" class="item-icon">        <span>Big Nugget</span>
+      </a>
+    </li>
+    <li data-search-text="Big Pearl ITEM_BIG_PEARL Overworld Route 125 Safari Zone - Southeast Shoal Cave - Low Tide Entrance Room Hidden Item Route 105 Route 129 Route 137 Underwater - Route 124 Underwater - Route 126">
+      <a href="big-pearl.html">
+<img src="../assets/game/graphics/items/icons/big_pearl.png" alt="Big Pearl" class="item-icon">        <span>Big Pearl</span>
+      </a>
+    </li>
+    <li data-search-text="Big Root ITEM_BIG_ROOT Overworld Route 119">
+      <a href="big-root.html">
+<img src="../assets/game/graphics/items/icons/big_root.png" alt="Big Root" class="item-icon">        <span>Big Root</span>
+      </a>
+    </li>
+    <li data-search-text="Binding Band ITEM_BINDING_BAND Overworld Route 121">
+      <a href="binding-band.html">
+<img src="../assets/game/graphics/items/icons/binding_band.png" alt="Binding Band" class="item-icon">        <span>Binding Band</span>
+      </a>
+    </li>
+    <li data-search-text="Black Belt ITEM_BLACK_BELT Wild Held Items Sawk Throh">
+      <a href="black-belt.html">
+<img src="../assets/game/graphics/items/icons/black_belt.png" alt="Black Belt" class="item-icon">        <span>Black Belt</span>
+      </a>
+    </li>
+    <li data-search-text="Black Flute ITEM_BLACK_FLUTE Shop Route 113 - Glass Workshop">
+      <a href="black-flute.html">
+<img src="../assets/game/graphics/items/icons/black_flute.png" alt="Black Flute" class="item-icon">        <span>Black Flute</span>
+      </a>
+    </li>
+    <li data-search-text="Black Glasses ITEM_BLACK_GLASSES Hidden Item Route 116 Wild Held Items Sandile">
+      <a href="black-glasses.html">
+<img src="../assets/game/graphics/items/icons/black_glasses.png" alt="Black Glasses" class="item-icon">        <span>Black Glasses</span>
+      </a>
+    </li>
+    <li data-search-text="Black Sludge ITEM_BLACK_SLUDGE Overworld Fiery Path Wild Held Items Croagunk Grimer Grimer (Alolan) Muk Trainer Held Item Elite Four Sidney (Ever Grande City - Sidney&#39;s Room)">
+      <a href="black-sludge.html">
+<img src="../assets/game/graphics/items/icons/black_sludge.png" alt="Black Sludge" class="item-icon">        <span>Black Sludge</span>
+      </a>
+    </li>
+    <li data-search-text="Blue Flute ITEM_BLUE_FLUTE Shop Route 113 - Glass Workshop">
+      <a href="blue-flute.html">
+<img src="../assets/game/graphics/items/icons/blue_flute.png" alt="Blue Flute" class="item-icon">        <span>Blue Flute</span>
+      </a>
+    </li>
+    <li data-search-text="Blue Scarf ITEM_BLUE_SCARF NPC Slateport City - Pokemon Fan Club">
+      <a href="blue-scarf.html">
+<img src="../assets/game/graphics/items/icons/blue_scarf.png" alt="Blue Scarf" class="item-icon">        <span>Blue Scarf</span>
+      </a>
+    </li>
+    <li data-search-text="Blue Shard ITEM_BLUE_SHARD Overworld Route 124 Hidden Item Underwater - Route 126 Wild Held Items Skrelp">
+      <a href="blue-shard.html">
+<img src="../assets/game/graphics/items/icons/blue_shard.png" alt="Blue Shard" class="item-icon">        <span>Blue Shard</span>
+      </a>
+    </li>
+    <li data-search-text="Blunder Policy ITEM_BLUNDER_POLICY Hidden Item Route 128 Pickup Lv. 21-100">
+      <a href="blunder-policy.html">
+<img src="../assets/game/graphics/items/icons/blunder_policy.png" alt="Blunder Policy" class="item-icon">        <span>Blunder Policy</span>
+      </a>
+    </li>
+    <li data-search-text="Bold Mint ITEM_BOLD_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="bold-mint.html">
+<img src="../assets/game/graphics/items/icons/bold_mint.png" alt="Bold Mint" class="item-icon">        <span>Bold Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Boost Mulch ITEM_BOOST_MULCH Berry Tree Pest Held Item Burmy (Plant Cloak) Cherubi Cutiefly Karrablast Pikipek Poipole">
+      <a href="boost-mulch.html">
+<img src="../assets/game/graphics/items/icons/boost_mulch.png" alt="Boost Mulch" class="item-icon">        <span>Boost Mulch</span>
+      </a>
+    </li>
+    <li data-search-text="Booster Energy ITEM_BOOSTER_ENERGY Wild Held Items Helioptile">
+      <a href="booster-energy.html">
+<img src="../assets/game/graphics/items/icons/booster_energy.png" alt="Booster Energy" class="item-icon">        <span>Booster Energy</span>
+      </a>
+    </li>
+    <li data-search-text="Brave Mint ITEM_BRAVE_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="brave-mint.html">
+<img src="../assets/game/graphics/items/icons/brave_mint.png" alt="Brave Mint" class="item-icon">        <span>Brave Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Bright Powder ITEM_BRIGHT_POWDER Shop Battle Frontier - Exchange Service Corner">
+      <a href="bright-powder.html">
+<img src="../assets/game/graphics/items/icons/bright_powder.png" alt="Bright Powder" class="item-icon">        <span>Bright Powder</span>
+      </a>
+    </li>
+    <li data-search-text="Bug Gem ITEM_BUG_GEM Hidden Item Route 137">
+      <a href="bug-gem.html">
+<img src="../assets/game/graphics/items/icons/bug_gem.png" alt="Bug Gem" class="item-icon">        <span>Bug Gem</span>
+      </a>
+    </li>
+    <li data-search-text="Burn Heal ITEM_BURN_HEAL Shop Lavaridge Town - Mart Verdanturf Town - Mart Overworld Jagged Pass">
+      <a href="burn-heal.html">
+<img src="../assets/game/graphics/items/icons/burn_heal.png" alt="Burn Heal" class="item-icon">        <span>Burn Heal</span>
+      </a>
+    </li>
+    <li data-search-text="Calcium ITEM_CALCIUM Shop Battle Frontier - Mart Lilycove City - Department Store 3F Slateport City Overworld Route 123 Safari Zone - North Hidden Item Route 109 Route 119 Underwater - Route 124">
+      <a href="calcium.html">
+<img src="../assets/game/graphics/items/icons/calcium.png" alt="Calcium" class="item-icon">        <span>Calcium</span>
+      </a>
+    </li>
+    <li data-search-text="Calm Mint ITEM_CALM_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="calm-mint.html">
+<img src="../assets/game/graphics/items/icons/calm_mint.png" alt="Calm Mint" class="item-icon">        <span>Calm Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Carbos ITEM_CARBOS Shop Battle Frontier - Mart Lilycove City - Department Store 3F Slateport City Overworld Route 134 Hidden Item Route 105 Route 114 Route 119 Underwater - Route 124">
+      <a href="carbos.html">
+<img src="../assets/game/graphics/items/icons/carbos.png" alt="Carbos" class="item-icon">        <span>Carbos</span>
+      </a>
+    </li>
+    <li data-search-text="Careful Mint ITEM_CAREFUL_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="careful-mint.html">
+<img src="../assets/game/graphics/items/icons/careful_mint.png" alt="Careful Mint" class="item-icon">        <span>Careful Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Cell Battery ITEM_CELL_BATTERY Wild Held Items Charjabug Geodude (Alolan) Graveler (Alolan)">
+      <a href="cell-battery.html">
+<img src="../assets/game/graphics/items/icons/cell_battery.png" alt="Cell Battery" class="item-icon">        <span>Cell Battery</span>
+      </a>
+    </li>
+    <li data-search-text="Charcoal ITEM_CHARCOAL NPC Lavaridge Town - Herb Shop Wild Held Items Turtonator Vulpix">
+      <a href="charcoal.html">
+<img src="../assets/game/graphics/items/icons/charcoal.png" alt="Charcoal" class="item-icon">        <span>Charcoal</span>
+      </a>
+    </li>
+    <li data-search-text="Choice Band ITEM_CHOICE_BAND Shop Battle Frontier - Exchange Service Corner">
+      <a href="choice-band.html">
+<img src="../assets/game/graphics/items/icons/choice_band.png" alt="Choice Band" class="item-icon">        <span>Choice Band</span>
+      </a>
+    </li>
+    <li data-search-text="Choice Scarf ITEM_CHOICE_SCARF NPC Littleroot Town - Brendan&#39;s House 1F Littleroot Town - Brendan&#39;s House 2F Littleroot Town - May&#39;s House 1F Littleroot Town - May&#39;s House 2F">
+      <a href="choice-scarf.html">
+<img src="../assets/game/graphics/items/icons/choice_scarf.png" alt="Choice Scarf" class="item-icon">        <span>Choice Scarf</span>
+      </a>
+    </li>
+    <li data-search-text="Choice Specs ITEM_CHOICE_SPECS Shop Battle Frontier - Exchange Service Corner">
+      <a href="choice-specs.html">
+<img src="../assets/game/graphics/items/icons/choice_specs.png" alt="Choice Specs" class="item-icon">        <span>Choice Specs</span>
+      </a>
+    </li>
+    <li data-search-text="Cleanse Tag ITEM_CLEANSE_TAG NPC Mt Pyre - 1F">
+      <a href="cleanse-tag.html">
+<img src="../assets/game/graphics/items/icons/cleanse_tag.png" alt="Cleanse Tag" class="item-icon">        <span>Cleanse Tag</span>
+      </a>
+    </li>
+    <li data-search-text="Clear Amulet ITEM_CLEAR_AMULET Hidden Item Route 136">
+      <a href="clear-amulet.html">
+<img src="../assets/game/graphics/items/icons/clear_amulet.png" alt="Clear Amulet" class="item-icon">        <span>Clear Amulet</span>
+      </a>
+    </li>
+    <li data-search-text="Cover Fossil ITEM_COVER_FOSSIL Hidden Item Underwater - Route 127">
+      <a href="cover-fossil.html">
+<img src="../assets/game/graphics/items/icons/cover_fossil.png" alt="Cover Fossil" class="item-icon">        <span>Cover Fossil</span>
+      </a>
+    </li>
+    <li data-search-text="Covert Cloak ITEM_COVERT_CLOAK Overworld Route 135 - Map">
+      <a href="covert-cloak.html">
+<img src="../assets/game/graphics/items/icons/covert_cloak.png" alt="Covert Cloak" class="item-icon">        <span>Covert Cloak</span>
+      </a>
+    </li>
+    <li data-search-text="Damp Rock ITEM_DAMP_ROCK Shop Mauville City - Game Corner">
+      <a href="damp-rock.html">
+<img src="../assets/game/graphics/items/icons/damp_rock.png" alt="Damp Rock" class="item-icon">        <span>Damp Rock</span>
+      </a>
+    </li>
+    <li data-search-text="Dark Gem ITEM_DARK_GEM Hidden Item Route 128">
+      <a href="dark-gem.html">
+<img src="../assets/game/graphics/items/icons/dark_gem.png" alt="Dark Gem" class="item-icon">        <span>Dark Gem</span>
+      </a>
+    </li>
+    <li data-search-text="Dawn Stone ITEM_DAWN_STONE NPC Route 124 - Diving Treasure Hunters House Overworld Meteor Falls - B1F 1R Route 134 Wild Held Items Minior (Green Core)">
+      <a href="dawn-stone.html">
+<img src="../assets/game/graphics/items/icons/dawn_stone.png" alt="Dawn Stone" class="item-icon">        <span>Dawn Stone</span>
+      </a>
+    </li>
+    <li data-search-text="Deep Sea Scale ITEM_DEEP_SEA_SCALE Wild Held Items Basculin (Blue-Striped) Basculin (White-Striped)">
+      <a href="deep-sea-scale.html">
+<img src="../assets/game/graphics/items/icons/deep_sea_scale.png" alt="Deep Sea Scale" class="item-icon">        <span>Deep Sea Scale</span>
+      </a>
+    </li>
+    <li data-search-text="Deep Sea Tooth ITEM_DEEP_SEA_TOOTH Wild Held Items Basculin (Red-Striped)">
+      <a href="deep-sea-tooth.html">
+<img src="../assets/game/graphics/items/icons/deep_sea_tooth.png" alt="Deep Sea Tooth" class="item-icon">        <span>Deep Sea Tooth</span>
+      </a>
+    </li>
+    <li data-search-text="Destiny Knot ITEM_DESTINY_KNOT Hidden Item Dew Beach 106 Pickup Lv. 21-100">
+      <a href="destiny-knot.html">
+<img src="../assets/game/graphics/items/icons/destiny_knot.png" alt="Destiny Knot" class="item-icon">        <span>Destiny Knot</span>
+      </a>
+    </li>
+    <li data-search-text="Dire Hit ITEM_DIRE_HIT Shop Fallarbor Town - Mart Lilycove City - Department Store 3F Mauville City - Mart Trainer Hill - Entrance Overworld Route 110">
+      <a href="dire-hit.html">
+<img src="../assets/game/graphics/items/icons/dire_hit.png" alt="Dire Hit" class="item-icon">        <span>Dire Hit</span>
+      </a>
+    </li>
+    <li data-search-text="Dragon Fang ITEM_DRAGON_FANG Wild Held Items Druddigon">
+      <a href="dragon-fang.html">
+<img src="../assets/game/graphics/items/icons/dragon_fang.png" alt="Dragon Fang" class="item-icon">        <span>Dragon Fang</span>
+      </a>
+    </li>
+    <li data-search-text="Dream Mail ITEM_DREAM_MAIL Shop Slateport City">
+      <a href="dream-mail.html">
+<img src="../assets/game/graphics/items/icons/dream_mail.png" alt="Dream Mail" class="item-icon">        <span>Dream Mail</span>
+      </a>
+    </li>
+    <li data-search-text="Dusk Stone ITEM_DUSK_STONE NPC Route 124 - Diving Treasure Hunters House">
+      <a href="dusk-stone.html">
+<img src="../assets/game/graphics/items/icons/dusk_stone.png" alt="Dusk Stone" class="item-icon">        <span>Dusk Stone</span>
+      </a>
+    </li>
+    <li data-search-text="Eject Button ITEM_EJECT_BUTTON Trainer Held Item Leader Tate&amp;Liza (Mossdeep City - Gym)">
+      <a href="eject-button.html">
+<img src="../assets/game/graphics/items/icons/eject_button.png" alt="Eject Button" class="item-icon">        <span>Eject Button</span>
+      </a>
+    </li>
+    <li data-search-text="Eject Pack ITEM_EJECT_PACK NPC Route 110 - Trick House End Route 110 - Trick House Entrance">
+      <a href="eject-pack.html">
+<img src="../assets/game/graphics/items/icons/eject_pack.png" alt="Eject Pack" class="item-icon">        <span>Eject Pack</span>
+      </a>
+    </li>
+    <li data-search-text="Electric Seed ITEM_ELECTRIC_SEED Wild Held Items Togedemaru">
+      <a href="electric-seed.html">
+<img src="../assets/game/graphics/items/icons/electric_seed.png" alt="Electric Seed" class="item-icon">        <span>Electric Seed</span>
+      </a>
+    </li>
+    <li data-search-text="Elixir ITEM_ELIXIR Overworld Route 110 Route 111 Route 119 Hidden Item Route 110 Victory Road - B2F">
+      <a href="elixir.html">
+<img src="../assets/game/graphics/items/icons/elixir.png" alt="Elixir" class="item-icon">        <span>Elixir</span>
+      </a>
+    </li>
+    <li data-search-text="Energy Powder ITEM_ENERGY_POWDER Shop Lavaridge Town - Herb Shop NPC Slateport City Overworld Route 114">
+      <a href="energy-powder.html">
+<img src="../assets/game/graphics/items/icons/energy_powder.png" alt="Energy Powder" class="item-icon">        <span>Energy Powder</span>
+      </a>
+    </li>
+    <li data-search-text="Energy Root ITEM_ENERGY_ROOT Shop Lavaridge Town - Herb Shop NPC Slateport City">
+      <a href="energy-root.html">
+<img src="../assets/game/graphics/items/icons/energy_root.png" alt="Energy Root" class="item-icon">        <span>Energy Root</span>
+      </a>
+    </li>
+    <li data-search-text="Escape Rope ITEM_ESCAPE_ROPE Shop Fallarbor Town - Mart Lilycove City - Department Store 2F Petalburg City - Mart Rustboro City - Mart Slateport City - Mart Overworld Granite Cave - 1F Magma Hideout - 3F 3R">
+      <a href="escape-rope.html">
+<img src="../assets/game/graphics/items/icons/escape_rope.png" alt="Escape Rope" class="item-icon">        <span>Escape Rope</span>
+      </a>
+    </li>
+    <li data-search-text="Ether ITEM_ETHER Overworld Petalburg City Petalburg Woods Hidden Item Route 109 Route 113 Pickup Lv. 1-20 Lv. 21-30 Lv. 31-50">
+      <a href="ether.html">
+<img src="../assets/game/graphics/items/icons/ether.png" alt="Ether" class="item-icon">        <span>Ether</span>
+      </a>
+    </li>
+    <li data-search-text="Everstone ITEM_EVERSTONE Hidden Item Granite Cave - B2F Wild Held Items Boldore Geodude Graveler Roggenrola">
+      <a href="everstone.html">
+<img src="../assets/game/graphics/items/icons/everstone.png" alt="Everstone" class="item-icon">        <span>Everstone</span>
+      </a>
+    </li>
+    <li data-search-text="Eviolite ITEM_EVIOLITE Overworld Mt Pyre - Exterior">
+      <a href="eviolite.html">
+<img src="../assets/game/graphics/items/icons/eviolite.png" alt="Eviolite" class="item-icon">        <span>Eviolite</span>
+      </a>
+    </li>
+    <li data-search-text="Fab Mail ITEM_FAB_MAIL Shop Slateport City">
+      <a href="fab-mail.html">
+<img src="../assets/game/graphics/items/icons/fab_mail.png" alt="Fab Mail" class="item-icon">        <span>Fab Mail</span>
+      </a>
+    </li>
+    <li data-search-text="Fairy Feather ITEM_FAIRY_FEATHER Overworld Route 128">
+      <a href="fairy-feather.html">
+<img src="../assets/game/graphics/items/icons/fairy_feather.png" alt="Fairy Feather" class="item-icon">        <span>Fairy Feather</span>
+      </a>
+    </li>
+    <li data-search-text="Fire Stone ITEM_FIRE_STONE Hidden Item Jagged Pass Wild Held Items Pansear">
+      <a href="fire-stone.html">
+<img src="../assets/game/graphics/items/icons/fire_stone.png" alt="Fire Stone" class="item-icon">        <span>Fire Stone</span>
+      </a>
+    </li>
+    <li data-search-text="Flame Orb ITEM_FLAME_ORB NPC Pacifidlog Town - House 2 Trainer Held Item Leader Flannery (Lavaridge Town - Gym 1F)">
+      <a href="flame-orb.html">
+<img src="../assets/game/graphics/items/icons/flame_orb.png" alt="Flame Orb" class="item-icon">        <span>Flame Orb</span>
+      </a>
+    </li>
+    <li data-search-text="Float Stone ITEM_FLOAT_STONE Overworld Granite Cave - B1F Wild Held Items Minior (Blue Core) Minior (Indigo Core) Minior (Violet Core)">
+      <a href="float-stone.html">
+<img src="../assets/game/graphics/items/icons/float_stone.png" alt="Float Stone" class="item-icon">        <span>Float Stone</span>
+      </a>
+    </li>
+    <li data-search-text="Fluffy Tail ITEM_FLUFFY_TAIL Shop Lilycove City - Department Store 2F Verdanturf Town - Mart">
+      <a href="fluffy-tail.html">
+<img src="../assets/game/graphics/items/icons/fluffy_tail.png" alt="Fluffy Tail" class="item-icon">        <span>Fluffy Tail</span>
+      </a>
+    </li>
+    <li data-search-text="Flying Gem ITEM_FLYING_GEM Hidden Item Underwater - Route 128">
+      <a href="flying-gem.html">
+<img src="../assets/game/graphics/items/icons/flying_gem.png" alt="Flying Gem" class="item-icon">        <span>Flying Gem</span>
+      </a>
+    </li>
+    <li data-search-text="Focus Band ITEM_FOCUS_BAND NPC Shoal Cave - Low Tide Lower Room">
+      <a href="focus-band.html">
+<img src="../assets/game/graphics/items/icons/focus_band.png" alt="Focus Band" class="item-icon">        <span>Focus Band</span>
+      </a>
+    </li>
+    <li data-search-text="Focus Sash ITEM_FOCUS_SASH Wild Held Items Mienshao Pickup Lv. 21-30 Lv. 31-70 Lv. 71-80 Lv. 81-90 Lv. 91-100 Trainer Held Item Elite Four Juan (Ever Grande City - Juan&#39;s Room) Rival Steven (Meteor Falls - Steven&#39;s Cave) Leader Glacia (Sootopolis City - Gym 1F)">
+      <a href="focus-sash.html">
+<img src="../assets/game/graphics/items/icons/focus_sash.png" alt="Focus Sash" class="item-icon">        <span>Focus Sash</span>
+      </a>
+    </li>
+    <li data-search-text="Fresh Water ITEM_FRESH_WATER NPC Lilycove City - Department Store Rooftop">
+      <a href="fresh-water.html">
+<img src="../assets/game/graphics/items/icons/fresh_water.png" alt="Fresh Water" class="item-icon">        <span>Fresh Water</span>
+      </a>
+    </li>
+    <li data-search-text="Full Heal ITEM_FULL_HEAL Shop Battle Frontier - Mart Ever Grande City - Pokemon League 1F Lilycove City - Department Store 2F Mossdeep City - Mart Sootopolis City - Mart Trainer Hill - Entrance Overworld Route 120 Route 137 Hidden Item Route 110 Route 119 Route 121 Pickup Lv. 1-20 Lv. 21-30 Lv. 31-40 Lv. 41-50 Lv. 51-60">
+      <a href="full-heal.html">
+<img src="../assets/game/graphics/items/icons/full_heal.png" alt="Full Heal" class="item-icon">        <span>Full Heal</span>
+      </a>
+    </li>
+    <li data-search-text="Full Restore ITEM_FULL_RESTORE Shop Battle Frontier - Mart Ever Grande City - Pokemon League 1F Trainer Hill - Entrance Overworld Magma Hideout - 2F 2R Victory Road - B2F Hidden Item Safari Zone - Southeast">
+      <a href="full-restore.html">
+<img src="../assets/game/graphics/items/icons/full_restore.png" alt="Full Restore" class="item-icon">        <span>Full Restore</span>
+      </a>
+    </li>
+    <li data-search-text="Gentle Mint ITEM_GENTLE_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="gentle-mint.html">
+<img src="../assets/game/graphics/items/icons/gentle_mint.png" alt="Gentle Mint" class="item-icon">        <span>Gentle Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Glitter Mail ITEM_GLITTER_MAIL Shop Slateport City Overworld Route 110 - Trick House Puzzle 6">
+      <a href="glitter-mail.html">
+<img src="../assets/game/graphics/items/icons/glitter_mail.png" alt="Glitter Mail" class="item-icon">        <span>Glitter Mail</span>
+      </a>
+    </li>
+    <li data-search-text="Grassy Seed ITEM_GRASSY_SEED Wild Held Items Bounsweet">
+      <a href="grassy-seed.html">
+<img src="../assets/game/graphics/items/icons/grassy_seed.png" alt="Grassy Seed" class="item-icon">        <span>Grassy Seed</span>
+      </a>
+    </li>
+    <li data-search-text="Green Scarf ITEM_GREEN_SCARF NPC Slateport City - Pokemon Fan Club">
+      <a href="green-scarf.html">
+<img src="../assets/game/graphics/items/icons/green_scarf.png" alt="Green Scarf" class="item-icon">        <span>Green Scarf</span>
+      </a>
+    </li>
+    <li data-search-text="Green Shard ITEM_GREEN_SHARD Overworld Route 126 Hidden Item Underwater - Route 124 Underwater - Route 126">
+      <a href="green-shard.html">
+<img src="../assets/game/graphics/items/icons/green_shard.png" alt="Green Shard" class="item-icon">        <span>Green Shard</span>
+      </a>
+    </li>
+    <li data-search-text="Grip Claw ITEM_GRIP_CLAW Wild Held Items Binacle Sandshrew Sandshrew (Alolan) Sandslash">
+      <a href="grip-claw.html">
+<img src="../assets/game/graphics/items/icons/grip_claw.png" alt="Grip Claw" class="item-icon">        <span>Grip Claw</span>
+      </a>
+    </li>
+    <li data-search-text="Guard Spec. ITEM_GUARD_SPEC Shop Fallarbor Town - Mart Lilycove City - Department Store 3F Mauville City - Mart Trainer Hill - Entrance">
+      <a href="guard-spec.html">
+<img src="../assets/game/graphics/items/icons/guard_spec.png" alt="Guard Spec." class="item-icon">        <span>Guard Spec.</span>
+      </a>
+    </li>
+    <li data-search-text="Harbor Mail ITEM_HARBOR_MAIL Shop Slateport City - Mart Overworld Route 110 - Trick House Puzzle 2">
+      <a href="harbor-mail.html">
+<img src="../assets/game/graphics/items/icons/harbor_mail.png" alt="Harbor Mail" class="item-icon">        <span>Harbor Mail</span>
+      </a>
+    </li>
+    <li data-search-text="Hard Stone ITEM_HARD_STONE NPC Route 110 - Trick House End Route 110 - Trick House Entrance Wild Held Items Boldore Crustle (Rock Face) Dwebble Minior (Orange Core) Minior (Red Core) Minior (Yellow Core) Roggenrola">
+      <a href="hard-stone.html">
+<img src="../assets/game/graphics/items/icons/hard_stone.png" alt="Hard Stone" class="item-icon">        <span>Hard Stone</span>
+      </a>
+    </li>
+    <li data-search-text="Hasty Mint ITEM_HASTY_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="hasty-mint.html">
+<img src="../assets/game/graphics/items/icons/hasty_mint.png" alt="Hasty Mint" class="item-icon">        <span>Hasty Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Heal Powder ITEM_HEAL_POWDER Shop Lavaridge Town - Herb Shop NPC Slateport City Overworld Route 115">
+      <a href="heal-powder.html">
+<img src="../assets/game/graphics/items/icons/heal_powder.png" alt="Heal Powder" class="item-icon">        <span>Heal Powder</span>
+      </a>
+    </li>
+    <li data-search-text="Heart Scale ITEM_HEART_SCALE Hidden Item Route 128 Underwater - Route 126">
+      <a href="heart-scale.html">
+<img src="../assets/game/graphics/items/icons/heart_scale.png" alt="Heart Scale" class="item-icon">        <span>Heart Scale</span>
+      </a>
+    </li>
+    <li data-search-text="Heat Rock ITEM_HEAT_ROCK Shop Mauville City - Game Corner">
+      <a href="heat-rock.html">
+<img src="../assets/game/graphics/items/icons/heat_rock.png" alt="Heat Rock" class="item-icon">        <span>Heat Rock</span>
+      </a>
+    </li>
+    <li data-search-text="Heavy-Duty Boots ITEM_HEAVY_DUTY_BOOTS Overworld New Mauville - Inside Trainer Held Item Leader Glacia (Sootopolis City - Gym 1F)">
+      <a href="heavy-duty-boots.html">
+<img src="../assets/game/graphics/items/icons/heavy_duty_boots.png" alt="Heavy-Duty Boots" class="item-icon">        <span>Heavy-Duty Boots</span>
+      </a>
+    </li>
+    <li data-search-text="Honey ITEM_HONEY Wild Held Items Cutiefly">
+      <a href="honey.html">
+<img src="../assets/game/graphics/items/icons/honey.png" alt="Honey" class="item-icon">        <span>Honey</span>
+      </a>
+    </li>
+    <li data-search-text="HP Up ITEM_HP_UP Shop Battle Frontier - Mart Lilycove City - Department Store 3F Slateport City Overworld Route 111 Route 116 Route 135 - Map Hidden Item Route 121 Underwater - Route 127">
+      <a href="hp-up.html">
+<img src="../assets/game/graphics/items/icons/hp_up.png" alt="HP Up" class="item-icon">        <span>HP Up</span>
+      </a>
+    </li>
+    <li data-search-text="Hyper Potion ITEM_HYPER_POTION Shop Battle Frontier - Mart Ever Grande City - Pokemon League 1F Fortree City - Mart Lilycove City - Department Store 2F Mossdeep City - Mart Sootopolis City - Mart Trainer Hill - Entrance Overworld Route 113 Route 118 Route 119 Hidden Item Route 123 Pickup Lv. 1-30 Lv. 31-40 Lv. 41-50 Lv. 51-60 Lv. 61-70 Lv. 71-80">
+      <a href="hyper-potion.html">
+<img src="../assets/game/graphics/items/icons/hyper_potion.png" alt="Hyper Potion" class="item-icon">        <span>Hyper Potion</span>
+      </a>
+    </li>
+    <li data-search-text="Ice Heal ITEM_ICE_HEAL Shop Verdanturf Town - Mart Overworld Route 137 Shoal Cave - Low Tide Stairs Room Hidden Item Lavaridge Town">
+      <a href="ice-heal.html">
+<img src="../assets/game/graphics/items/icons/ice_heal.png" alt="Ice Heal" class="item-icon">        <span>Ice Heal</span>
+      </a>
+    </li>
+    <li data-search-text="Ice Stone ITEM_ICE_STONE Overworld Route 137">
+      <a href="ice-stone.html">
+<img src="../assets/game/graphics/items/icons/ice_stone.png" alt="Ice Stone" class="item-icon">        <span>Ice Stone</span>
+      </a>
+    </li>
+    <li data-search-text="Icy Rock ITEM_ICY_ROCK Shop Mauville City - Game Corner Trainer Held Item Leader Glacia (Sootopolis City - Gym 1F)">
+      <a href="icy-rock.html">
+<img src="../assets/game/graphics/items/icons/icy_rock.png" alt="Icy Rock" class="item-icon">        <span>Icy Rock</span>
+      </a>
+    </li>
+    <li data-search-text="Impish Mint ITEM_IMPISH_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="impish-mint.html">
+<img src="../assets/game/graphics/items/icons/impish_mint.png" alt="Impish Mint" class="item-icon">        <span>Impish Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Iron ITEM_IRON Shop Battle Frontier - Mart Lilycove City - Department Store 3F Slateport City Overworld Route 105 Route 115 Hidden Item Route 118 Route 129 Underwater - Route 126">
+      <a href="iron.html">
+<img src="../assets/game/graphics/items/icons/iron.png" alt="Iron" class="item-icon">        <span>Iron</span>
+      </a>
+    </li>
+    <li data-search-text="Iron Ball ITEM_IRON_BALL Overworld Granite Cave - B2F">
+      <a href="iron-ball.html">
+<img src="../assets/game/graphics/items/icons/iron_ball.png" alt="Iron Ball" class="item-icon">        <span>Iron Ball</span>
+      </a>
+    </li>
+    <li data-search-text="Iron Plate ITEM_IRON_PLATE Trainer Held Item Rival Steven (Meteor Falls - Steven&#39;s Cave)">
+      <a href="iron-plate.html">
+<img src="../assets/game/graphics/items/icons/iron_plate.png" alt="Iron Plate" class="item-icon">        <span>Iron Plate</span>
+      </a>
+    </li>
+    <li data-search-text="Jaw Fossil ITEM_JAW_FOSSIL Overworld Desert Underpass Mirage Tower - 4F">
+      <a href="jaw-fossil.html">
+<img src="../assets/game/graphics/items/icons/jaw_fossil.png" alt="Jaw Fossil" class="item-icon">        <span>Jaw Fossil</span>
+      </a>
+    </li>
+    <li data-search-text="Jolly Mint ITEM_JOLLY_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="jolly-mint.html">
+<img src="../assets/game/graphics/items/icons/jolly_mint.png" alt="Jolly Mint" class="item-icon">        <span>Jolly Mint</span>
+      </a>
+    </li>
+    <li data-search-text="King&#39;s Rock ITEM_KINGS_ROCK Shop Battle Frontier - Exchange Service Corner NPC Mossdeep City Wild Held Items Hawlucha Pickup Lv. 21-100">
+      <a href="kings-rock.html">
+<img src="../assets/game/graphics/items/icons/kings_rock.png" alt="King&#39;s Rock" class="item-icon">        <span>King&#39;s Rock</span>
+      </a>
+    </li>
+    <li data-search-text="Knell Bell ITEM_KNELL_BELL Overworld Route 136">
+      <a href="knell-bell.html">
+<img src="../assets/game/graphics/items/icons/knell_bell.png" alt="Knell Bell" class="item-icon">        <span>Knell Bell</span>
+      </a>
+    </li>
+    <li data-search-text="Lava Cookie ITEM_LAVA_COOKIE NPC Mt Chimney">
+      <a href="lava-cookie.html">
+<img src="../assets/game/graphics/items/icons/lava_cookie.png" alt="Lava Cookie" class="item-icon">        <span>Lava Cookie</span>
+      </a>
+    </li>
+    <li data-search-text="Lax Mint ITEM_LAX_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="lax-mint.html">
+<img src="../assets/game/graphics/items/icons/lax_mint.png" alt="Lax Mint" class="item-icon">        <span>Lax Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Leader&#39;s Crest ITEM_LEADERS_CREST Wild Held Items Bisharp Pawniard">
+      <a href="leaders-crest.html">
+<img src="../assets/game/graphics/items/icons/leaders_crest.png" alt="Leader&#39;s Crest" class="item-icon">        <span>Leader&#39;s Crest</span>
+      </a>
+    </li>
+    <li data-search-text="Leaf Stone ITEM_LEAF_STONE Hidden Item Route 119 Wild Held Items Pansage">
+      <a href="leaf-stone.html">
+<img src="../assets/game/graphics/items/icons/leaf_stone.png" alt="Leaf Stone" class="item-icon">        <span>Leaf Stone</span>
+      </a>
+    </li>
+    <li data-search-text="Leftovers ITEM_LEFTOVERS Shop Battle Frontier - Exchange Service Corner Hidden Item SS Tidal Lower Deck Pickup Lv. 21-100 Trainer Held Item Elite Four Drake (Ever Grande City - Drake&#39;s Room) Elite Four Juan (Ever Grande City - Juan&#39;s Room) Elite Four Phoebe (Ever Grande City - Phoebe&#39;s Room) Elite Four Sidney (Ever Grande City - Sidney&#39;s Room) Rival Steven (Meteor Falls - Steven&#39;s Cave)">
+      <a href="leftovers.html">
+<img src="../assets/game/graphics/items/icons/leftovers.png" alt="Leftovers" class="item-icon">        <span>Leftovers</span>
+      </a>
+    </li>
+    <li data-search-text="Lemonade ITEM_LEMONADE NPC Lilycove City - Department Store Rooftop">
+      <a href="lemonade.html">
+<img src="../assets/game/graphics/items/icons/lemonade.png" alt="Lemonade" class="item-icon">        <span>Lemonade</span>
+      </a>
+    </li>
+    <li data-search-text="Life Orb ITEM_LIFE_ORB Hidden Item Route 136 Trainer Held Item Champion Wallace (Ever Grande City - Champion&#39;s Room) Elite Four Drake (Ever Grande City - Drake&#39;s Room) Elite Four Sidney (Ever Grande City - Sidney&#39;s Room)">
+      <a href="life-orb.html">
+<img src="../assets/game/graphics/items/icons/life_orb.png" alt="Life Orb" class="item-icon">        <span>Life Orb</span>
+      </a>
+    </li>
+    <li data-search-text="Light Ball ITEM_LIGHT_BALL Overworld New Mauville - Inside Wild Held Items Pikachu">
+      <a href="light-ball.html">
+<img src="../assets/game/graphics/items/icons/light_ball.png" alt="Light Ball" class="item-icon">        <span>Light Ball</span>
+      </a>
+    </li>
+    <li data-search-text="Light Clay ITEM_LIGHT_CLAY Overworld Meteor Falls - 1F 1R Wild Held Items Golett Mudbray Trainer Held Item Rival Steven (Meteor Falls - Steven&#39;s Cave)">
+      <a href="light-clay.html">
+<img src="../assets/game/graphics/items/icons/light_clay.png" alt="Light Clay" class="item-icon">        <span>Light Clay</span>
+      </a>
+    </li>
+    <li data-search-text="Loaded Dice ITEM_LOADED_DICE Shop Mauville City - Game Corner">
+      <a href="loaded-dice.html">
+<img src="../assets/game/graphics/items/icons/loaded_dice.png" alt="Loaded Dice" class="item-icon">        <span>Loaded Dice</span>
+      </a>
+    </li>
+    <li data-search-text="Lonely Mint ITEM_LONELY_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="lonely-mint.html">
+<img src="../assets/game/graphics/items/icons/lonely_mint.png" alt="Lonely Mint" class="item-icon">        <span>Lonely Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Lucky Egg ITEM_LUCKY_EGG Shop Battle Frontier - Exchange Service Corner">
+      <a href="lucky-egg.html">
+<img src="../assets/game/graphics/items/icons/lucky_egg.png" alt="Lucky Egg" class="item-icon">        <span>Lucky Egg</span>
+      </a>
+    </li>
+    <li data-search-text="Macho Brace ITEM_MACHO_BRACE NPC Route 111 - Winstrate Familys House">
+      <a href="macho-brace.html">
+<img src="../assets/game/graphics/items/icons/macho_brace.png" alt="Macho Brace" class="item-icon">        <span>Macho Brace</span>
+      </a>
+    </li>
+    <li data-search-text="Magnet ITEM_MAGNET NPC Route 110 - Trick House End Route 110 - Trick House Entrance">
+      <a href="magnet.html">
+<img src="../assets/game/graphics/items/icons/magnet.png" alt="Magnet" class="item-icon">        <span>Magnet</span>
+      </a>
+    </li>
+    <li data-search-text="Max Elixir ITEM_MAX_ELIXIR Overworld Aqua Hideout - B1F Magma Hideout - 2F 2R Hidden Item Victory Road - 1F Pickup Lv. 61-80 Lv. 81-90 Lv. 91-100">
+      <a href="max-elixir.html">
+<img src="../assets/game/graphics/items/icons/max_elixir.png" alt="Max Elixir" class="item-icon">        <span>Max Elixir</span>
+      </a>
+    </li>
+    <li data-search-text="Max Ether ITEM_MAX_ETHER Overworld Route 113 Rusturf Tunnel Hidden Item Mt Pyre - Exterior Route 119 Pickup Lv. 21-40 Lv. 41-70">
+      <a href="max-ether.html">
+<img src="../assets/game/graphics/items/icons/max_ether.png" alt="Max Ether" class="item-icon">        <span>Max Ether</span>
+      </a>
+    </li>
+    <li data-search-text="Max Potion ITEM_MAX_POTION Shop Battle Frontier - Mart Ever Grande City - Pokemon League 1F Lilycove City - Department Store 2F Sootopolis City - Mart Trainer Hill - Entrance Pickup Lv. 21-30 Lv. 31-60 Lv. 61-80 Lv. 81-90 Lv. 91-100">
+      <a href="max-potion.html">
+<img src="../assets/game/graphics/items/icons/max_potion.png" alt="Max Potion" class="item-icon">        <span>Max Potion</span>
+      </a>
+    </li>
+    <li data-search-text="Max Repel ITEM_MAX_REPEL Shop Battle Frontier - Mart Ever Grande City - Pokemon League 1F Lilycove City - Department Store 2F Mossdeep City - Mart Sootopolis City - Mart Overworld Route 119 Hidden Item Victory Road - B2F Pickup Lv. 11-30 Lv. 31-50 Lv. 51-60 Lv. 61-80 Lv. 81-90">
+      <a href="max-repel.html">
+<img src="../assets/game/graphics/items/icons/max_repel.png" alt="Max Repel" class="item-icon">        <span>Max Repel</span>
+      </a>
+    </li>
+    <li data-search-text="Max Revive ITEM_MAX_REVIVE Overworld Magma Hideout - 4F Route 133 Safari Zone - Southwest Hidden Item Route 121 Pickup Lv. 31-70 Lv. 71-80 Lv. 81-100">
+      <a href="max-revive.html">
+<img src="../assets/game/graphics/items/icons/max_revive.png" alt="Max Revive" class="item-icon">        <span>Max Revive</span>
+      </a>
+    </li>
+    <li data-search-text="Mech Mail ITEM_MECH_MAIL Shop Lilycove City - Department Store 2F Overworld Route 110 - Trick House Puzzle 4">
+      <a href="mech-mail.html">
+<img src="../assets/game/graphics/items/icons/mech_mail.png" alt="Mech Mail" class="item-icon">        <span>Mech Mail</span>
+      </a>
+    </li>
+    <li data-search-text="Mental Herb ITEM_MENTAL_HERB NPC Fortree City - House 4 Wild Held Items Pancham Sewaddle">
+      <a href="mental-herb.html">
+<img src="../assets/game/graphics/items/icons/mental_herb.png" alt="Mental Herb" class="item-icon">        <span>Mental Herb</span>
+      </a>
+    </li>
+    <li data-search-text="Metal Coat ITEM_METAL_COAT Wild Held Items Bronzong Bronzor">
+      <a href="metal-coat.html">
+<img src="../assets/game/graphics/items/icons/metal_coat.png" alt="Metal Coat" class="item-icon">        <span>Metal Coat</span>
+      </a>
+    </li>
+    <li data-search-text="Metal Powder ITEM_METAL_POWDER Wild Held Items Ditto">
+      <a href="metal-powder.html">
+<img src="../assets/game/graphics/items/icons/metal_powder.png" alt="Metal Powder" class="item-icon">        <span>Metal Powder</span>
+      </a>
+    </li>
+    <li data-search-text="Metronome ITEM_METRONOME Overworld Route 116 Wild Held Items Chatot Kricketot">
+      <a href="metronome.html">
+<img src="../assets/game/graphics/items/icons/metronome.png" alt="Metronome" class="item-icon">        <span>Metronome</span>
+      </a>
+    </li>
+    <li data-search-text="Mild Mint ITEM_MILD_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="mild-mint.html">
+<img src="../assets/game/graphics/items/icons/mild_mint.png" alt="Mild Mint" class="item-icon">        <span>Mild Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Miracle Seed ITEM_MIRACLE_SEED NPC Petalburg Woods Wild Held Items Cherubi Fomantis Maractus Pumpkaboo (Super Size)">
+      <a href="miracle-seed.html">
+<img src="../assets/game/graphics/items/icons/miracle_seed.png" alt="Miracle Seed" class="item-icon">        <span>Miracle Seed</span>
+      </a>
+    </li>
+    <li data-search-text="Mirror Herb ITEM_MIRROR_HERB Overworld Route 137">
+      <a href="mirror-herb.html">
+<img src="../assets/game/graphics/items/icons/mirror_herb.png" alt="Mirror Herb" class="item-icon">        <span>Mirror Herb</span>
+      </a>
+    </li>
+    <li data-search-text="Misty Seed ITEM_MISTY_SEED Wild Held Items Comfey">
+      <a href="misty-seed.html">
+<img src="../assets/game/graphics/items/icons/misty_seed.png" alt="Misty Seed" class="item-icon">        <span>Misty Seed</span>
+      </a>
+    </li>
+    <li data-search-text="Modest Mint ITEM_MODEST_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="modest-mint.html">
+<img src="../assets/game/graphics/items/icons/modest_mint.png" alt="Modest Mint" class="item-icon">        <span>Modest Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Moon Stone ITEM_MOON_STONE Overworld Meteor Falls - 1F 1R Pickup Lv. 11-30 Lv. 31-70 Lv. 71-80 Lv. 81-90 Lv. 91-100">
+      <a href="moon-stone.html">
+<img src="../assets/game/graphics/items/icons/moon_stone.png" alt="Moon Stone" class="item-icon">        <span>Moon Stone</span>
+      </a>
+    </li>
+    <li data-search-text="Mystic Water ITEM_MYSTIC_WATER Wild Held Items Araquanid Dewpider">
+      <a href="mystic-water.html">
+<img src="../assets/game/graphics/items/icons/mystic_water.png" alt="Mystic Water" class="item-icon">        <span>Mystic Water</span>
+      </a>
+    </li>
+    <li data-search-text="Naive Mint ITEM_NAIVE_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="naive-mint.html">
+<img src="../assets/game/graphics/items/icons/naive_mint.png" alt="Naive Mint" class="item-icon">        <span>Naive Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Naughty Mint ITEM_NAUGHTY_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="naughty-mint.html">
+<img src="../assets/game/graphics/items/icons/naughty_mint.png" alt="Naughty Mint" class="item-icon">        <span>Naughty Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Never-Melt Ice ITEM_NEVER_MELT_ICE Overworld Shoal Cave - Low Tide Ice Room Wild Held Items Cryogonal Snover Vanillish Vanillite">
+      <a href="never-melt-ice.html">
+<img src="../assets/game/graphics/items/icons/never_melt_ice.png" alt="Never-Melt Ice" class="item-icon">        <span>Never-Melt Ice</span>
+      </a>
+    </li>
+    <li data-search-text="Normal Gem ITEM_NORMAL_GEM Overworld Route 136">
+      <a href="normal-gem.html">
+<img src="../assets/game/graphics/items/icons/normal_gem.png" alt="Normal Gem" class="item-icon">        <span>Normal Gem</span>
+      </a>
+    </li>
+    <li data-search-text="Nugget ITEM_NUGGET Overworld Aqua Hideout - B1F Magma Hideout - 3F 1R Route 112 Route 119 Route 120 Route 128 - Cavern Safari Zone - Northeast Hidden Item Fallarbor Town Route 110 - Trick House End Route 121 Pickup Lv. 21-30 Lv. 31-70 Lv. 71-80 Lv. 81-90 Lv. 91-100 Trainer Held Item Lady Cindy (Route 104) Rich Boy Winston (Route 104) Lady Sarah (Route 116) Rich Boy Dawson (Route 116) Lady Naomi (SS Tidal Corridor) Rich Boy Garret (SS Tidal Corridor) Rich Boy Brian (Sootopolis City - Gym B1F) Rich Boy Darren (Sootopolis City - Gym B1F)">
+      <a href="nugget.html">
+<img src="../assets/game/graphics/items/icons/nugget.png" alt="Nugget" class="item-icon">        <span>Nugget</span>
+      </a>
+    </li>
+    <li data-search-text="Old Gateau ITEM_OLD_GATEAU Hidden Item Old House Room 1 - 2">
+      <a href="old-gateau.html">
+<img src="../assets/game/graphics/items/icons/old_gateau.png" alt="Old Gateau" class="item-icon">        <span>Old Gateau</span>
+      </a>
+    </li>
+    <li data-search-text="Orange Mail ITEM_ORANGE_MAIL Shop Petalburg City - Mart Overworld Route 110 - Trick House Puzzle 1">
+      <a href="orange-mail.html">
+<img src="../assets/game/graphics/items/icons/orange_mail.png" alt="Orange Mail" class="item-icon">        <span>Orange Mail</span>
+      </a>
+    </li>
+    <li data-search-text="Paralyze Heal ITEM_PARALYZE_HEAL Shop Fallarbor Town - Mart Fortree City - Mart Lavaridge Town - Mart Mauville City - Mart Oldale Town - Mart Petalburg City - Mart Rustboro City - Mart Slateport City - Mart Trainer Hill - Entrance Verdanturf Town - Mart Overworld New Mauville - Inside Petalburg Woods">
+      <a href="paralyze-heal.html">
+<img src="../assets/game/graphics/items/icons/paralyze_heal.png" alt="Paralyze Heal" class="item-icon">        <span>Paralyze Heal</span>
+      </a>
+    </li>
+    <li data-search-text="Pearl ITEM_PEARL Hidden Item Route 104 Route 115 Underwater - Route 124">
+      <a href="pearl.html">
+<img src="../assets/game/graphics/items/icons/pearl.png" alt="Pearl" class="item-icon">        <span>Pearl</span>
+      </a>
+    </li>
+    <li data-search-text="Pink Nectar ITEM_PINK_NECTAR Shop Slateport City Wild Held Items Oricorio (Pa&#39;u Style)">
+      <a href="pink-nectar.html">
+<img src="../assets/game/graphics/items/icons/pink_nectar.png" alt="Pink Nectar" class="item-icon">        <span>Pink Nectar</span>
+      </a>
+    </li>
+    <li data-search-text="Pink Scarf ITEM_PINK_SCARF NPC Slateport City - Pokemon Fan Club">
+      <a href="pink-scarf.html">
+<img src="../assets/game/graphics/items/icons/pink_scarf.png" alt="Pink Scarf" class="item-icon">        <span>Pink Scarf</span>
+      </a>
+    </li>
+    <li data-search-text="Plume Fossil ITEM_PLUME_FOSSIL Hidden Item Underwater - Route 128">
+      <a href="plume-fossil.html">
+<img src="../assets/game/graphics/items/icons/plume_fossil.png" alt="Plume Fossil" class="item-icon">        <span>Plume Fossil</span>
+      </a>
+    </li>
+    <li data-search-text="Poison Barb ITEM_POISON_BARB Wild Held Items Budew Mareanie Skorupi Toxapex Venipede Whirlipede">
+      <a href="poison-barb.html">
+<img src="../assets/game/graphics/items/icons/poison_barb.png" alt="Poison Barb" class="item-icon">        <span>Poison Barb</span>
+      </a>
+    </li>
+    <li data-search-text="Poison Gem ITEM_POISON_GEM NPC Sootopolis City - Lotad And Seedot House">
+      <a href="poison-gem.html">
+<img src="../assets/game/graphics/items/icons/poison_gem.png" alt="Poison Gem" class="item-icon">        <span>Poison Gem</span>
+      </a>
+    </li>
+    <li data-search-text="Poké Doll ITEM_POKE_DOLL Overworld Mt Pyre - 4F Pickup Lv. 1-10 Lv. 11-20 Lv. 21-30 Lv. 31-40">
+      <a href="poke-doll.html">
+<img src="../assets/game/graphics/items/icons/poke_doll.png" alt="Poké Doll" class="item-icon">        <span>Poké Doll</span>
+      </a>
+    </li>
+    <li data-search-text="Potion ITEM_POTION Shop Lilycove City - Department Store 2F Oldale Town - Mart Petalburg City - Mart Rustboro City - Mart Slateport City - Mart NPC Oldale Town Overworld Route 102 Route 104 Route 109 Route 116 Hidden Item Petalburg Woods Route 104 Pickup Lv. 1-10">
+      <a href="potion.html">
+<img src="../assets/game/graphics/items/icons/potion.png" alt="Potion" class="item-icon">        <span>Potion</span>
+      </a>
+    </li>
+    <li data-search-text="Power Anklet ITEM_POWER_ANKLET Shop Battle Frontier - Exchange Service Corner">
+      <a href="power-anklet.html">
+<img src="../assets/game/graphics/items/icons/power_anklet.png" alt="Power Anklet" class="item-icon">        <span>Power Anklet</span>
+      </a>
+    </li>
+    <li data-search-text="Power Band ITEM_POWER_BAND Shop Battle Frontier - Exchange Service Corner">
+      <a href="power-band.html">
+<img src="../assets/game/graphics/items/icons/power_band.png" alt="Power Band" class="item-icon">        <span>Power Band</span>
+      </a>
+    </li>
+    <li data-search-text="Power Belt ITEM_POWER_BELT Shop Battle Frontier - Exchange Service Corner">
+      <a href="power-belt.html">
+<img src="../assets/game/graphics/items/icons/power_belt.png" alt="Power Belt" class="item-icon">        <span>Power Belt</span>
+      </a>
+    </li>
+    <li data-search-text="Power Bracer ITEM_POWER_BRACER Shop Battle Frontier - Exchange Service Corner">
+      <a href="power-bracer.html">
+<img src="../assets/game/graphics/items/icons/power_bracer.png" alt="Power Bracer" class="item-icon">        <span>Power Bracer</span>
+      </a>
+    </li>
+    <li data-search-text="Power Herb ITEM_POWER_HERB Shop Lavaridge Town - Herb Shop">
+      <a href="power-herb.html">
+<img src="../assets/game/graphics/items/icons/power_herb.png" alt="Power Herb" class="item-icon">        <span>Power Herb</span>
+      </a>
+    </li>
+    <li data-search-text="Power Lens ITEM_POWER_LENS Shop Battle Frontier - Exchange Service Corner">
+      <a href="power-lens.html">
+<img src="../assets/game/graphics/items/icons/power_lens.png" alt="Power Lens" class="item-icon">        <span>Power Lens</span>
+      </a>
+    </li>
+    <li data-search-text="Power Weight ITEM_POWER_WEIGHT Shop Battle Frontier - Exchange Service Corner">
+      <a href="power-weight.html">
+<img src="../assets/game/graphics/items/icons/power_weight.png" alt="Power Weight" class="item-icon">        <span>Power Weight</span>
+      </a>
+    </li>
+    <li data-search-text="PP Max ITEM_PP_MAX NPC Route 110 - Trick House End Route 110 - Trick House Entrance Overworld Magma Hideout - 3F 2R">
+      <a href="pp-max.html">
+<img src="../assets/game/graphics/items/icons/pp_max.png" alt="PP Max" class="item-icon">        <span>PP Max</span>
+      </a>
+    </li>
+    <li data-search-text="PP Up ITEM_PP_UP NPC Slateport City Overworld Route 103 Route 104 Route 109 Route 115 Route 123 Victory Road - 1F Hidden Item Lilycove City Safari Zone - Southeast Pickup Lv. 21-50 Lv. 51-70 Lv. 71-80 Lv. 81-90 Lv. 91-100">
+      <a href="pp-up.html">
+<img src="../assets/game/graphics/items/icons/pp_up.png" alt="PP Up" class="item-icon">        <span>PP Up</span>
+      </a>
+    </li>
+    <li data-search-text="Protective Pads ITEM_PROTECTIVE_PADS Overworld Route 117">
+      <a href="protective-pads.html">
+<img src="../assets/game/graphics/items/icons/protective_pads.png" alt="Protective Pads" class="item-icon">        <span>Protective Pads</span>
+      </a>
+    </li>
+    <li data-search-text="Protein ITEM_PROTEIN Shop Battle Frontier - Mart Lilycove City - Department Store 3F Slateport City NPC Safari Zone - North Overworld Route 106 Route 114 Route 132 Hidden Item Route 109 Route 111 Route 114">
+      <a href="protein.html">
+<img src="../assets/game/graphics/items/icons/protein.png" alt="Protein" class="item-icon">        <span>Protein</span>
+      </a>
+    </li>
+    <li data-search-text="Psychic Seed ITEM_PSYCHIC_SEED Wild Held Items Exeggcute">
+      <a href="psychic-seed.html">
+<img src="../assets/game/graphics/items/icons/psychic_seed.png" alt="Psychic Seed" class="item-icon">        <span>Psychic Seed</span>
+      </a>
+    </li>
+    <li data-search-text="Punching Glove ITEM_PUNCHING_GLOVE NPC Route 110 - Trick House End Route 110 - Trick House Entrance">
+      <a href="punching-glove.html">
+<img src="../assets/game/graphics/items/icons/punching_glove.png" alt="Punching Glove" class="item-icon">        <span>Punching Glove</span>
+      </a>
+    </li>
+    <li data-search-text="Purple Nectar ITEM_PURPLE_NECTAR Shop Slateport City Wild Held Items Oricorio (Sensu Style)">
+      <a href="purple-nectar.html">
+<img src="../assets/game/graphics/items/icons/purple_nectar.png" alt="Purple Nectar" class="item-icon">        <span>Purple Nectar</span>
+      </a>
+    </li>
+    <li data-search-text="Quick Claw ITEM_QUICK_CLAW NPC Rustboro City - Pokemon School Safari Zone - North Wild Held Items Meowth Meowth (Alolan) Persian">
+      <a href="quick-claw.html">
+<img src="../assets/game/graphics/items/icons/quick_claw.png" alt="Quick Claw" class="item-icon">        <span>Quick Claw</span>
+      </a>
+    </li>
+    <li data-search-text="Quick Powder ITEM_QUICK_POWDER Wild Held Items Ditto">
+      <a href="quick-powder.html">
+<img src="../assets/game/graphics/items/icons/quick_powder.png" alt="Quick Powder" class="item-icon">        <span>Quick Powder</span>
+      </a>
+    </li>
+    <li data-search-text="Quiet Mint ITEM_QUIET_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="quiet-mint.html">
+<img src="../assets/game/graphics/items/icons/quiet_mint.png" alt="Quiet Mint" class="item-icon">        <span>Quiet Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Rare Candy ITEM_RARE_CANDY NPC Slateport City Victory Road - 1F Overworld Ever Grande City - Hall 1 Ever Grande City - Hall 2 Ever Grande City - Hall 3 Ever Grande City - Hall 4 Magma Hideout - 1F Route 114 Route 127 Route 132 Route 136 Shoal Cave - Low Tide Inner Room Hidden Item Mt Pyre - Summit Petalburg City Route 108 Route 111 Route 120 Route 123 Safari Zone - Northeast Pickup Lv. 11-50 Lv. 51-70 Lv. 71-80 Lv. 81-90 Lv. 91-100">
+      <a href="rare-candy.html">
+<img src="../assets/game/graphics/items/icons/rare_candy.png" alt="Rare Candy" class="item-icon">        <span>Rare Candy</span>
+      </a>
+    </li>
+    <li data-search-text="Rash Mint ITEM_RASH_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="rash-mint.html">
+<img src="../assets/game/graphics/items/icons/rash_mint.png" alt="Rash Mint" class="item-icon">        <span>Rash Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Razor Claw ITEM_RAZOR_CLAW Wild Held Items Jangmo-o">
+      <a href="razor-claw.html">
+<img src="../assets/game/graphics/items/icons/razor_claw.png" alt="Razor Claw" class="item-icon">        <span>Razor Claw</span>
+      </a>
+    </li>
+    <li data-search-text="Razor Fang ITEM_RAZOR_FANG Wild Held Items Bruxish">
+      <a href="razor-fang.html">
+<img src="../assets/game/graphics/items/icons/razor_fang.png" alt="Razor Fang" class="item-icon">        <span>Razor Fang</span>
+      </a>
+    </li>
+    <li data-search-text="Red Card ITEM_RED_CARD NPC Abandoned Ship - Corridors B1F">
+      <a href="red-card.html">
+<img src="../assets/game/graphics/items/icons/red_card.png" alt="Red Card" class="item-icon">        <span>Red Card</span>
+      </a>
+    </li>
+    <li data-search-text="Red Flute ITEM_RED_FLUTE Shop Route 113 - Glass Workshop">
+      <a href="red-flute.html">
+<img src="../assets/game/graphics/items/icons/red_flute.png" alt="Red Flute" class="item-icon">        <span>Red Flute</span>
+      </a>
+    </li>
+    <li data-search-text="Red Nectar ITEM_RED_NECTAR Shop Slateport City Wild Held Items Oricorio (Baile Style)">
+      <a href="red-nectar.html">
+<img src="../assets/game/graphics/items/icons/red_nectar.png" alt="Red Nectar" class="item-icon">        <span>Red Nectar</span>
+      </a>
+    </li>
+    <li data-search-text="Red Scarf ITEM_RED_SCARF NPC Slateport City - Pokemon Fan Club">
+      <a href="red-scarf.html">
+<img src="../assets/game/graphics/items/icons/red_scarf.png" alt="Red Scarf" class="item-icon">        <span>Red Scarf</span>
+      </a>
+    </li>
+    <li data-search-text="Red Shard ITEM_RED_SHARD Overworld Route 124 Hidden Item Underwater - Route 127 Wild Held Items Mareanie Toxapex">
+      <a href="red-shard.html">
+<img src="../assets/game/graphics/items/icons/red_shard.png" alt="Red Shard" class="item-icon">        <span>Red Shard</span>
+      </a>
+    </li>
+    <li data-search-text="Relaxed Mint ITEM_RELAXED_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="relaxed-mint.html">
+<img src="../assets/game/graphics/items/icons/relaxed_mint.png" alt="Relaxed Mint" class="item-icon">        <span>Relaxed Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Repel ITEM_REPEL Shop Lilycove City - Department Store 2F Petalburg City - Mart Rustboro City - Mart Slateport City - Mart Verdanturf Town - Mart Overworld Route 116 Pickup Lv. 1-10 Lv. 11-20">
+      <a href="repel.html">
+<img src="../assets/game/graphics/items/icons/repel.png" alt="Repel" class="item-icon">        <span>Repel</span>
+      </a>
+    </li>
+    <li data-search-text="Retro Mail ITEM_RETRO_MAIL Shop Slateport City">
+      <a href="retro-mail.html">
+<img src="../assets/game/graphics/items/icons/retro_mail.png" alt="Retro Mail" class="item-icon">        <span>Retro Mail</span>
+      </a>
+    </li>
+    <li data-search-text="Revival Herb ITEM_REVIVAL_HERB Shop Lavaridge Town - Herb Shop NPC Slateport City Overworld Route 123">
+      <a href="revival-herb.html">
+<img src="../assets/game/graphics/items/icons/revival_herb.png" alt="Revival Herb" class="item-icon">        <span>Revival Herb</span>
+      </a>
+    </li>
+    <li data-search-text="Revive ITEM_REVIVE Shop Battle Frontier - Mart Ever Grande City - Pokemon League 1F Fortree City - Mart Lavaridge Town - Mart Lilycove City - Department Store 2F Mossdeep City - Mart Sootopolis City - Mart Trainer Hill - Entrance Overworld Abandoned Ship - Rooms 2 1F Route 121 Hidden Item Route 109 Route 110 Route 120 Route 123 Pickup Lv. 1-30 Lv. 31-50 Lv. 51-60 Lv. 61-70">
+      <a href="revive.html">
+<img src="../assets/game/graphics/items/icons/revive.png" alt="Revive" class="item-icon">        <span>Revive</span>
+      </a>
+    </li>
+    <li data-search-text="Rich Mulch ITEM_RICH_MULCH Berry Tree Pest Held Item Burmy (Plant Cloak) Cherubi Cutiefly Karrablast Pikipek Poipole">
+      <a href="rich-mulch.html">
+<img src="../assets/game/graphics/items/icons/rich_mulch.png" alt="Rich Mulch" class="item-icon">        <span>Rich Mulch</span>
+      </a>
+    </li>
+    <li data-search-text="Ring Target ITEM_RING_TARGET Overworld Rustboro City">
+      <a href="ring-target.html">
+<img src="../assets/game/graphics/items/icons/ring_target.png" alt="Ring Target" class="item-icon">        <span>Ring Target</span>
+      </a>
+    </li>
+    <li data-search-text="Rock Gem ITEM_ROCK_GEM Hidden Item Route 135 - Map">
+      <a href="rock-gem.html">
+<img src="../assets/game/graphics/items/icons/rock_gem.png" alt="Rock Gem" class="item-icon">        <span>Rock Gem</span>
+      </a>
+    </li>
+    <li data-search-text="Rocky Helmet ITEM_ROCKY_HELMET Overworld Route 135 - Map Trainer Held Item Elite Four Drake (Ever Grande City - Drake&#39;s Room)">
+      <a href="rocky-helmet.html">
+<img src="../assets/game/graphics/items/icons/rocky_helmet.png" alt="Rocky Helmet" class="item-icon">        <span>Rocky Helmet</span>
+      </a>
+    </li>
+    <li data-search-text="Room Service ITEM_ROOM_SERVICE Overworld Old House C2">
+      <a href="room-service.html">
+<img src="../assets/game/graphics/items/icons/room_service.png" alt="Room Service" class="item-icon">        <span>Room Service</span>
+      </a>
+    </li>
+    <li data-search-text="Rose Incense ITEM_ROSE_INCENSE Overworld Mt Pyre - 5F">
+      <a href="rose-incense.html">
+<img src="../assets/game/graphics/items/icons/rose_incense.png" alt="Rose Incense" class="item-icon">        <span>Rose Incense</span>
+      </a>
+    </li>
+    <li data-search-text="Sachet ITEM_SACHET Shop Slateport City">
+      <a href="sachet.html">
+<img src="../assets/game/graphics/items/icons/sachet.png" alt="Sachet" class="item-icon">        <span>Sachet</span>
+      </a>
+    </li>
+    <li data-search-text="Sacred Ash ITEM_SACRED_ASH Hidden Item Navel Rock - Top">
+      <a href="sacred-ash.html">
+<img src="../assets/game/graphics/items/icons/sacred_ash.png" alt="Sacred Ash" class="item-icon">        <span>Sacred Ash</span>
+      </a>
+    </li>
+    <li data-search-text="Safety Goggles ITEM_SAFETY_GOGGLES Overworld New Mauville - Inside">
+      <a href="safety-goggles.html">
+<img src="../assets/game/graphics/items/icons/safety_goggles.png" alt="Safety Goggles" class="item-icon">        <span>Safety Goggles</span>
+      </a>
+    </li>
+    <li data-search-text="Sail Fossil ITEM_SAIL_FOSSIL Overworld Desert Underpass Mirage Tower - 4F">
+      <a href="sail-fossil.html">
+<img src="../assets/game/graphics/items/icons/sail_fossil.png" alt="Sail Fossil" class="item-icon">        <span>Sail Fossil</span>
+      </a>
+    </li>
+    <li data-search-text="Sassy Mint ITEM_SASSY_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="sassy-mint.html">
+<img src="../assets/game/graphics/items/icons/sassy_mint.png" alt="Sassy Mint" class="item-icon">        <span>Sassy Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Scope Lens ITEM_SCOPE_LENS Overworld Abandoned Ship - Rooms 1F">
+      <a href="scope-lens.html">
+<img src="../assets/game/graphics/items/icons/scope_lens.png" alt="Scope Lens" class="item-icon">        <span>Scope Lens</span>
+      </a>
+    </li>
+    <li data-search-text="Serious Mint ITEM_SERIOUS_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="serious-mint.html">
+<img src="../assets/game/graphics/items/icons/serious_mint.png" alt="Serious Mint" class="item-icon">        <span>Serious Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Shadow Mail ITEM_SHADOW_MAIL Shop Sootopolis City - Mart Overworld Route 110 - Trick House Puzzle 3">
+      <a href="shadow-mail.html">
+<img src="../assets/game/graphics/items/icons/shadow_mail.png" alt="Shadow Mail" class="item-icon">        <span>Shadow Mail</span>
+      </a>
+    </li>
+    <li data-search-text="Sharp Beak ITEM_SHARP_BEAK Overworld Route 137">
+      <a href="sharp-beak.html">
+<img src="../assets/game/graphics/items/icons/sharp_beak.png" alt="Sharp Beak" class="item-icon">        <span>Sharp Beak</span>
+      </a>
+    </li>
+    <li data-search-text="Shed Shell ITEM_SHED_SHELL Wild Held Items Goomy Scraggy">
+      <a href="shed-shell.html">
+<img src="../assets/game/graphics/items/icons/shed_shell.png" alt="Shed Shell" class="item-icon">        <span>Shed Shell</span>
+      </a>
+    </li>
+    <li data-search-text="Shell Bell ITEM_SHELL_BELL NPC Shoal Cave - Low Tide Entrance Room">
+      <a href="shell-bell.html">
+<img src="../assets/game/graphics/items/icons/shell_bell.png" alt="Shell Bell" class="item-icon">        <span>Shell Bell</span>
+      </a>
+    </li>
+    <li data-search-text="Shiny Stone ITEM_SHINY_STONE NPC Route 124 - Diving Treasure Hunters House Overworld Lilycove City">
+      <a href="shiny-stone.html">
+<img src="../assets/game/graphics/items/icons/shiny_stone.png" alt="Shiny Stone" class="item-icon">        <span>Shiny Stone</span>
+      </a>
+    </li>
+    <li data-search-text="Shoal Salt ITEM_SHOAL_SALT NPC Shoal Cave - Low Tide Inner Room Shoal Cave - Low Tide Lower Room Shoal Cave - Low Tide Stairs Room">
+      <a href="shoal-salt.html">
+<img src="../assets/game/graphics/items/icons/shoal_salt.png" alt="Shoal Salt" class="item-icon">        <span>Shoal Salt</span>
+      </a>
+    </li>
+    <li data-search-text="Shoal Shell ITEM_SHOAL_SHELL NPC Shoal Cave - Low Tide Inner Room">
+      <a href="shoal-shell.html">
+<img src="../assets/game/graphics/items/icons/shoal_shell.png" alt="Shoal Shell" class="item-icon">        <span>Shoal Shell</span>
+      </a>
+    </li>
+    <li data-search-text="Silk Scarf ITEM_SILK_SCARF NPC Dewford Town - House 2 Wild Held Items Trubbish Trainer Held Item Leader Brawly (Dewford Town - Gym)">
+      <a href="silk-scarf.html">
+<img src="../assets/game/graphics/items/icons/silk_scarf.png" alt="Silk Scarf" class="item-icon">        <span>Silk Scarf</span>
+      </a>
+    </li>
+    <li data-search-text="Silver Powder ITEM_SILVER_POWDER Shop Battle Frontier - Exchange Service Corner">
+      <a href="silver-powder.html">
+<img src="../assets/game/graphics/items/icons/silver_powder.png" alt="Silver Powder" class="item-icon">        <span>Silver Powder</span>
+      </a>
+    </li>
+    <li data-search-text="Skull Fossil ITEM_SKULL_FOSSIL Hidden Item Underwater - Route 126">
+      <a href="skull-fossil.html">
+<img src="../assets/game/graphics/items/icons/skull_fossil.png" alt="Skull Fossil" class="item-icon">        <span>Skull Fossil</span>
+      </a>
+    </li>
+    <li data-search-text="Smoke Ball ITEM_SMOKE_BALL Hidden Item Route 123 Wild Held Items Salandit">
+      <a href="smoke-ball.html">
+<img src="../assets/game/graphics/items/icons/smoke_ball.png" alt="Smoke Ball" class="item-icon">        <span>Smoke Ball</span>
+      </a>
+    </li>
+    <li data-search-text="Smooth Rock ITEM_SMOOTH_ROCK Shop Mauville City - Game Corner">
+      <a href="smooth-rock.html">
+<img src="../assets/game/graphics/items/icons/smooth_rock.png" alt="Smooth Rock" class="item-icon">        <span>Smooth Rock</span>
+      </a>
+    </li>
+    <li data-search-text="Snowball ITEM_SNOWBALL Hidden Item Route 137 Wild Held Items Darumaka (Galarian) Vulpix (Alolan)">
+      <a href="snowball.html">
+<img src="../assets/game/graphics/items/icons/snowball.png" alt="Snowball" class="item-icon">        <span>Snowball</span>
+      </a>
+    </li>
+    <li data-search-text="Soda Pop ITEM_SODA_POP NPC Lilycove City - Department Store Rooftop Route 109 - Seashore House">
+      <a href="soda-pop.html">
+<img src="../assets/game/graphics/items/icons/soda_pop.png" alt="Soda Pop" class="item-icon">        <span>Soda Pop</span>
+      </a>
+    </li>
+    <li data-search-text="Soft Sand ITEM_SOFT_SAND NPC Route 109 Wild Held Items Diglett Diglett (Alolan) Dugtrio Dugtrio (Alolan) Stunfisk">
+      <a href="soft-sand.html">
+<img src="../assets/game/graphics/items/icons/soft_sand.png" alt="Soft Sand" class="item-icon">        <span>Soft Sand</span>
+      </a>
+    </li>
+    <li data-search-text="Soothe Bell ITEM_SOOTHE_BELL NPC Slateport City - Pokemon Fan Club">
+      <a href="soothe-bell.html">
+<img src="../assets/game/graphics/items/icons/soothe_bell.png" alt="Soothe Bell" class="item-icon">        <span>Soothe Bell</span>
+      </a>
+    </li>
+    <li data-search-text="Spandex Flares ITEM_SPANDEX_FLARES Shop Battle Frontier - Exchange Service Corner Overworld Lilycove City - Cove Lily Motel 2F">
+      <a href="spandex-flares.html">
+<img src="../assets/game/graphics/items/icons/spandex_flares.png" alt="Spandex Flares" class="item-icon">        <span>Spandex Flares</span>
+      </a>
+    </li>
+    <li data-search-text="Spell Tag ITEM_SPELL_TAG Wild Held Items Cofagrigus Sandygast Yamask">
+      <a href="spell-tag.html">
+<img src="../assets/game/graphics/items/icons/spell_tag.png" alt="Spell Tag" class="item-icon">        <span>Spell Tag</span>
+      </a>
+    </li>
+    <li data-search-text="Star Piece ITEM_STAR_PIECE Overworld Route 108 Hidden Item Underwater - Route 127">
+      <a href="star-piece.html">
+<img src="../assets/game/graphics/items/icons/star_piece.png" alt="Star Piece" class="item-icon">        <span>Star Piece</span>
+      </a>
+    </li>
+    <li data-search-text="Stardust ITEM_STARDUST Hidden Item Route 106 Route 111 Route 135 - Map Route 137">
+      <a href="stardust.html">
+<img src="../assets/game/graphics/items/icons/stardust.png" alt="Stardust" class="item-icon">        <span>Stardust</span>
+      </a>
+    </li>
+    <li data-search-text="Sticky Barb ITEM_STICKY_BARB Wild Held Items Ferroseed">
+      <a href="sticky-barb.html">
+<img src="../assets/game/graphics/items/icons/sticky_barb.png" alt="Sticky Barb" class="item-icon">        <span>Sticky Barb</span>
+      </a>
+    </li>
+    <li data-search-text="Sun Stone ITEM_SUN_STONE NPC Mossdeep City - Space Center 1F Route 124 - Diving Treasure Hunters House Overworld Route 111 Pickup Lv. 11-30 Lv. 31-70 Lv. 71-80 Lv. 81-90 Lv. 91-100">
+      <a href="sun-stone.html">
+<img src="../assets/game/graphics/items/icons/sun_stone.png" alt="Sun Stone" class="item-icon">        <span>Sun Stone</span>
+      </a>
+    </li>
+    <li data-search-text="Super Potion ITEM_SUPER_POTION Shop Fallarbor Town - Mart Fortree City - Mart Lavaridge Town - Mart Lilycove City - Department Store 2F Mauville City - Mart Petalburg City - Mart Rustboro City - Mart Slateport City - Mart Trainer Hill - Entrance Verdanturf Town - Mart Overworld Route 115 Route 137 Hidden Item Route 104 Route 116 Route 136 Pickup Lv. 1-10 Lv. 11-20 Lv. 21-30">
+      <a href="super-potion.html">
+<img src="../assets/game/graphics/items/icons/super_potion.png" alt="Super Potion" class="item-icon">        <span>Super Potion</span>
+      </a>
+    </li>
+    <li data-search-text="Super Repel ITEM_SUPER_REPEL Shop Fallarbor Town - Mart Fortree City - Mart Lavaridge Town - Mart Lilycove City - Department Store 2F Overworld Mt Pyre - 3F Route 113 Hidden Item Route 123 Route 136 Pickup Lv. 1-10 Lv. 11-20 Lv. 21-40 Lv. 41-50">
+      <a href="super-repel.html">
+<img src="../assets/game/graphics/items/icons/super_repel.png" alt="Super Repel" class="item-icon">        <span>Super Repel</span>
+      </a>
+    </li>
+    <li data-search-text="Surprise Mulch ITEM_SURPRISE_MULCH Berry Tree Pest Held Item Burmy (Plant Cloak) Cherubi Cutiefly Karrablast Pikipek Poipole">
+      <a href="surprise-mulch.html">
+<img src="../assets/game/graphics/items/icons/surprise_mulch.png" alt="Surprise Mulch" class="item-icon">        <span>Surprise Mulch</span>
+      </a>
+    </li>
+    <li data-search-text="Terrain Extender ITEM_TERRAIN_EXTENDER Overworld Route 119">
+      <a href="terrain-extender.html">
+<img src="../assets/game/graphics/items/icons/terrain_extender.png" alt="Terrain Extender" class="item-icon">        <span>Terrain Extender</span>
+      </a>
+    </li>
+    <li data-search-text="Thick Club ITEM_THICK_CLUB Wild Held Items Cubone Marowak Marowak (Alolan)">
+      <a href="thick-club.html">
+<img src="../assets/game/graphics/items/icons/thick_club.png" alt="Thick Club" class="item-icon">        <span>Thick Club</span>
+      </a>
+    </li>
+    <li data-search-text="Throat Spray ITEM_THROAT_SPRAY Shop Battle Frontier - Exchange Service Corner Trainer Held Item Elite Four Drake (Ever Grande City - Drake&#39;s Room)">
+      <a href="throat-spray.html">
+<img src="../assets/game/graphics/items/icons/throat_spray.png" alt="Throat Spray" class="item-icon">        <span>Throat Spray</span>
+      </a>
+    </li>
+    <li data-search-text="Thunder Stone ITEM_THUNDER_STONE Overworld Route 120 Wild Held Items Luxio">
+      <a href="thunder-stone.html">
+<img src="../assets/game/graphics/items/icons/thunder_stone.png" alt="Thunder Stone" class="item-icon">        <span>Thunder Stone</span>
+      </a>
+    </li>
+    <li data-search-text="Timid Mint ITEM_TIMID_MINT Shop Lavaridge Town - Herb Shop">
+      <a href="timid-mint.html">
+<img src="../assets/game/graphics/items/icons/timid_mint.png" alt="Timid Mint" class="item-icon">        <span>Timid Mint</span>
+      </a>
+    </li>
+    <li data-search-text="Tiny Mushroom ITEM_TINY_MUSHROOM Hidden Item Petalburg Woods Wild Held Items Foongus Morelull Pickup Lv. 1-10 Lv. 11-20">
+      <a href="tiny-mushroom.html">
+<img src="../assets/game/graphics/items/icons/tiny_mushroom.png" alt="Tiny Mushroom" class="item-icon">        <span>Tiny Mushroom</span>
+      </a>
+    </li>
+    <li data-search-text="Toxic Orb ITEM_TOXIC_ORB NPC Pacifidlog Town - House 2 Trainer Held Item Elite Four Juan (Ever Grande City - Juan&#39;s Room)">
+      <a href="toxic-orb.html">
+<img src="../assets/game/graphics/items/icons/toxic_orb.png" alt="Toxic Orb" class="item-icon">        <span>Toxic Orb</span>
+      </a>
+    </li>
+    <li data-search-text="Tropic Mail ITEM_TROPIC_MAIL Overworld Route 110 - Trick House Puzzle 7">
+      <a href="tropic-mail.html">
+<img src="../assets/game/graphics/items/icons/tropic_mail.png" alt="Tropic Mail" class="item-icon">        <span>Tropic Mail</span>
+      </a>
+    </li>
+    <li data-search-text="Twisted Spoon ITEM_TWISTED_SPOON Hidden Item Route 136">
+      <a href="twisted-spoon.html">
+<img src="../assets/game/graphics/items/icons/twisted_spoon.png" alt="Twisted Spoon" class="item-icon">        <span>Twisted Spoon</span>
+      </a>
+    </li>
+    <li data-search-text="Utility Umbrella ITEM_UTILITY_UMBRELLA Overworld Route 120 Trainer Held Item Parasol Lady Rachel (Route 119)">
+      <a href="utility-umbrella.html">
+<img src="../assets/game/graphics/items/icons/utility_umbrella.png" alt="Utility Umbrella" class="item-icon">        <span>Utility Umbrella</span>
+      </a>
+    </li>
+    <li data-search-text="Water Gem ITEM_WATER_GEM NPC Sootopolis City - Lotad And Seedot House">
+      <a href="water-gem.html">
+<img src="../assets/game/graphics/items/icons/water_gem.png" alt="Water Gem" class="item-icon">        <span>Water Gem</span>
+      </a>
+    </li>
+    <li data-search-text="Water Stone ITEM_WATER_STONE Overworld Abandoned Ship - Rooms B1F Wild Held Items Panpour">
+      <a href="water-stone.html">
+<img src="../assets/game/graphics/items/icons/water_stone.png" alt="Water Stone" class="item-icon">        <span>Water Stone</span>
+      </a>
+    </li>
+    <li data-search-text="Wave Mail ITEM_WAVE_MAIL Shop Lilycove City - Department Store 2F Overworld Route 110 - Trick House Puzzle 2">
+      <a href="wave-mail.html">
+<img src="../assets/game/graphics/items/icons/wave_mail.png" alt="Wave Mail" class="item-icon">        <span>Wave Mail</span>
+      </a>
+    </li>
+    <li data-search-text="Weakness Policy ITEM_WEAKNESS_POLICY Pickup Lv. 21-100 Trainer Held Item Rival Steven (Meteor Falls - Steven&#39;s Cave)">
+      <a href="weakness-policy.html">
+<img src="../assets/game/graphics/items/icons/weakness_policy.png" alt="Weakness Policy" class="item-icon">        <span>Weakness Policy</span>
+      </a>
+    </li>
+    <li data-search-text="Whipped Dream ITEM_WHIPPED_DREAM Shop Slateport City">
+      <a href="whipped-dream.html">
+<img src="../assets/game/graphics/items/icons/whipped_dream.png" alt="Whipped Dream" class="item-icon">        <span>Whipped Dream</span>
+      </a>
+    </li>
+    <li data-search-text="White Flute ITEM_WHITE_FLUTE Shop Route 113 - Glass Workshop">
+      <a href="white-flute.html">
+<img src="../assets/game/graphics/items/icons/white_flute.png" alt="White Flute" class="item-icon">        <span>White Flute</span>
+      </a>
+    </li>
+    <li data-search-text="White Herb ITEM_WHITE_HERB NPC Route 104 Trainer Held Item Elite Four Phoebe (Ever Grande City - Phoebe&#39;s Room) Leader Flannery (Lavaridge Town - Gym 1F)">
+      <a href="white-herb.html">
+<img src="../assets/game/graphics/items/icons/white_herb.png" alt="White Herb" class="item-icon">        <span>White Herb</span>
+      </a>
+    </li>
+    <li data-search-text="Wide Lens ITEM_WIDE_LENS Overworld Abandoned Ship - Hidden Floor Rooms">
+      <a href="wide-lens.html">
+<img src="../assets/game/graphics/items/icons/wide_lens.png" alt="Wide Lens" class="item-icon">        <span>Wide Lens</span>
+      </a>
+    </li>
+    <li data-search-text="Wizard Cape ITEM_DAMAGE_BOUNCEABLES Overworld Route 110">
+      <a href="damage-bounceables.html">
+<img src="../assets/game/graphics/items/icons/damage_bounceables.png" alt="Wizard Cape" class="item-icon">        <span>Wizard Cape</span>
+      </a>
+    </li>
+    <li data-search-text="Wood Mail ITEM_WOOD_MAIL Shop Fortree City - Mart Overworld Route 110 - Trick House Puzzle 3">
+      <a href="wood-mail.html">
+<img src="../assets/game/graphics/items/icons/wood_mail.png" alt="Wood Mail" class="item-icon">        <span>Wood Mail</span>
+      </a>
+    </li>
+    <li data-search-text="X Accuracy ITEM_X_ACCURACY Shop Lilycove City - Department Store 3F Mauville City - Mart Trainer Hill - Entrance Overworld Route 104">
+      <a href="x-accuracy.html">
+<img src="../assets/game/graphics/items/icons/x_accuracy.png" alt="X Accuracy" class="item-icon">        <span>X Accuracy</span>
+      </a>
+    </li>
+    <li data-search-text="X Attack ITEM_X_ATTACK Shop Fallarbor Town - Mart Lilycove City - Department Store 3F Mauville City - Mart Mossdeep City - Mart Petalburg City - Mart Rustboro City - Mart Sootopolis City - Mart Trainer Hill - Entrance">
+      <a href="x-attack.html">
+<img src="../assets/game/graphics/items/icons/x_attack.png" alt="X Attack" class="item-icon">        <span>X Attack</span>
+      </a>
+    </li>
+    <li data-search-text="X Defense ITEM_X_DEFENSE Shop Fallarbor Town - Mart Lilycove City - Department Store 3F Mauville City - Mart Mossdeep City - Mart Petalburg City - Mart Rustboro City - Mart Sootopolis City - Mart Trainer Hill - Entrance">
+      <a href="x-defense.html">
+<img src="../assets/game/graphics/items/icons/x_defense.png" alt="X Defense" class="item-icon">        <span>X Defense</span>
+      </a>
+    </li>
+    <li data-search-text="X Sp. Atk ITEM_X_SP_ATK Shop Fallarbor Town - Mart Lilycove City - Department Store 3F Trainer Hill - Entrance Verdanturf Town - Mart">
+      <a href="x-sp-atk.html">
+<img src="../assets/game/graphics/items/icons/x_sp_atk.png" alt="X Sp. Atk" class="item-icon">        <span>X Sp. Atk</span>
+      </a>
+    </li>
+    <li data-search-text="X Sp. Def ITEM_X_SP_DEF Shop Lilycove City - Department Store 3F">
+      <a href="x-sp-def.html">
+<img src="../assets/game/graphics/items/icons/x_sp_def.png" alt="X Sp. Def" class="item-icon">        <span>X Sp. Def</span>
+      </a>
+    </li>
+    <li data-search-text="X Speed ITEM_X_SPEED Shop Fallarbor Town - Mart Lavaridge Town - Mart Lilycove City - Department Store 3F Mauville City - Mart Petalburg City - Mart Rustboro City - Mart Trainer Hill - Entrance Overworld Mauville City">
+      <a href="x-speed.html">
+<img src="../assets/game/graphics/items/icons/x_speed.png" alt="X Speed" class="item-icon">        <span>X Speed</span>
+      </a>
+    </li>
+    <li data-search-text="Yellow Flute ITEM_YELLOW_FLUTE Shop Route 113 - Glass Workshop">
+      <a href="yellow-flute.html">
+<img src="../assets/game/graphics/items/icons/yellow_flute.png" alt="Yellow Flute" class="item-icon">        <span>Yellow Flute</span>
+      </a>
+    </li>
+    <li data-search-text="Yellow Nectar ITEM_YELLOW_NECTAR Shop Slateport City Wild Held Items Oricorio (Pom-Pom Style)">
+      <a href="yellow-nectar.html">
+<img src="../assets/game/graphics/items/icons/yellow_nectar.png" alt="Yellow Nectar" class="item-icon">        <span>Yellow Nectar</span>
+      </a>
+    </li>
+    <li data-search-text="Yellow Scarf ITEM_YELLOW_SCARF NPC Slateport City - Pokemon Fan Club">
+      <a href="yellow-scarf.html">
+<img src="../assets/game/graphics/items/icons/yellow_scarf.png" alt="Yellow Scarf" class="item-icon">        <span>Yellow Scarf</span>
+      </a>
+    </li>
+    <li data-search-text="Yellow Shard ITEM_YELLOW_SHARD Overworld Route 124 Hidden Item Underwater - Route 126 Wild Held Items Bruxish">
+      <a href="yellow-shard.html">
+<img src="../assets/game/graphics/items/icons/yellow_shard.png" alt="Yellow Shard" class="item-icon">        <span>Yellow Shard</span>
+      </a>
+    </li>
+    <li data-search-text="Zinc ITEM_ZINC Shop Battle Frontier - Mart Lilycove City - Department Store 3F Slateport City Overworld Route 119 Route 121 Route 127 Hidden Item Artisan Cave - B1F Mt Pyre - Summit Route 106 Route 120 Safari Zone - Northeast">
+      <a href="zinc.html">
+<img src="../assets/game/graphics/items/icons/zinc.png" alt="Zinc" class="item-icon">        <span>Zinc</span>
+      </a>
+    </li>
+    <li data-search-text="Zoom Lens ITEM_ZOOM_LENS Overworld Petalburg Woods">
+      <a href="zoom-lens.html">
+<img src="../assets/game/graphics/items/icons/zoom_lens.png" alt="Zoom Lens" class="item-icon">        <span>Zoom Lens</span>
+      </a>
+    </li>
+  </ul>
+</section>
+<section class="itemdex-pocket" data-pocket="Pocket Key Items">
+  <h2>Key Items <span class="muted small-text" data-pocket-count>38</span></h2>
+  <ul class="itemdex-grid">
+    <li data-search-text="Acro Bike ITEM_ACRO_BIKE NPC Lavaridge Town Mauville City - Bike Shop">
+      <a href="acro-bike.html">
+<img src="../assets/game/graphics/items/icons/acro_bike.png" alt="Acro Bike" class="item-icon">        <span>Acro Bike</span>
+      </a>
+    </li>
+    <li data-search-text="Aurora Ticket ITEM_AURORA_TICKET Hidden Item Route 130">
+      <a href="aurora-ticket.html">
+<img src="../assets/game/graphics/items/icons/aurora_ticket.png" alt="Aurora Ticket" class="item-icon">        <span>Aurora Ticket</span>
+      </a>
+    </li>
+    <li data-search-text="Basement Key ITEM_BASEMENT_KEY NPC Mauville City">
+      <a href="basement-key.html">
+<img src="../assets/game/graphics/items/icons/basement_key.png" alt="Basement Key" class="item-icon">        <span>Basement Key</span>
+      </a>
+    </li>
+    <li data-search-text="Bike ITEM_BICYCLE NPC Lavaridge Town">
+      <a href="bicycle.html">
+<img src="../assets/game/graphics/items/icons/bicycle.png" alt="Bike" class="item-icon">        <span>Bike</span>
+      </a>
+    </li>
+    <li data-search-text="Bike Voucher ITEM_BIKE_VOUCHER NPC Route 129">
+      <a href="bike-voucher.html">
+<img src="../assets/game/graphics/items/icons/bike_voucher.png" alt="Bike Voucher" class="item-icon">        <span>Bike Voucher</span>
+      </a>
+    </li>
+    <li data-search-text="Catching Charm ITEM_CATCHING_CHARM NPC Indoor - route 136 fisherman">
+      <a href="catching-charm.html">
+<img src="../assets/game/graphics/items/icons/catching_charm.png" alt="Catching Charm" class="item-icon">        <span>Catching Charm</span>
+      </a>
+    </li>
+    <li data-search-text="Coin Case ITEM_COIN_CASE NPC Mauville City - House 2">
+      <a href="coin-case.html">
+<img src="../assets/game/graphics/items/icons/coin_case.png" alt="Coin Case" class="item-icon">        <span>Coin Case</span>
+      </a>
+    </li>
+    <li data-search-text="Contest Pass ITEM_CONTEST_PASS NPC Lilycove City - Contest Lobby">
+      <a href="contest-pass.html">
+<img src="../assets/game/graphics/items/icons/contest_pass.png" alt="Contest Pass" class="item-icon">        <span>Contest Pass</span>
+      </a>
+    </li>
+    <li data-search-text="Devon Parts ITEM_DEVON_PARTS NPC Rusturf Tunnel">
+      <a href="devon-parts.html">
+<img src="../assets/game/graphics/items/icons/devon_parts.png" alt="Devon Parts" class="item-icon">        <span>Devon Parts</span>
+      </a>
+    </li>
+    <li data-search-text="Devon Scope ITEM_DEVON_SCOPE NPC Route 120">
+      <a href="devon-scope.html">
+<img src="../assets/game/graphics/items/icons/devon_scope.png" alt="Devon Scope" class="item-icon">        <span>Devon Scope</span>
+      </a>
+    </li>
+    <li data-search-text="Dowsing Machine ITEM_DOWSING_MACHINE NPC Route 110">
+      <a href="dowsing-machine.html">
+<img src="../assets/game/graphics/items/icons/dowsing_machine.png" alt="Dowsing Machine" class="item-icon">        <span>Dowsing Machine</span>
+      </a>
+    </li>
+    <li data-search-text="Eon Ticket ITEM_EON_TICKET Hidden Item Route 119">
+      <a href="eon-ticket.html">
+<img src="../assets/game/graphics/items/icons/eon_ticket.png" alt="Eon Ticket" class="item-icon">        <span>Eon Ticket</span>
+      </a>
+    </li>
+    <li data-search-text="Exp. Charm ITEM_EXP_CHARM NPC Ever Grande City - Champion&#39;s Room">
+      <a href="exp-charm.html">
+<img src="../assets/game/graphics/items/icons/exp_charm.png" alt="Exp. Charm" class="item-icon">        <span>Exp. Charm</span>
+      </a>
+    </li>
+    <li data-search-text="Exp. Share ITEM_EXP_SHARE NPC Rustboro City - Devon Corp 3F">
+      <a href="exp-share.html">
+<img src="../assets/game/graphics/items/icons/exp_share.png" alt="Exp. Share" class="item-icon">        <span>Exp. Share</span>
+      </a>
+    </li>
+    <li data-search-text="Go-Goggles ITEM_GO_GOGGLES NPC Lavaridge Town">
+      <a href="go-goggles.html">
+<img src="../assets/game/graphics/items/icons/go_goggles.png" alt="Go-Goggles" class="item-icon">        <span>Go-Goggles</span>
+      </a>
+    </li>
+    <li data-search-text="Good Rod ITEM_GOOD_ROD NPC Indoor - route 136 fisherman">
+      <a href="good-rod.html">
+<img src="../assets/game/graphics/items/icons/good_rod.png" alt="Good Rod" class="item-icon">        <span>Good Rod</span>
+      </a>
+    </li>
+    <li data-search-text="Key to Room 1 ITEM_KEY_TO_ROOM_1 Hidden Item Abandoned Ship - Hidden Floor Rooms">
+      <a href="key-to-room-1.html">
+<img src="../assets/game/graphics/items/icons/key_to_room_1.png" alt="Key to Room 1" class="item-icon">        <span>Key to Room 1</span>
+      </a>
+    </li>
+    <li data-search-text="Key to Room 2 ITEM_KEY_TO_ROOM_2 Hidden Item Abandoned Ship - Hidden Floor Rooms">
+      <a href="key-to-room-2.html">
+<img src="../assets/game/graphics/items/icons/key_to_room_2.png" alt="Key to Room 2" class="item-icon">        <span>Key to Room 2</span>
+      </a>
+    </li>
+    <li data-search-text="Key to Room 4 ITEM_KEY_TO_ROOM_4 Hidden Item Abandoned Ship - Hidden Floor Rooms">
+      <a href="key-to-room-4.html">
+<img src="../assets/game/graphics/items/icons/key_to_room_4.png" alt="Key to Room 4" class="item-icon">        <span>Key to Room 4</span>
+      </a>
+    </li>
+    <li data-search-text="Key to Room 6 ITEM_KEY_TO_ROOM_6 Hidden Item Abandoned Ship - Hidden Floor Rooms">
+      <a href="key-to-room-6.html">
+<img src="../assets/game/graphics/items/icons/key_to_room_6.png" alt="Key to Room 6" class="item-icon">        <span>Key to Room 6</span>
+      </a>
+    </li>
+    <li data-search-text="Letter ITEM_LETTER NPC Rustboro City - Devon Corp 3F">
+      <a href="letter.html">
+<img src="../assets/game/graphics/items/icons/letter.png" alt="Letter" class="item-icon">        <span>Letter</span>
+      </a>
+    </li>
+    <li data-search-text="Level Cap ITEM_LEVEL_CAP NPC Littleroot Town">
+      <a href="level-cap.html">
+<img src="../assets/game/graphics/items/icons/level_cap.png" alt="Level Cap" class="item-icon">        <span>Level Cap</span>
+      </a>
+    </li>
+    <li data-search-text="Mach Bike ITEM_MACH_BIKE NPC Mauville City - Bike Shop">
+      <a href="mach-bike.html">
+<img src="../assets/game/graphics/items/icons/mach_bike.png" alt="Mach Bike" class="item-icon">        <span>Mach Bike</span>
+      </a>
+    </li>
+    <li data-search-text="Magma Emblem ITEM_MAGMA_EMBLEM NPC Mt Pyre - Summit">
+      <a href="magma-emblem.html">
+<img src="../assets/game/graphics/items/icons/magma_emblem.png" alt="Magma Emblem" class="item-icon">        <span>Magma Emblem</span>
+      </a>
+    </li>
+    <li data-search-text="Meteorite ITEM_METEORITE NPC Mt Chimney">
+      <a href="meteorite.html">
+<img src="../assets/game/graphics/items/icons/meteorite.png" alt="Meteorite" class="item-icon">        <span>Meteorite</span>
+      </a>
+    </li>
+    <li data-search-text="Mystic Ticket ITEM_MYSTIC_TICKET Hidden Item Route 115">
+      <a href="mystic-ticket.html">
+<img src="../assets/game/graphics/items/icons/mystic_ticket.png" alt="Mystic Ticket" class="item-icon">        <span>Mystic Ticket</span>
+      </a>
+    </li>
+    <li data-search-text="Old Rod ITEM_OLD_ROD NPC Dewford Town Indoor - route 136 fisherman">
+      <a href="old-rod.html">
+<img src="../assets/game/graphics/items/icons/old_rod.png" alt="Old Rod" class="item-icon">        <span>Old Rod</span>
+      </a>
+    </li>
+    <li data-search-text="Old Sea Map ITEM_OLD_SEA_MAP NPC Slateport City - Harbor">
+      <a href="old-sea-map.html">
+<img src="../assets/game/graphics/items/icons/old_sea_map.png" alt="Old Sea Map" class="item-icon">        <span>Old Sea Map</span>
+      </a>
+    </li>
+    <li data-search-text="Pokéblock Case ITEM_POKEBLOCK_CASE NPC Lilycove City - Contest Lobby">
+      <a href="pokeblock-case.html">
+<img src="../assets/game/graphics/items/icons/pokeblock_case.png" alt="Pokéblock Case" class="item-icon">        <span>Pokéblock Case</span>
+      </a>
+    </li>
+    <li data-search-text="Powder Jar ITEM_POWDER_JAR NPC Slateport City">
+      <a href="powder-jar.html">
+<img src="../assets/game/graphics/items/icons/powder_jar.png" alt="Powder Jar" class="item-icon">        <span>Powder Jar</span>
+      </a>
+    </li>
+    <li data-search-text="Reveal Glass ITEM_REVEAL_GLASS Hidden Item Underwater Route 114">
+      <a href="reveal-glass.html">
+<img src="../assets/game/graphics/items/icons/reveal_glass.png" alt="Reveal Glass" class="item-icon">        <span>Reveal Glass</span>
+      </a>
+    </li>
+    <li data-search-text="Rotom Catalog ITEM_ROTOM_CATALOG Overworld Lilycove City - Department Store 1F">
+      <a href="rotom-catalog.html">
+<img src="../assets/game/graphics/items/icons/rotom_catalog.png" alt="Rotom Catalog" class="item-icon">        <span>Rotom Catalog</span>
+      </a>
+    </li>
+    <li data-search-text="S.S. Ticket ITEM_SS_TICKET NPC Littleroot Town - Brendan&#39;s House 1F Littleroot Town - Brendan&#39;s House 2F Littleroot Town - May&#39;s House 1F Littleroot Town - May&#39;s House 2F">
+      <a href="ss-ticket.html">
+<img src="../assets/game/graphics/items/icons/ss_ticket.png" alt="S.S. Ticket" class="item-icon">        <span>S.S. Ticket</span>
+      </a>
+    </li>
+    <li data-search-text="Scanner ITEM_SCANNER Overworld Abandoned Ship - Hidden Floor Rooms">
+      <a href="scanner.html">
+<img src="../assets/game/graphics/items/icons/scanner.png" alt="Scanner" class="item-icon">        <span>Scanner</span>
+      </a>
+    </li>
+    <li data-search-text="Soot Sack ITEM_SOOT_SACK NPC Route 113 - Glass Workshop">
+      <a href="soot-sack.html">
+<img src="../assets/game/graphics/items/icons/soot_sack.png" alt="Soot Sack" class="item-icon">        <span>Soot Sack</span>
+      </a>
+    </li>
+    <li data-search-text="Storage Key ITEM_STORAGE_KEY Overworld Abandoned Ship - Captains Office">
+      <a href="storage-key.html">
+<img src="../assets/game/graphics/items/icons/storage_key.png" alt="Storage Key" class="item-icon">        <span>Storage Key</span>
+      </a>
+    </li>
+    <li data-search-text="Super Rod ITEM_SUPER_ROD NPC Indoor - route 136 fisherman">
+      <a href="super-rod.html">
+<img src="../assets/game/graphics/items/icons/super_rod.png" alt="Super Rod" class="item-icon">        <span>Super Rod</span>
+      </a>
+    </li>
+    <li data-search-text="Wailmer Pail ITEM_WAILMER_PAIL NPC Route 104 - Pretty Petal Flower Shop">
+      <a href="wailmer-pail.html">
+<img src="../assets/game/graphics/items/icons/wailmer_pail.png" alt="Wailmer Pail" class="item-icon">        <span>Wailmer Pail</span>
+      </a>
+    </li>
+  </ul>
+</section>
+<section class="itemdex-pocket" data-pocket="Pocket Poke Balls">
+  <h2>Poké Balls <span class="muted small-text" data-pocket-count>15</span></h2>
+  <ul class="itemdex-grid">
+    <li data-search-text="Dive Ball ITEM_DIVE_BALL Shop Lilycove City - Department Store 2F Mossdeep City - Mart Overworld Abandoned Ship - Rooms 2 B1F">
+      <a href="dive-ball.html">
+<img src="../assets/game/graphics/items/icons/dive_ball.png" alt="Dive Ball" class="item-icon">        <span>Dive Ball</span>
+      </a>
+    </li>
+    <li data-search-text="Dusk Ball ITEM_DUSK_BALL Shop Fallarbor Town - Mart Overworld Old House C2 - 2 Hidden Item Route 136">
+      <a href="dusk-ball.html">
+<img src="../assets/game/graphics/items/icons/dusk_ball.png" alt="Dusk Ball" class="item-icon">        <span>Dusk Ball</span>
+      </a>
+    </li>
+    <li data-search-text="Great Ball ITEM_GREAT_BALL Shop Fallarbor Town - Mart Fortree City - Mart Lavaridge Town - Mart Lilycove City - Department Store 2F Mauville City - Mart Petalburg City - Mart Slateport City - Mart Verdanturf Town - Mart NPC Petalburg Woods Overworld Dew Beach 106 Petalburg Woods Hidden Item Jagged Pass Route 109 Route 110 Route 117 Route 137">
+      <a href="great-ball.html">
+<img src="../assets/game/graphics/items/icons/great_ball.png" alt="Great Ball" class="item-icon">        <span>Great Ball</span>
+      </a>
+    </li>
+    <li data-search-text="Heal Ball ITEM_HEAL_BALL Shop Lilycove City - Department Store 2F Rustboro City - Mart Overworld Route 104">
+      <a href="heal-ball.html">
+<img src="../assets/game/graphics/items/icons/heal_ball.png" alt="Heal Ball" class="item-icon">        <span>Heal Ball</span>
+      </a>
+    </li>
+    <li data-search-text="Lure Ball ITEM_LURE_BALL NPC Indoor - route 136 fisherman">
+      <a href="lure-ball.html">
+<img src="../assets/game/graphics/items/icons/lure_ball.png" alt="Lure Ball" class="item-icon">        <span>Lure Ball</span>
+      </a>
+    </li>
+    <li data-search-text="Luxury Ball ITEM_LUXURY_BALL NPC Contest Hall Lilycove City - Contest Lobby Overworld Abandoned Ship - Hidden Floor Rooms">
+      <a href="luxury-ball.html">
+<img src="../assets/game/graphics/items/icons/luxury_ball.png" alt="Luxury Ball" class="item-icon">        <span>Luxury Ball</span>
+      </a>
+    </li>
+    <li data-search-text="Master Ball ITEM_MASTER_BALL Overworld Aqua Hideout - B1F">
+      <a href="master-ball.html">
+<img src="../assets/game/graphics/items/icons/master_ball.png" alt="Master Ball" class="item-icon">        <span>Master Ball</span>
+      </a>
+    </li>
+    <li data-search-text="Nest Ball ITEM_NEST_BALL Shop Verdanturf Town - Mart Overworld Aqua Hideout - B2F Route 120">
+      <a href="nest-ball.html">
+<img src="../assets/game/graphics/items/icons/nest_ball.png" alt="Nest Ball" class="item-icon">        <span>Nest Ball</span>
+      </a>
+    </li>
+    <li data-search-text="Net Ball ITEM_NET_BALL Shop Lilycove City - Department Store 2F Mossdeep City - Mart Overworld Mossdeep City">
+      <a href="net-ball.html">
+<img src="../assets/game/graphics/items/icons/net_ball.png" alt="Net Ball" class="item-icon">        <span>Net Ball</span>
+      </a>
+    </li>
+    <li data-search-text="Poké Ball ITEM_POKE_BALL Shop Lilycove City - Department Store 2F Mauville City - Mart Oldale Town - Mart Petalburg City - Mart Rustboro City - Mart Slateport City - Mart NPC Littleroot Town - Professor Birch&#39;s Lab Overworld Rusturf Tunnel Hidden Item Lilycove City Petalburg Woods Route 104 Route 106">
+      <a href="poke-ball.html">
+<img src="../assets/game/graphics/items/icons/poke_ball.png" alt="Poké Ball" class="item-icon">        <span>Poké Ball</span>
+      </a>
+    </li>
+    <li data-search-text="Premier Ball ITEM_PREMIER_BALL Shop Rustboro City - Mart NPC Rustboro City Rustboro City - Flat 2 2F Hidden Item Route 137">
+      <a href="premier-ball.html">
+<img src="../assets/game/graphics/items/icons/premier_ball.png" alt="Premier Ball" class="item-icon">        <span>Premier Ball</span>
+      </a>
+    </li>
+    <li data-search-text="Quick Ball ITEM_QUICK_BALL Shop Lilycove City - Department Store 2F Rustboro City - Mart">
+      <a href="quick-ball.html">
+<img src="../assets/game/graphics/items/icons/quick_ball.png" alt="Quick Ball" class="item-icon">        <span>Quick Ball</span>
+      </a>
+    </li>
+    <li data-search-text="Repeat Ball ITEM_REPEAT_BALL Shop Lilycove City - Department Store 2F Rustboro City - Mart NPC Route 116">
+      <a href="repeat-ball.html">
+<img src="../assets/game/graphics/items/icons/repeat_ball.png" alt="Repeat Ball" class="item-icon">        <span>Repeat Ball</span>
+      </a>
+    </li>
+    <li data-search-text="Timer Ball ITEM_TIMER_BALL Shop Lilycove City - Department Store 2F Rustboro City - Mart">
+      <a href="timer-ball.html">
+<img src="../assets/game/graphics/items/icons/timer_ball.png" alt="Timer Ball" class="item-icon">        <span>Timer Ball</span>
+      </a>
+    </li>
+    <li data-search-text="Ultra Ball ITEM_ULTRA_BALL Shop Battle Frontier - Mart Ever Grande City - Pokemon League 1F Fortree City - Mart Lilycove City - Department Store 2F Mossdeep City - Mart Sootopolis City - Mart Overworld Mt Pyre - 2F New Mauville - Inside Route 119 Route 123 Route 135 - Map Hidden Item Mt Pyre - Exterior Route 136 Underwater - Route 126">
+      <a href="ultra-ball.html">
+<img src="../assets/game/graphics/items/icons/ultra_ball.png" alt="Ultra Ball" class="item-icon">        <span>Ultra Ball</span>
+      </a>
+    </li>
+  </ul>
+</section>
+<section class="itemdex-pocket" data-pocket="Pocket Tm Hm">
+  <h2>TMs &amp; HMs <span class="muted small-text" data-pocket-count>109</span></h2>
+  <ul class="itemdex-grid">
+    <li data-search-text="HM01 Nature Power ITEM_HM_NATURE_POWER NPC Route 111">
+      <a href="hm-nature-power.html">
+<img src="../assets/game/graphics/items/icons/hm_normal.png" alt="HM01 Nature Power" class="item-icon">        <span>HM01 Nature Power</span>
+      </a>
+    </li>
+    <li data-search-text="HM02 Fly ITEM_HM_FLY NPC Route 119">
+      <a href="hm-fly.html">
+<img src="../assets/game/graphics/items/icons/hm_flying.png" alt="HM02 Fly" class="item-icon">        <span>HM02 Fly</span>
+      </a>
+    </li>
+    <li data-search-text="HM03 Surf ITEM_HM_SURF NPC Petalburg City - Wally&#39;s House">
+      <a href="hm-surf.html">
+<img src="../assets/game/graphics/items/icons/hm_water.png" alt="HM03 Surf" class="item-icon">        <span>HM03 Surf</span>
+      </a>
+    </li>
+    <li data-search-text="HM04 Strength ITEM_HM_STRENGTH NPC Rusturf Tunnel">
+      <a href="hm-strength.html">
+<img src="../assets/game/graphics/items/icons/hm_normal.png" alt="HM04 Strength" class="item-icon">        <span>HM04 Strength</span>
+      </a>
+    </li>
+    <li data-search-text="HM05 Flash ITEM_HM_FLASH NPC Granite Cave - 1F">
+      <a href="hm-flash.html">
+<img src="../assets/game/graphics/items/icons/hm_normal.png" alt="HM05 Flash" class="item-icon">        <span>HM05 Flash</span>
+      </a>
+    </li>
+    <li data-search-text="HM06 Rock Smash ITEM_HM_ROCK_SMASH NPC Mauville City - House 1">
+      <a href="hm-rock-smash.html">
+<img src="../assets/game/graphics/items/icons/hm_fighting.png" alt="HM06 Rock Smash" class="item-icon">        <span>HM06 Rock Smash</span>
+      </a>
+    </li>
+    <li data-search-text="HM07 Waterfall ITEM_HM_WATERFALL NPC Sootopolis City">
+      <a href="hm-waterfall.html">
+<img src="../assets/game/graphics/items/icons/hm_water.png" alt="HM07 Waterfall" class="item-icon">        <span>HM07 Waterfall</span>
+      </a>
+    </li>
+    <li data-search-text="HM08 Dive ITEM_HM_DIVE NPC Mossdeep City - Steven&#39;s House">
+      <a href="hm-dive.html">
+<img src="../assets/game/graphics/items/icons/hm_water.png" alt="HM08 Dive" class="item-icon">        <span>HM08 Dive</span>
+      </a>
+    </li>
+    <li data-search-text="HM09 Cut ITEM_HM_CUT NPC Rustboro City - Cutters House">
+      <a href="hm-cut.html">
+<img src="../assets/game/graphics/items/icons/hm_normal.png" alt="HM09 Cut" class="item-icon">        <span>HM09 Cut</span>
+      </a>
+    </li>
+    <li data-search-text="TM01 Aromatherapy ITEM_TM_AROMATHERAPY Overworld Route 117">
+      <a href="tm-aromatherapy.html">
+<img src="../assets/game/graphics/items/icons/tm_grass.png" alt="TM01 Aromatherapy" class="item-icon">        <span>TM01 Aromatherapy</span>
+      </a>
+    </li>
+    <li data-search-text="TM02 Bullet Seed ITEM_TM_BULLET_SEED Hidden Item Artisan Cave - B1F">
+      <a href="tm-bullet-seed.html">
+<img src="../assets/game/graphics/items/icons/tm_grass.png" alt="TM02 Bullet Seed" class="item-icon">        <span>TM02 Bullet Seed</span>
+      </a>
+    </li>
+    <li data-search-text="TM03 Energy Ball ITEM_TM_ENERGY_BALL NPC Fallarbor Town - Move Relearners House">
+      <a href="tm-energy-ball.html">
+<img src="../assets/game/graphics/items/icons/tm_grass.png" alt="TM03 Energy Ball" class="item-icon">        <span>TM03 Energy Ball</span>
+      </a>
+    </li>
+    <li data-search-text="TM04 Giga Drain ITEM_TM_GIGA_DRAIN NPC Route 123">
+      <a href="tm-giga-drain.html">
+<img src="../assets/game/graphics/items/icons/tm_grass.png" alt="TM04 Giga Drain" class="item-icon">        <span>TM04 Giga Drain</span>
+      </a>
+    </li>
+    <li data-search-text="TM05 Leech Seed ITEM_TM_LEECH_SEED Shop Mauville City - Game Corner">
+      <a href="tm-leech-seed.html">
+<img src="../assets/game/graphics/items/icons/tm_grass.png" alt="TM05 Leech Seed" class="item-icon">        <span>TM05 Leech Seed</span>
+      </a>
+    </li>
+    <li data-search-text="TM06 Worry Seed ITEM_TM_WORRY_SEED NPC Route 104">
+      <a href="tm-worry-seed.html">
+<img src="../assets/game/graphics/items/icons/tm_grass.png" alt="TM06 Worry Seed" class="item-icon">        <span>TM06 Worry Seed</span>
+      </a>
+    </li>
+    <li data-search-text="TM07 Solar Beam ITEM_TM_SOLAR_BEAM Shop Lilycove City - Department Store 4F">
+      <a href="tm-solar-beam.html">
+<img src="../assets/game/graphics/items/icons/tm_grass.png" alt="TM07 Solar Beam" class="item-icon">        <span>TM07 Solar Beam</span>
+      </a>
+    </li>
+    <li data-search-text="TM08 Blaze Kick ITEM_TM_BLAZE_KICK Hidden Item Artisan Cave - B1F">
+      <a href="tm-blaze-kick.html">
+<img src="../assets/game/graphics/items/icons/tm_fire.png" alt="TM08 Blaze Kick" class="item-icon">        <span>TM08 Blaze Kick</span>
+      </a>
+    </li>
+    <li data-search-text="TM09 Flamethrower ITEM_TM_FLAMETHROWER NPC Fallarbor Town - Cozmos House">
+      <a href="tm-flamethrower.html">
+<img src="../assets/game/graphics/items/icons/tm_fire.png" alt="TM09 Flamethrower" class="item-icon">        <span>TM09 Flamethrower</span>
+      </a>
+    </li>
+    <li data-search-text="TM10 Flame Charge ITEM_TM_FLAME_CHARGE Shop Mauville City - Game Corner">
+      <a href="tm-flame-charge.html">
+<img src="../assets/game/graphics/items/icons/tm_fire.png" alt="TM10 Flame Charge" class="item-icon">        <span>TM10 Flame Charge</span>
+      </a>
+    </li>
+    <li data-search-text="TM11 Overheat ITEM_TM_OVERHEAT NPC Lavaridge Town - Gym 1F">
+      <a href="tm-overheat.html">
+<img src="../assets/game/graphics/items/icons/tm_fire.png" alt="TM11 Overheat" class="item-icon">        <span>TM11 Overheat</span>
+      </a>
+    </li>
+    <li data-search-text="TM12 Sunny Day ITEM_TM_SUNNY_DAY Overworld Scorched Slab">
+      <a href="tm-sunny-day.html">
+<img src="../assets/game/graphics/items/icons/tm_fire.png" alt="TM12 Sunny Day" class="item-icon">        <span>TM12 Sunny Day</span>
+      </a>
+    </li>
+    <li data-search-text="TM13 Will-O-Wisp ITEM_TM_WILL_O_WISP Overworld Mt Pyre - Exterior">
+      <a href="tm-will-o-wisp.html">
+<img src="../assets/game/graphics/items/icons/tm_fire.png" alt="TM13 Will-O-Wisp" class="item-icon">        <span>TM13 Will-O-Wisp</span>
+      </a>
+    </li>
+    <li data-search-text="TM14 Aqua Ring ITEM_TM_AQUA_RING Shop Mauville City - Game Corner">
+      <a href="tm-aqua-ring.html">
+<img src="../assets/game/graphics/items/icons/tm_water.png" alt="TM14 Aqua Ring" class="item-icon">        <span>TM14 Aqua Ring</span>
+      </a>
+    </li>
+    <li data-search-text="TM15 Life Dew ITEM_TM_LIFE_DEW Overworld Petalburg City">
+      <a href="tm-life-dew.html">
+<img src="../assets/game/graphics/items/icons/tm_water.png" alt="TM15 Life Dew" class="item-icon">        <span>TM15 Life Dew</span>
+      </a>
+    </li>
+    <li data-search-text="TM16 Rain Dance ITEM_TM_RAIN_DANCE Overworld Abandoned Ship - Hidden Floor Rooms">
+      <a href="tm-rain-dance.html">
+<img src="../assets/game/graphics/items/icons/tm_water.png" alt="TM16 Rain Dance" class="item-icon">        <span>TM16 Rain Dance</span>
+      </a>
+    </li>
+    <li data-search-text="TM17 Soak ITEM_TM_SOAK Overworld Seafloor Cavern - Room 4">
+      <a href="tm-soak.html">
+<img src="../assets/game/graphics/items/icons/tm_water.png" alt="TM17 Soak" class="item-icon">        <span>TM17 Soak</span>
+      </a>
+    </li>
+    <li data-search-text="TM18 Thunder ITEM_TM_THUNDER Shop Lilycove City - Department Store 4F">
+      <a href="tm-thunder.html">
+<img src="../assets/game/graphics/items/icons/tm_electric.png" alt="TM18 Thunder" class="item-icon">        <span>TM18 Thunder</span>
+      </a>
+    </li>
+    <li data-search-text="TM19 Thunderbolt ITEM_TM_THUNDERBOLT Overworld Route 135 - Map">
+      <a href="tm-thunderbolt.html">
+<img src="../assets/game/graphics/items/icons/tm_electric.png" alt="TM19 Thunderbolt" class="item-icon">        <span>TM19 Thunderbolt</span>
+      </a>
+    </li>
+    <li data-search-text="TM20 Thunder Wave ITEM_TM_THUNDER_WAVE NPC Mauville City - Gym">
+      <a href="tm-thunder-wave.html">
+<img src="../assets/game/graphics/items/icons/tm_electric.png" alt="TM20 Thunder Wave" class="item-icon">        <span>TM20 Thunder Wave</span>
+      </a>
+    </li>
+    <li data-search-text="TM21 Volt Switch ITEM_TM_VOLT_SWITCH NPC Mauville City">
+      <a href="tm-volt-switch.html">
+<img src="../assets/game/graphics/items/icons/tm_electric.png" alt="TM21 Volt Switch" class="item-icon">        <span>TM21 Volt Switch</span>
+      </a>
+    </li>
+    <li data-search-text="TM22 Zing Zap ITEM_TM_ZING_ZAP Hidden Item Artisan Cave - B1F">
+      <a href="tm-zing-zap.html">
+<img src="../assets/game/graphics/items/icons/tm_electric.png" alt="TM22 Zing Zap" class="item-icon">        <span>TM22 Zing Zap</span>
+      </a>
+    </li>
+    <li data-search-text="TM23 Baton Pass ITEM_TM_BATON_PASS Overworld Artisan Cave - B1F">
+      <a href="tm-baton-pass.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="TM23 Baton Pass" class="item-icon">        <span>TM23 Baton Pass</span>
+      </a>
+    </li>
+    <li data-search-text="TM24 Encore ITEM_TM_ENCORE Shop Lilycove City - Department Store 4F">
+      <a href="tm-encore.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="TM24 Encore" class="item-icon">        <span>TM24 Encore</span>
+      </a>
+    </li>
+    <li data-search-text="TM25 Endeavor ITEM_TM_ENDEAVOR Overworld Artisan Cave - B1F">
+      <a href="tm-endeavor.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="TM25 Endeavor" class="item-icon">        <span>TM25 Endeavor</span>
+      </a>
+    </li>
+    <li data-search-text="TM26 Hidden Power ITEM_TM_HIDDEN_POWER NPC Fortree City - House 2">
+      <a href="tm-hidden-power.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="TM26 Hidden Power" class="item-icon">        <span>TM26 Hidden Power</span>
+      </a>
+    </li>
+    <li data-search-text="TM27 Hyper Beam ITEM_TM_HYPER_BEAM Overworld Sky Pillar - Top">
+      <a href="tm-hyper-beam.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="TM27 Hyper Beam" class="item-icon">        <span>TM27 Hyper Beam</span>
+      </a>
+    </li>
+    <li data-search-text="TM28 Pain Split ITEM_TM_PAIN_SPLIT Overworld Route 115">
+      <a href="tm-pain-split.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="TM28 Pain Split" class="item-icon">        <span>TM28 Pain Split</span>
+      </a>
+    </li>
+    <li data-search-text="TM29 Protect ITEM_TM_PROTECT Shop Lilycove City - Department Store 4F">
+      <a href="tm-protect.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="TM29 Protect" class="item-icon">        <span>TM29 Protect</span>
+      </a>
+    </li>
+    <li data-search-text="TM30 Return ITEM_TM_RETURN NPC Petalburg City - Gym">
+      <a href="tm-return.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="TM30 Return" class="item-icon">        <span>TM30 Return</span>
+      </a>
+    </li>
+    <li data-search-text="TM31 Sleep Talk ITEM_TM_SLEEP_TALK Shop Lilycove City - Department Store 4F">
+      <a href="tm-sleep-talk.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="TM31 Sleep Talk" class="item-icon">        <span>TM31 Sleep Talk</span>
+      </a>
+    </li>
+    <li data-search-text="TM32 Substitute ITEM_TM_SUBSTITUTE Shop Lilycove City - Department Store 4F">
+      <a href="tm-substitute.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="TM32 Substitute" class="item-icon">        <span>TM32 Substitute</span>
+      </a>
+    </li>
+    <li data-search-text="TM33 Swords Dance ITEM_TM_SWORDS_DANCE Overworld Meteor Falls - Steven&#39;s Cave">
+      <a href="tm-swords-dance.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="TM33 Swords Dance" class="item-icon">        <span>TM33 Swords Dance</span>
+      </a>
+    </li>
+    <li data-search-text="TM34 Weather Ball ITEM_TM_WEATHER_BALL Overworld Safari Zone - Northwest">
+      <a href="tm-weather-ball.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="TM34 Weather Ball" class="item-icon">        <span>TM34 Weather Ball</span>
+      </a>
+    </li>
+    <li data-search-text="TM35 Wish ITEM_TM_WISH Overworld Meteor Falls - 1F 1R">
+      <a href="tm-wish.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="TM35 Wish" class="item-icon">        <span>TM35 Wish</span>
+      </a>
+    </li>
+    <li data-search-text="TM36 Brick Break ITEM_TM_BRICK_BREAK NPC Sootopolis City - House 1">
+      <a href="tm-brick-break.html">
+<img src="../assets/game/graphics/items/icons/tm_fighting.png" alt="TM36 Brick Break" class="item-icon">        <span>TM36 Brick Break</span>
+      </a>
+    </li>
+    <li data-search-text="TM37 Bulk Up ITEM_TM_BULK_UP NPC Dewford Town - Gym">
+      <a href="tm-bulk-up.html">
+<img src="../assets/game/graphics/items/icons/tm_fighting.png" alt="TM37 Bulk Up" class="item-icon">        <span>TM37 Bulk Up</span>
+      </a>
+    </li>
+    <li data-search-text="TM38 Coaching ITEM_TM_COACHING Shop Lilycove City - Department Store 4F">
+      <a href="tm-coaching.html">
+<img src="../assets/game/graphics/items/icons/tm_fighting.png" alt="TM38 Coaching" class="item-icon">        <span>TM38 Coaching</span>
+      </a>
+    </li>
+    <li data-search-text="TM39 Drain Punch ITEM_TM_DRAIN_PUNCH Overworld Route 115">
+      <a href="tm-drain-punch.html">
+<img src="../assets/game/graphics/items/icons/tm_fighting.png" alt="TM39 Drain Punch" class="item-icon">        <span>TM39 Drain Punch</span>
+      </a>
+    </li>
+    <li data-search-text="TM40 Focus Blast ITEM_TM_FOCUS_BLAST Overworld Victory Road - 1F">
+      <a href="tm-focus-blast.html">
+<img src="../assets/game/graphics/items/icons/tm_fighting.png" alt="TM40 Focus Blast" class="item-icon">        <span>TM40 Focus Blast</span>
+      </a>
+    </li>
+    <li data-search-text="TM41 Power-Up Punch ITEM_TM_POWER_UP_PUNCH Overworld Dew Beach 106">
+      <a href="tm-power-up-punch.html">
+<img src="../assets/game/graphics/items/icons/tm_fighting.png" alt="TM41 Power-Up Punch" class="item-icon">        <span>TM41 Power-Up Punch</span>
+      </a>
+    </li>
+    <li data-search-text="TM42 Upper Hand ITEM_TM_UPPER_HAND NPC Route 110 - Trick House End Route 110 - Trick House Entrance">
+      <a href="tm-upper-hand.html">
+<img src="../assets/game/graphics/items/icons/tm_fighting.png" alt="TM42 Upper Hand" class="item-icon">        <span>TM42 Upper Hand</span>
+      </a>
+    </li>
+    <li data-search-text="TM43 Calm Mind ITEM_TM_CALM_MIND Overworld Victory Road - B1F">
+      <a href="tm-calm-mind.html">
+<img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="TM43 Calm Mind" class="item-icon">        <span>TM43 Calm Mind</span>
+      </a>
+    </li>
+    <li data-search-text="TM44 Light Screen ITEM_TM_LIGHT_SCREEN NPC Mossdeep City - Gym">
+      <a href="tm-light-screen.html">
+<img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="TM44 Light Screen" class="item-icon">        <span>TM44 Light Screen</span>
+      </a>
+    </li>
+    <li data-search-text="TM45 Psychic ITEM_TM_PSYCHIC Overworld Victory Road - B1F">
+      <a href="tm-psychic.html">
+<img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="TM45 Psychic" class="item-icon">        <span>TM45 Psychic</span>
+      </a>
+    </li>
+    <li data-search-text="TM46 Psycho Cut ITEM_TM_PSYCHO_CUT Overworld Route 103">
+      <a href="tm-psycho-cut.html">
+<img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="TM46 Psycho Cut" class="item-icon">        <span>TM46 Psycho Cut</span>
+      </a>
+    </li>
+    <li data-search-text="TM47 Reflect ITEM_TM_REFLECT NPC Mossdeep City - Gym">
+      <a href="tm-reflect.html">
+<img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="TM47 Reflect" class="item-icon">        <span>TM47 Reflect</span>
+      </a>
+    </li>
+    <li data-search-text="TM48 Rest ITEM_TM_REST NPC Lilycove City - House 2">
+      <a href="tm-rest.html">
+<img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="TM48 Rest" class="item-icon">        <span>TM48 Rest</span>
+      </a>
+    </li>
+    <li data-search-text="TM49 Trick ITEM_TM_TRICK NPC Route 110 - Trick House End Route 110 - Trick House Entrance">
+      <a href="tm-trick.html">
+<img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="TM49 Trick" class="item-icon">        <span>TM49 Trick</span>
+      </a>
+    </li>
+    <li data-search-text="TM50 Trick Room ITEM_TM_TRICK_ROOM Overworld Old House Room 1">
+      <a href="tm-trick-room.html">
+<img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="TM50 Trick Room" class="item-icon">        <span>TM50 Trick Room</span>
+      </a>
+    </li>
+    <li data-search-text="TM51 Acrobatics ITEM_TM_ACROBATICS Overworld Route 127">
+      <a href="tm-acrobatics.html">
+<img src="../assets/game/graphics/items/icons/tm_flying.png" alt="TM51 Acrobatics" class="item-icon">        <span>TM51 Acrobatics</span>
+      </a>
+    </li>
+    <li data-search-text="TM52 Air Slash ITEM_TM_AIR_SLASH Overworld Route 114">
+      <a href="tm-air-slash.html">
+<img src="../assets/game/graphics/items/icons/tm_flying.png" alt="TM52 Air Slash" class="item-icon">        <span>TM52 Air Slash</span>
+      </a>
+    </li>
+    <li data-search-text="TM53 Tailwind ITEM_TM_TAILWIND NPC Fortree City - Gym">
+      <a href="tm-tailwind.html">
+<img src="../assets/game/graphics/items/icons/tm_flying.png" alt="TM53 Tailwind" class="item-icon">        <span>TM53 Tailwind</span>
+      </a>
+    </li>
+    <li data-search-text="TM54 Roost ITEM_TM_ROOST Shop Lilycove City - Department Store 4F">
+      <a href="tm-roost.html">
+<img src="../assets/game/graphics/items/icons/tm_flying.png" alt="TM54 Roost" class="item-icon">        <span>TM54 Roost</span>
+      </a>
+    </li>
+    <li data-search-text="TM55 Whirlwind ITEM_TM_WHIRLWIND Overworld Route 133">
+      <a href="tm-whirlwind.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="TM55 Whirlwind" class="item-icon">        <span>TM55 Whirlwind</span>
+      </a>
+    </li>
+    <li data-search-text="TM56 Aurora Veil ITEM_TM_AURORA_VEIL Overworld Route 137">
+      <a href="tm-aurora-veil.html">
+<img src="../assets/game/graphics/items/icons/tm_ice.png" alt="TM56 Aurora Veil" class="item-icon">        <span>TM56 Aurora Veil</span>
+      </a>
+    </li>
+    <li data-search-text="TM57 Blizzard ITEM_TM_BLIZZARD Shop Lilycove City - Department Store 4F">
+      <a href="tm-blizzard.html">
+<img src="../assets/game/graphics/items/icons/tm_ice.png" alt="TM57 Blizzard" class="item-icon">        <span>TM57 Blizzard</span>
+      </a>
+    </li>
+    <li data-search-text="TM58 Hail ITEM_TM_HAIL NPC Sootopolis City - Gym 1F">
+      <a href="tm-hail.html">
+<img src="../assets/game/graphics/items/icons/tm_ice.png" alt="TM58 Hail" class="item-icon">        <span>TM58 Hail</span>
+      </a>
+    </li>
+    <li data-search-text="TM59 Ice Beam ITEM_TM_ICE_BEAM Overworld Abandoned Ship - Room B1F">
+      <a href="tm-ice-beam.html">
+<img src="../assets/game/graphics/items/icons/tm_ice.png" alt="TM59 Ice Beam" class="item-icon">        <span>TM59 Ice Beam</span>
+      </a>
+    </li>
+    <li data-search-text="TM60 Triple Axel ITEM_TM_TRIPLE_AXEL Overworld Shoal Cave - Low Tide Ice Room">
+      <a href="tm-triple-axel.html">
+<img src="../assets/game/graphics/items/icons/tm_ice.png" alt="TM60 Triple Axel" class="item-icon">        <span>TM60 Triple Axel</span>
+      </a>
+    </li>
+    <li data-search-text="TM61 Ancient Power ITEM_TM_ANCIENT_POWER NPC Rustboro City - Gym">
+      <a href="tm-ancient-power.html">
+<img src="../assets/game/graphics/items/icons/tm_rock.png" alt="TM61 Ancient Power" class="item-icon">        <span>TM61 Ancient Power</span>
+      </a>
+    </li>
+    <li data-search-text="TM62 Meteor Beam ITEM_TM_METEOR_BEAM Overworld Meteor Falls - 1F 1R">
+      <a href="tm-meteor-beam.html">
+<img src="../assets/game/graphics/items/icons/tm_rock.png" alt="TM62 Meteor Beam" class="item-icon">        <span>TM62 Meteor Beam</span>
+      </a>
+    </li>
+    <li data-search-text="TM63 Rock Slide ITEM_TM_ROCK_SLIDE Overworld Granite Cave - B2F">
+      <a href="tm-rock-slide.html">
+<img src="../assets/game/graphics/items/icons/tm_rock.png" alt="TM63 Rock Slide" class="item-icon">        <span>TM63 Rock Slide</span>
+      </a>
+    </li>
+    <li data-search-text="TM64 Sandstorm ITEM_TM_SANDSTORM Overworld Route 111">
+      <a href="tm-sandstorm.html">
+<img src="../assets/game/graphics/items/icons/tm_rock.png" alt="TM64 Sandstorm" class="item-icon">        <span>TM64 Sandstorm</span>
+      </a>
+    </li>
+    <li data-search-text="TM65 Stone Edge ITEM_TM_STONE_EDGE Overworld Route 136">
+      <a href="tm-stone-edge.html">
+<img src="../assets/game/graphics/items/icons/tm_rock.png" alt="TM65 Stone Edge" class="item-icon">        <span>TM65 Stone Edge</span>
+      </a>
+    </li>
+    <li data-search-text="TM66 Dig ITEM_TM_DIG NPC Route 114 - Fossil Maniacs House">
+      <a href="tm-dig.html">
+<img src="../assets/game/graphics/items/icons/tm_ground.png" alt="TM66 Dig" class="item-icon">        <span>TM66 Dig</span>
+      </a>
+    </li>
+    <li data-search-text="TM67 Earthquake ITEM_TM_EARTHQUAKE Overworld Seafloor Cavern - Room 9">
+      <a href="tm-earthquake.html">
+<img src="../assets/game/graphics/items/icons/tm_ground.png" alt="TM67 Earthquake" class="item-icon">        <span>TM67 Earthquake</span>
+      </a>
+    </li>
+    <li data-search-text="TM68 Scorching Sands ITEM_TM_SCORCHING_SANDS Hidden Item Lilycove City">
+      <a href="tm-scorching-sands.html">
+<img src="../assets/game/graphics/items/icons/tm_ground.png" alt="TM68 Scorching Sands" class="item-icon">        <span>TM68 Scorching Sands</span>
+      </a>
+    </li>
+    <li data-search-text="TM69 Sand Tomb ITEM_TM_SAND_TOMB Shop Route 113 - Glass Workshop">
+      <a href="tm-sand-tomb.html">
+<img src="../assets/game/graphics/items/icons/tm_ground.png" alt="TM69 Sand Tomb" class="item-icon">        <span>TM69 Sand Tomb</span>
+      </a>
+    </li>
+    <li data-search-text="TM70 Spikes ITEM_TM_SPIKES Hidden Item Route 113">
+      <a href="tm-spikes.html">
+<img src="../assets/game/graphics/items/icons/tm_ground.png" alt="TM70 Spikes" class="item-icon">        <span>TM70 Spikes</span>
+      </a>
+    </li>
+    <li data-search-text="TM71 Lunge ITEM_TM_LUNGE Overworld Artisan Cave - B1F">
+      <a href="tm-lunge.html">
+<img src="../assets/game/graphics/items/icons/tm_bug.png" alt="TM71 Lunge" class="item-icon">        <span>TM71 Lunge</span>
+      </a>
+    </li>
+    <li data-search-text="TM72 Pollen Puff ITEM_TM_POLLEN_PUFF Overworld Artisan Cave - B1F">
+      <a href="tm-pollen-puff.html">
+<img src="../assets/game/graphics/items/icons/tm_bug.png" alt="TM72 Pollen Puff" class="item-icon">        <span>TM72 Pollen Puff</span>
+      </a>
+    </li>
+    <li data-search-text="TM73 Sticky Web ITEM_TM_STICKY_WEB Hidden Item Petalburg Woods">
+      <a href="tm-sticky-web.html">
+<img src="../assets/game/graphics/items/icons/tm_bug.png" alt="TM73 Sticky Web" class="item-icon">        <span>TM73 Sticky Web</span>
+      </a>
+    </li>
+    <li data-search-text="TM74 U-turn ITEM_TM_U_TURN Overworld Route 123">
+      <a href="tm-u-turn.html">
+<img src="../assets/game/graphics/items/icons/tm_bug.png" alt="TM74 U-turn" class="item-icon">        <span>TM74 U-turn</span>
+      </a>
+    </li>
+    <li data-search-text="TM75 X-Scissor ITEM_TM_X_SCISSOR Overworld Route 133">
+      <a href="tm-x-scissor.html">
+<img src="../assets/game/graphics/items/icons/tm_bug.png" alt="TM75 X-Scissor" class="item-icon">        <span>TM75 X-Scissor</span>
+      </a>
+    </li>
+    <li data-search-text="TM76 Sludge Bomb ITEM_TM_SLUDGE_BOMB NPC Dewford Town - Hall">
+      <a href="tm-sludge-bomb.html">
+<img src="../assets/game/graphics/items/icons/tm_poison.png" alt="TM76 Sludge Bomb" class="item-icon">        <span>TM76 Sludge Bomb</span>
+      </a>
+    </li>
+    <li data-search-text="TM77 Toxic ITEM_TM_TOXIC Overworld Fiery Path">
+      <a href="tm-toxic.html">
+<img src="../assets/game/graphics/items/icons/tm_poison.png" alt="TM77 Toxic" class="item-icon">        <span>TM77 Toxic</span>
+      </a>
+    </li>
+    <li data-search-text="TM78 Toxic Spikes ITEM_TM_TOXIC_SPIKES Hidden Item Magma Hideout - 4F">
+      <a href="tm-toxic-spikes.html">
+<img src="../assets/game/graphics/items/icons/tm_poison.png" alt="TM78 Toxic Spikes" class="item-icon">        <span>TM78 Toxic Spikes</span>
+      </a>
+    </li>
+    <li data-search-text="TM79 Venom Drench ITEM_TM_VENOM_DRENCH Hidden Item Route 113">
+      <a href="tm-venom-drench.html">
+<img src="../assets/game/graphics/items/icons/tm_poison.png" alt="TM79 Venom Drench" class="item-icon">        <span>TM79 Venom Drench</span>
+      </a>
+    </li>
+    <li data-search-text="TM80 Venoshock ITEM_TM_VENOSHOCK NPC Slateport City - Battle Tent Lobby">
+      <a href="tm-venoshock.html">
+<img src="../assets/game/graphics/items/icons/tm_poison.png" alt="TM80 Venoshock" class="item-icon">        <span>TM80 Venoshock</span>
+      </a>
+    </li>
+    <li data-search-text="TM81 Curse ITEM_TM_CURSE NPC SS Tidal Rooms">
+      <a href="tm-curse.html">
+<img src="../assets/game/graphics/items/icons/tm_ghost.png" alt="TM81 Curse" class="item-icon">        <span>TM81 Curse</span>
+      </a>
+    </li>
+    <li data-search-text="TM82 Destiny Bond ITEM_TM_DESTINY_BOND Shop Lilycove City - Department Store 4F">
+      <a href="tm-destiny-bond.html">
+<img src="../assets/game/graphics/items/icons/tm_ghost.png" alt="TM82 Destiny Bond" class="item-icon">        <span>TM82 Destiny Bond</span>
+      </a>
+    </li>
+    <li data-search-text="TM83 Phantom Force ITEM_TM_PHANTOM_FORCE NPC Ever Grande City - Phoebe&#39;s Room">
+      <a href="tm-phantom-force.html">
+<img src="../assets/game/graphics/items/icons/tm_ghost.png" alt="TM83 Phantom Force" class="item-icon">        <span>TM83 Phantom Force</span>
+      </a>
+    </li>
+    <li data-search-text="TM84 Shadow Ball ITEM_TM_SHADOW_BALL Overworld Mt Pyre - 6F">
+      <a href="tm-shadow-ball.html">
+<img src="../assets/game/graphics/items/icons/tm_ghost.png" alt="TM84 Shadow Ball" class="item-icon">        <span>TM84 Shadow Ball</span>
+      </a>
+    </li>
+    <li data-search-text="TM85 Draco Meteor ITEM_TM_DRACO_METEOR NPC Ever Grande City - Drake&#39;s Room">
+      <a href="tm-draco-meteor.html">
+<img src="../assets/game/graphics/items/icons/tm_dragon.png" alt="TM85 Draco Meteor" class="item-icon">        <span>TM85 Draco Meteor</span>
+      </a>
+    </li>
+    <li data-search-text="TM86 Dragon Cheer ITEM_TM_DRAGON_CHEER NPC Verdanturf Town - Battle Tent Lobby">
+      <a href="tm-dragon-cheer.html">
+<img src="../assets/game/graphics/items/icons/tm_dragon.png" alt="TM86 Dragon Cheer" class="item-icon">        <span>TM86 Dragon Cheer</span>
+      </a>
+    </li>
+    <li data-search-text="TM87 Dragon Claw ITEM_TM_DRAGON_CLAW Overworld Meteor Falls - B1F 2R">
+      <a href="tm-dragon-claw.html">
+<img src="../assets/game/graphics/items/icons/tm_dragon.png" alt="TM87 Dragon Claw" class="item-icon">        <span>TM87 Dragon Claw</span>
+      </a>
+    </li>
+    <li data-search-text="TM88 Dark Pulse ITEM_TM_DARK_PULSE Overworld Artisan Cave - B1F">
+      <a href="tm-dark-pulse.html">
+<img src="../assets/game/graphics/items/icons/tm_dark.png" alt="TM88 Dark Pulse" class="item-icon">        <span>TM88 Dark Pulse</span>
+      </a>
+    </li>
+    <li data-search-text="TM89 Hone Claws ITEM_TM_HONE_CLAWS Shop Mauville City - Game Corner">
+      <a href="tm-hone-claws.html">
+<img src="../assets/game/graphics/items/icons/tm_dark.png" alt="TM89 Hone Claws" class="item-icon">        <span>TM89 Hone Claws</span>
+      </a>
+    </li>
+    <li data-search-text="TM90 Knock Off ITEM_TM_KNOCK_OFF NPC Slateport City - Oceanic Museum 1F">
+      <a href="tm-knock-off.html">
+<img src="../assets/game/graphics/items/icons/tm_dark.png" alt="TM90 Knock Off" class="item-icon">        <span>TM90 Knock Off</span>
+      </a>
+    </li>
+    <li data-search-text="TM91 Nasty Plot ITEM_TM_NASTY_PLOT Overworld Meteor Falls - Steven&#39;s Cave">
+      <a href="tm-nasty-plot.html">
+<img src="../assets/game/graphics/items/icons/tm_dark.png" alt="TM91 Nasty Plot" class="item-icon">        <span>TM91 Nasty Plot</span>
+      </a>
+    </li>
+    <li data-search-text="TM92 Sucker Punch ITEM_TM_SUCKER_PUNCH NPC Ever Grande City - Sidney&#39;s Room">
+      <a href="tm-sucker-punch.html">
+<img src="../assets/game/graphics/items/icons/tm_dark.png" alt="TM92 Sucker Punch" class="item-icon">        <span>TM92 Sucker Punch</span>
+      </a>
+    </li>
+    <li data-search-text="TM93 Taunt ITEM_TM_TAUNT NPC Route 114">
+      <a href="tm-taunt.html">
+<img src="../assets/game/graphics/items/icons/tm_dark.png" alt="TM93 Taunt" class="item-icon">        <span>TM93 Taunt</span>
+      </a>
+    </li>
+    <li data-search-text="TM94 Autotomize ITEM_TM_AUTOTOMIZE NPC Granite Cave - Steven&#39;s Room">
+      <a href="tm-autotomize.html">
+<img src="../assets/game/graphics/items/icons/tm_steel.png" alt="TM94 Autotomize" class="item-icon">        <span>TM94 Autotomize</span>
+      </a>
+    </li>
+    <li data-search-text="TM95 Steel Beam ITEM_TM_STEEL_BEAM Overworld Artisan Cave - 1F">
+      <a href="tm-steel-beam.html">
+<img src="../assets/game/graphics/items/icons/tm_steel.png" alt="TM95 Steel Beam" class="item-icon">        <span>TM95 Steel Beam</span>
+      </a>
+    </li>
+    <li data-search-text="TM96 Iron Defense ITEM_TM_IRON_DEFENSE Shop Lilycove City - Department Store 4F">
+      <a href="tm-iron-defense.html">
+<img src="../assets/game/graphics/items/icons/tm_steel.png" alt="TM96 Iron Defense" class="item-icon">        <span>TM96 Iron Defense</span>
+      </a>
+    </li>
+    <li data-search-text="TM97 Iron Head ITEM_TM_IRON_HEAD Hidden Item Artisan Cave - B1F">
+      <a href="tm-iron-head.html">
+<img src="../assets/game/graphics/items/icons/tm_steel.png" alt="TM97 Iron Head" class="item-icon">        <span>TM97 Iron Head</span>
+      </a>
+    </li>
+    <li data-search-text="TM98 Dazzling Gleam ITEM_TM_DAZZLING_GLEAM NPC Ever Grande City - Juan&#39;s Room">
+      <a href="tm-dazzling-gleam.html">
+<img src="../assets/game/graphics/items/icons/tm_fairy.png" alt="TM98 Dazzling Gleam" class="item-icon">        <span>TM98 Dazzling Gleam</span>
+      </a>
+    </li>
+    <li data-search-text="TM99 Draining Kiss ITEM_TM_DRAINING_KISS Overworld Slateport City - Harbor">
+      <a href="tm-draining-kiss.html">
+<img src="../assets/game/graphics/items/icons/tm_fairy.png" alt="TM99 Draining Kiss" class="item-icon">        <span>TM99 Draining Kiss</span>
+      </a>
+    </li>
+    <li data-search-text="TM100 Play Rough ITEM_TM_PLAY_ROUGH Overworld Route 110">
+      <a href="tm-play-rough.html">
+<img src="../assets/game/graphics/items/icons/tm_fairy.png" alt="TM100 Play Rough" class="item-icon">        <span>TM100 Play Rough</span>
+      </a>
+    </li>
+  </ul>
+</section>
+<section class="itemdex-pocket" data-pocket="Pocket Berries">
+  <h2>Berries <span class="muted small-text" data-pocket-count>68</span></h2>
+  <ul class="itemdex-grid">
+    <li data-search-text="Aguav Berry ITEM_AGUAV_BERRY NPC Route 120 Random Berry Gift Route 114">
+      <a href="aguav-berry.html">
+<img src="../assets/game/graphics/items/icons/aguav_berry.png" alt="Aguav Berry" class="item-icon">        <span>Aguav Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Apicot Berry ITEM_APICOT_BERRY Berry Mutation ">
+      <a href="apicot-berry.html">
+<img src="../assets/game/graphics/items/icons/apicot_berry.png" alt="Apicot Berry" class="item-icon">        <span>Apicot Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Aspear Berry ITEM_ASPEAR_BERRY Berry Tree Route 120 Route 121 Random Berry Gift Route 114 Wild Held Items Crabrawler">
+      <a href="aspear-berry.html">
+<img src="../assets/game/graphics/items/icons/aspear_berry.png" alt="Aspear Berry" class="item-icon">        <span>Aspear Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Babiri Berry ITEM_BABIRI_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="babiri-berry.html">
+<img src="../assets/game/graphics/items/icons/babiri_berry.png" alt="Babiri Berry" class="item-icon">        <span>Babiri Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Belue Berry ITEM_BELUE_BERRY NPC Route 123 - Berry Masters House">
+      <a href="belue-berry.html">
+<img src="../assets/game/graphics/items/icons/belue_berry.png" alt="Belue Berry" class="item-icon">        <span>Belue Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Bluk Berry ITEM_BLUK_BERRY Berry Tree Route 115 Random Berry Gift Route 114">
+      <a href="bluk-berry.html">
+<img src="../assets/game/graphics/items/icons/bluk_berry.png" alt="Bluk Berry" class="item-icon">        <span>Bluk Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Charti Berry ITEM_CHARTI_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="charti-berry.html">
+<img src="../assets/game/graphics/items/icons/charti_berry.png" alt="Charti Berry" class="item-icon">        <span>Charti Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Cheri Berry ITEM_CHERI_BERRY Berry Tree Route 103 Route 104 Random Berry Gift Route 114">
+      <a href="cheri-berry.html">
+<img src="../assets/game/graphics/items/icons/cheri_berry.png" alt="Cheri Berry" class="item-icon">        <span>Cheri Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Chesto Berry ITEM_CHESTO_BERRY NPC Route 104 Berry Tree Route 116 Route 121 Random Berry Gift Route 114 Wild Held Items Mimikyu (Disguised) Trainer Held Item Elite Four Juan (Ever Grande City - Juan&#39;s Room)">
+      <a href="chesto-berry.html">
+<img src="../assets/game/graphics/items/icons/chesto_berry.png" alt="Chesto Berry" class="item-icon">        <span>Chesto Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Chilan Berry ITEM_CHILAN_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="chilan-berry.html">
+<img src="../assets/game/graphics/items/icons/chilan_berry.png" alt="Chilan Berry" class="item-icon">        <span>Chilan Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Chople Berry ITEM_CHOPLE_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="chople-berry.html">
+<img src="../assets/game/graphics/items/icons/chople_berry.png" alt="Chople Berry" class="item-icon">        <span>Chople Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Coba Berry ITEM_COBA_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="coba-berry.html">
+<img src="../assets/game/graphics/items/icons/coba_berry.png" alt="Coba Berry" class="item-icon">        <span>Coba Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Colbur Berry ITEM_COLBUR_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="colbur-berry.html">
+<img src="../assets/game/graphics/items/icons/colbur_berry.png" alt="Colbur Berry" class="item-icon">        <span>Colbur Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Cornn Berry ITEM_CORNN_BERRY Random Berry Gift Route 123 - Berry Masters House">
+      <a href="cornn-berry.html">
+<img src="../assets/game/graphics/items/icons/cornn_berry.png" alt="Cornn Berry" class="item-icon">        <span>Cornn Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Custap Berry ITEM_CUSTAP_BERRY Random Berry Gift Route 123 - Berry Masters House">
+      <a href="custap-berry.html">
+<img src="../assets/game/graphics/items/icons/custap_berry.png" alt="Custap Berry" class="item-icon">        <span>Custap Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Durin Berry ITEM_DURIN_BERRY NPC Route 123 - Berry Masters House">
+      <a href="durin-berry.html">
+<img src="../assets/game/graphics/items/icons/durin_berry.png" alt="Durin Berry" class="item-icon">        <span>Durin Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Enigma Berry ITEM_ENIGMA_BERRY Berry Mutation ">
+      <a href="enigma-berry.html">
+<img src="../assets/game/graphics/items/icons/enigma_berry_e_reader.png" alt="Enigma Berry" class="item-icon">        <span>Enigma Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Enigma Berry ITEM_ENIGMA_BERRY_E_READER NPC Petalburg City - Gym Berry Mutation ">
+      <a href="enigma-berry-e-reader.html">
+<img src="../assets/game/graphics/items/icons/enigma_berry_e_reader.png" alt="Enigma Berry" class="item-icon">        <span>Enigma Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Figy Berry ITEM_FIGY_BERRY NPC Route 120 Sootopolis City Random Berry Gift Route 114">
+      <a href="figy-berry.html">
+<img src="../assets/game/graphics/items/icons/figy_berry.png" alt="Figy Berry" class="item-icon">        <span>Figy Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Ganlon Berry ITEM_GANLON_BERRY Berry Mutation ">
+      <a href="ganlon-berry.html">
+<img src="../assets/game/graphics/items/icons/ganlon_berry.png" alt="Ganlon Berry" class="item-icon">        <span>Ganlon Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Grepa Berry ITEM_GREPA_BERRY Berry Tree Route 123 Random Berry Gift Route 123 - Berry Masters House Berry Mutation ">
+      <a href="grepa-berry.html">
+<img src="../assets/game/graphics/items/icons/grepa_berry.png" alt="Grepa Berry" class="item-icon">        <span>Grepa Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Haban Berry ITEM_HABAN_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="haban-berry.html">
+<img src="../assets/game/graphics/items/icons/haban_berry.png" alt="Haban Berry" class="item-icon">        <span>Haban Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Hondew Berry ITEM_HONDEW_BERRY Berry Tree Route 119 Random Berry Gift Route 123 - Berry Masters House Berry Mutation ">
+      <a href="hondew-berry.html">
+<img src="../assets/game/graphics/items/icons/hondew_berry.png" alt="Hondew Berry" class="item-icon">        <span>Hondew Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Iapapa Berry ITEM_IAPAPA_BERRY NPC Route 120 Sootopolis City Random Berry Gift Route 114">
+      <a href="iapapa-berry.html">
+<img src="../assets/game/graphics/items/icons/iapapa_berry.png" alt="Iapapa Berry" class="item-icon">        <span>Iapapa Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Jaboca Berry ITEM_JABOCA_BERRY Random Berry Gift Route 123 - Berry Masters House">
+      <a href="jaboca-berry.html">
+<img src="../assets/game/graphics/items/icons/jaboca_berry.png" alt="Jaboca Berry" class="item-icon">        <span>Jaboca Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Kasib Berry ITEM_KASIB_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="kasib-berry.html">
+<img src="../assets/game/graphics/items/icons/kasib_berry.png" alt="Kasib Berry" class="item-icon">        <span>Kasib Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Kebia Berry ITEM_KEBIA_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="kebia-berry.html">
+<img src="../assets/game/graphics/items/icons/kebia_berry.png" alt="Kebia Berry" class="item-icon">        <span>Kebia Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Kee Berry ITEM_KEE_BERRY Berry Mutation ">
+      <a href="kee-berry.html">
+<img src="../assets/game/graphics/items/icons/kee_berry.png" alt="Kee Berry" class="item-icon">        <span>Kee Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Kelpsy Berry ITEM_KELPSY_BERRY Berry Tree Route 115 Random Berry Gift Route 123 - Berry Masters House Berry Mutation ">
+      <a href="kelpsy-berry.html">
+<img src="../assets/game/graphics/items/icons/kelpsy_berry.png" alt="Kelpsy Berry" class="item-icon">        <span>Kelpsy Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Lansat Berry ITEM_LANSAT_BERRY NPC Battle Frontier - Scotts House Berry Mutation ">
+      <a href="lansat-berry.html">
+<img src="../assets/game/graphics/items/icons/lansat_berry.png" alt="Lansat Berry" class="item-icon">        <span>Lansat Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Leppa Berry ITEM_LEPPA_BERRY Berry Tree Route 103 Route 104 Route 119 Route 123 Random Berry Gift Route 114">
+      <a href="leppa-berry.html">
+<img src="../assets/game/graphics/items/icons/leppa_berry.png" alt="Leppa Berry" class="item-icon">        <span>Leppa Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Liechi Berry ITEM_LIECHI_BERRY Berry Tree Route 130 Route 136 Berry Mutation ">
+      <a href="liechi-berry.html">
+<img src="../assets/game/graphics/items/icons/liechi_berry.png" alt="Liechi Berry" class="item-icon">        <span>Liechi Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Lum Berry ITEM_LUM_BERRY Random Berry Gift Route 114">
+      <a href="lum-berry.html">
+<img src="../assets/game/graphics/items/icons/lum_berry.png" alt="Lum Berry" class="item-icon">        <span>Lum Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Mago Berry ITEM_MAGO_BERRY NPC Route 120 Random Berry Gift Route 114">
+      <a href="mago-berry.html">
+<img src="../assets/game/graphics/items/icons/mago_berry.png" alt="Mago Berry" class="item-icon">        <span>Mago Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Magost Berry ITEM_MAGOST_BERRY Random Berry Gift Route 123 - Berry Masters House">
+      <a href="magost-berry.html">
+<img src="../assets/game/graphics/items/icons/magost_berry.png" alt="Magost Berry" class="item-icon">        <span>Magost Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Maranga Berry ITEM_MARANGA_BERRY Berry Mutation ">
+      <a href="maranga-berry.html">
+<img src="../assets/game/graphics/items/icons/maranga_berry.png" alt="Maranga Berry" class="item-icon">        <span>Maranga Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Micle Berry ITEM_MICLE_BERRY Random Berry Gift Route 123 - Berry Masters House">
+      <a href="micle-berry.html">
+<img src="../assets/game/graphics/items/icons/micle_berry.png" alt="Micle Berry" class="item-icon">        <span>Micle Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Nanab Berry ITEM_NANAB_BERRY Berry Tree Route 110 Route 120 Route 121 Random Berry Gift Route 114">
+      <a href="nanab-berry.html">
+<img src="../assets/game/graphics/items/icons/nanab_berry.png" alt="Nanab Berry" class="item-icon">        <span>Nanab Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Nomel Berry ITEM_NOMEL_BERRY Random Berry Gift Route 123 - Berry Masters House">
+      <a href="nomel-berry.html">
+<img src="../assets/game/graphics/items/icons/nomel_berry.png" alt="Nomel Berry" class="item-icon">        <span>Nomel Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Occa Berry ITEM_OCCA_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="occa-berry.html">
+<img src="../assets/game/graphics/items/icons/occa_berry.png" alt="Occa Berry" class="item-icon">        <span>Occa Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Oran Berry ITEM_ORAN_BERRY Berry Tree Route 102 Route 104 Route 111 Random Berry Gift Route 114 Wild Held Items Audino Trainer Held Item Pokefan Miguel (Route 103) Pokefan Isabel (Route 110) Pokefan Kaleb (Route 110) Winstrate Victor (Route 111) Winstrate Victoria (Route 111) Pokefan Vanessa (Route 121) Leader Roxanne (Rustboro City - Gym) Pokefan Colton (SS Tidal Corridor) Pokefan Bethany (Sootopolis City - Gym B1F) Pokefan Yannik (Sootopolis City - Gym B1F)">
+      <a href="oran-berry.html">
+<img src="../assets/game/graphics/items/icons/oran_berry.png" alt="Oran Berry" class="item-icon">        <span>Oran Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Pamtre Berry ITEM_PAMTRE_BERRY NPC Route 123 - Berry Masters House">
+      <a href="pamtre-berry.html">
+<img src="../assets/game/graphics/items/icons/pamtre_berry.png" alt="Pamtre Berry" class="item-icon">        <span>Pamtre Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Passho Berry ITEM_PASSHO_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="passho-berry.html">
+<img src="../assets/game/graphics/items/icons/passho_berry.png" alt="Passho Berry" class="item-icon">        <span>Passho Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Payapa Berry ITEM_PAYAPA_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="payapa-berry.html">
+<img src="../assets/game/graphics/items/icons/payapa_berry.png" alt="Payapa Berry" class="item-icon">        <span>Payapa Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Pecha Berry ITEM_PECHA_BERRY NPC Lilycove City - Contest Lobby Berry Tree Route 102 Route 104 Route 112 Route 120 Route 123 Random Berry Gift Route 114 Wild Held Items Raticate (Alolan) Rattata (Alolan) Yungoos">
+      <a href="pecha-berry.html">
+<img src="../assets/game/graphics/items/icons/pecha_berry.png" alt="Pecha Berry" class="item-icon">        <span>Pecha Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Persim Berry ITEM_PERSIM_BERRY Berry Tree Route 114 Route 121 Random Berry Gift Route 114 Wild Held Items Drampa">
+      <a href="persim-berry.html">
+<img src="../assets/game/graphics/items/icons/persim_berry.png" alt="Persim Berry" class="item-icon">        <span>Persim Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Petaya Berry ITEM_PETAYA_BERRY Berry Mutation ">
+      <a href="petaya-berry.html">
+<img src="../assets/game/graphics/items/icons/petaya_berry.png" alt="Petaya Berry" class="item-icon">        <span>Petaya Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Pinap Berry ITEM_PINAP_BERRY Berry Tree Route 116 Route 120 Random Berry Gift Route 114">
+      <a href="pinap-berry.html">
+<img src="../assets/game/graphics/items/icons/pinap_berry.png" alt="Pinap Berry" class="item-icon">        <span>Pinap Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Pomeg Berry ITEM_POMEG_BERRY Berry Tree Route 119 Route 123 Random Berry Gift Route 123 - Berry Masters House Berry Mutation ">
+      <a href="pomeg-berry.html">
+<img src="../assets/game/graphics/items/icons/pomeg_berry.png" alt="Pomeg Berry" class="item-icon">        <span>Pomeg Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Qualot Berry ITEM_QUALOT_BERRY Berry Tree Route 123 Random Berry Gift Route 123 - Berry Masters House Berry Mutation ">
+      <a href="qualot-berry.html">
+<img src="../assets/game/graphics/items/icons/qualot_berry.png" alt="Qualot Berry" class="item-icon">        <span>Qualot Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Rabuta Berry ITEM_RABUTA_BERRY Random Berry Gift Route 123 - Berry Masters House">
+      <a href="rabuta-berry.html">
+<img src="../assets/game/graphics/items/icons/rabuta_berry.png" alt="Rabuta Berry" class="item-icon">        <span>Rabuta Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Rawst Berry ITEM_RAWST_BERRY Berry Tree Route 112 Route 121 Route 123 Random Berry Gift Route 114">
+      <a href="rawst-berry.html">
+<img src="../assets/game/graphics/items/icons/rawst_berry.png" alt="Rawst Berry" class="item-icon">        <span>Rawst Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Razz Berry ITEM_RAZZ_BERRY NPC Route 111 Berry Tree Route 111 Route 120 Random Berry Gift Route 114">
+      <a href="razz-berry.html">
+<img src="../assets/game/graphics/items/icons/razz_berry.png" alt="Razz Berry" class="item-icon">        <span>Razz Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Rindo Berry ITEM_RINDO_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="rindo-berry.html">
+<img src="../assets/game/graphics/items/icons/rindo_berry.png" alt="Rindo Berry" class="item-icon">        <span>Rindo Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Roseli Berry ITEM_ROSELI_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="roseli-berry.html">
+<img src="../assets/game/graphics/items/icons/roseli_berry.png" alt="Roseli Berry" class="item-icon">        <span>Roseli Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Rowap Berry ITEM_ROWAP_BERRY Random Berry Gift Route 123 - Berry Masters House">
+      <a href="rowap-berry.html">
+<img src="../assets/game/graphics/items/icons/rowap_berry.png" alt="Rowap Berry" class="item-icon">        <span>Rowap Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Salac Berry ITEM_SALAC_BERRY Trainer Held Item Leader Wattson (Mauville City - Gym) Leader Glacia (Sootopolis City - Gym 1F) Berry Mutation ">
+      <a href="salac-berry.html">
+<img src="../assets/game/graphics/items/icons/salac_berry.png" alt="Salac Berry" class="item-icon">        <span>Salac Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Shuca Berry ITEM_SHUCA_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="shuca-berry.html">
+<img src="../assets/game/graphics/items/icons/shuca_berry.png" alt="Shuca Berry" class="item-icon">        <span>Shuca Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Sitrus Berry ITEM_SITRUS_BERRY Berry Tree Route 118 Route 119 Route 123 Random Berry Gift Route 114 Wild Held Items Audino Toucannon Trumbeak Trainer Held Item Champion Wallace (Ever Grande City - Champion&#39;s Room) Elite Four Juan (Ever Grande City - Juan&#39;s Room) Elite Four Phoebe (Ever Grande City - Phoebe&#39;s Room) Leader Winona (Fortree City - Gym) Leader Wattson (Mauville City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Norman (Petalburg City - Gym) Cooltrainer Carolina (Route 108)">
+      <a href="sitrus-berry.html">
+<img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="Sitrus Berry" class="item-icon">        <span>Sitrus Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Spelon Berry ITEM_SPELON_BERRY NPC Route 123 - Berry Masters House">
+      <a href="spelon-berry.html">
+<img src="../assets/game/graphics/items/icons/spelon_berry.png" alt="Spelon Berry" class="item-icon">        <span>Spelon Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Starf Berry ITEM_STARF_BERRY NPC Battle Frontier - Scotts House">
+      <a href="starf-berry.html">
+<img src="../assets/game/graphics/items/icons/starf_berry.png" alt="Starf Berry" class="item-icon">        <span>Starf Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Tamato Berry ITEM_TAMATO_BERRY Random Berry Gift Route 123 - Berry Masters House Berry Mutation ">
+      <a href="tamato-berry.html">
+<img src="../assets/game/graphics/items/icons/tamato_berry.png" alt="Tamato Berry" class="item-icon">        <span>Tamato Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Tanga Berry ITEM_TANGA_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="tanga-berry.html">
+<img src="../assets/game/graphics/items/icons/tanga_berry.png" alt="Tanga Berry" class="item-icon">        <span>Tanga Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Wacan Berry ITEM_WACAN_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="wacan-berry.html">
+<img src="../assets/game/graphics/items/icons/wacan_berry.png" alt="Wacan Berry" class="item-icon">        <span>Wacan Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Watmel Berry ITEM_WATMEL_BERRY NPC Route 123 - Berry Masters House">
+      <a href="watmel-berry.html">
+<img src="../assets/game/graphics/items/icons/watmel_berry.png" alt="Watmel Berry" class="item-icon">        <span>Watmel Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Wepear Berry ITEM_WEPEAR_BERRY Berry Tree Route 117 Route 120 Random Berry Gift Route 114">
+      <a href="wepear-berry.html">
+<img src="../assets/game/graphics/items/icons/wepear_berry.png" alt="Wepear Berry" class="item-icon">        <span>Wepear Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Wiki Berry ITEM_WIKI_BERRY NPC Route 120 Random Berry Gift Route 114">
+      <a href="wiki-berry.html">
+<img src="../assets/game/graphics/items/icons/wiki_berry.png" alt="Wiki Berry" class="item-icon">        <span>Wiki Berry</span>
+      </a>
+    </li>
+    <li data-search-text="Yache Berry ITEM_YACHE_BERRY Random Berry Gift Route 123 - Berry Masters House Sootopolis City">
+      <a href="yache-berry.html">
+<img src="../assets/game/graphics/items/icons/yache_berry.png" alt="Yache Berry" class="item-icon">        <span>Yache Berry</span>
+      </a>
+    </li>
+  </ul>
+</section>
+<p id="itemdex-empty" class="filter-empty" style="display:none;">No items match that search.</p>
+<script>
+  (function () {
+    const bag = document.querySelector('[data-bag-frame]');
+    const hotspots = document.querySelectorAll('.itemdex-bag-hotspot');
+    // Frame 2 (Key Items) draws the bag smaller, so the other pockets visually
+    // sit lower on the bag. Apply a uniform downward shift while it's active.
+    const KEY_ITEMS_SHIFTS = {
+      'Pocket Items': 7, 'Pocket Tm Hm': 7, 'Pocket Berries': 7,
+      'Pocket Poke Balls': 3, 'Pocket Key Items': 4,
+    };
+    hotspots.forEach((h) => { h.dataset.baseTop = h.style.top; });
+    const sections = document.querySelectorAll('.itemdex-pocket');
+    const searchInput = document.getElementById('itemdex-search');
+    // Mirror the active pocket into location.hash so the browser back button
+    // (from an item page) returns the user to the same tab they came from.
+    const POCKET_HASHES = {
+      'Pocket Items': 'items', 'Pocket Key Items': 'key-items',
+      'Pocket Poke Balls': 'poke-balls', 'Pocket Tm Hm': 'tm-hm', 'Pocket Berries': 'berries',
+    };
+    const HASH_TO_HOTSPOT = {};
+    hotspots.forEach((h) => { HASH_TO_HOTSPOT[POCKET_HASHES[h.dataset.pocket]] = h; });
+    function activate(pocket, spriteY, updateHash) {
+      bag.style.backgroundPositionY = `-${spriteY * 6}px`;
+      const keyActive = pocket === 'Pocket Key Items';
+      hotspots.forEach((h) => {
+        const shift = keyActive ? (KEY_ITEMS_SHIFTS[h.dataset.pocket] || 0) : 0;
+        h.style.top = shift ? `${parseFloat(h.dataset.baseTop) + shift}%` : h.dataset.baseTop;
+      });
+      sections.forEach((s) => s.classList.toggle('is-active', s.dataset.pocket === pocket));
+      if (searchInput) searchInput.dispatchEvent(new Event('input'));
+      if (updateHash !== false) {
+        const slug = POCKET_HASHES[pocket];
+        if (slug) history.replaceState(null, '', `#${slug}`);
+      }
+    }
+    hotspots.forEach((btn) => {
+      btn.addEventListener('click', () => activate(btn.dataset.pocket, btn.dataset.spriteY));
+    });
+    // Live counts: re-tally visible (non-filter-hidden) items per pocket on
+    // every search keystroke so the badge reflects what's actually showing.
+    if (searchInput) {
+      const updateCounts = () => {
+        sections.forEach((s) => {
+          const count = s.querySelectorAll('li[data-search-text]:not(.filter-hidden)').length;
+          const badge = s.querySelector('[data-pocket-count]');
+          if (badge) badge.textContent = count;
+        });
+      };
+      // The base filter handler runs first (adds/removes filter-hidden); read
+      // the result on the next animation frame so we don't race it.
+      searchInput.addEventListener('input', () => requestAnimationFrame(updateCounts));
+    }
+    // Honor the pocket hash on load and on subsequent back-nav.
+    const hashHotspot = () => HASH_TO_HOTSPOT[(location.hash || '').replace(/^#/, '')];
+    const syncFromHash = () => {
+      const h = hashHotspot();
+      if (h) activate(h.dataset.pocket, h.dataset.spriteY, false);
+    };
+    if (hashHotspot()) syncFromHash();
+    else activate('Pocket Items', 64, false);
+    window.addEventListener('hashchange', syncFromHash);
+  })();
+</script>
+  </main>
+  <script>
+    function obstagoonBindFilters() {
+      const inputs = document.querySelectorAll('[data-filter-input]');
+      inputs.forEach((input) => {
+        const selector = input.getAttribute('data-filter-target');
+        const emptyTextSelector = input.getAttribute('data-filter-empty');
+        const countSelector = input.getAttribute('data-filter-count');
+        const items = Array.from(document.querySelectorAll(selector || ''));
+        const emptyNode = emptyTextSelector ? document.querySelector(emptyTextSelector) : null;
+        const countNode = countSelector ? document.querySelector(countSelector) : null;
+        const stateKey = input.id || selector || '';
+        const apply = () => {
+          const query = obstagoonNormalize(input.value);
+          let visible = 0;
+          items.forEach((item) => {
+            const haystack = obstagoonNormalize(item.getAttribute('data-search-text') || item.textContent || '');
+            const match = !query || haystack.includes(query);
+            item.classList.toggle('filter-hidden', !match);
+            if (match) visible += 1;
+          });
+          if (emptyNode) emptyNode.style.display = visible === 0 ? '' : 'none';
+          if (countNode) countNode.textContent = visible;
+          if (stateKey) obstagoonSaveState(stateKey, {search: input.value});
+        };
+        if (stateKey) {
+          const saved = obstagoonLoadState(stateKey);
+          if (saved.search) input.value = saved.search;
+        }
+        input.addEventListener('input', apply);
+        apply();
+      });
+    }
+    function obstagoonBindRowLinks() {
+      // Elements with data-href behave as buttons: clicking anywhere navigates,
+      // except clicks on nested links/buttons which retain their own behavior
+      // (e.g. ability links inside a pokedex row stay individually clickable).
+      document.querySelectorAll('tr[data-href], li[data-href]').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('a, button')) return;
+          window.location = row.getAttribute('data-href');
+        });
+      });
+    }
+    function obstagoonBindLinkedHotspots() {
+      // Mirror hover between encounter-map hotspots and the section's link-grid
+      // tile by matching href. Hovering one outlines the other so it's clear
+      // which spot on the map corresponds to which list entry.
+      const partners = new Map();
+      document.querySelectorAll('.region-map a[href], .link-grid > li > a[href]').forEach((a) => {
+        const key = a.getAttribute('href');
+        if (!partners.has(key)) partners.set(key, []);
+        partners.get(key).push(a);
+      });
+      partners.forEach((group) => {
+        if (group.length < 2) return;
+        group.forEach((el) => {
+          el.addEventListener('mouseenter', () => group.forEach((other) => { if (other !== el) other.classList.add('linked-hover'); }));
+          el.addEventListener('mouseleave', () => group.forEach((other) => other.classList.remove('linked-hover')));
+        });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+    } else {
+      obstagoonBindFilters();
+      obstagoonBindRowLinks();
+      obstagoonBindLinkedHotspots();
+    }
+  </script>
+</body>
+</html>

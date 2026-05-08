@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pickup - pokeemerald-expansion</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script>
+    // Lowercase, strip diacritics (é→e), and drop non-alphanumerics so a query
+    // like "basculinwhitestriped" still matches "Basculin (White-Striped)".
+    // Defined in <head> so per-page IIFEs in the content can call it.
+    window.obstagoonNormalize = (s) => (s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+    // Per-tab index state (search, chips, sort) restored on back/forward and
+    // reload only — fresh clicks of nav links start clean.
+    window.obstagoonShouldRestoreState = () => {
+      const nav = performance.getEntriesByType('navigation')[0];
+      return !!(nav && (nav.type === 'back_forward' || nav.type === 'reload'));
+    };
+    window.obstagoonLoadState = (key) => {
+      if (!obstagoonShouldRestoreState()) return {};
+      try { return JSON.parse(sessionStorage.getItem('obstagoon:' + key) || '{}'); }
+      catch (e) { return {}; }
+    };
+    window.obstagoonSaveState = (key, state) => {
+      // Private browsing / quota-exceeded throws; degrade silently.
+      try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
+      catch (e) {}
+    };
+    // Shared search+chips+sort filter binding for index pages. Each page
+    // passes its element ids, a haystack-by-chip-kind map (for filtering),
+    // suggestion sources, and optionally a table selector to enable
+    // click-to-sort. State persists in sessionStorage under stateKey. Defined
+    // in <head> so per-page IIFEs in the content can call it.
+    window.obstagoonBindIndexPage = (opts) => {
+      const input = document.getElementById(opts.inputId);
+      const dropdown = document.getElementById(opts.dropdownId);
+      const chipsBox = document.getElementById(opts.chipsBoxId);
+      const empty = opts.emptyId ? document.getElementById(opts.emptyId) : null;
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      const rows = Array.from(document.querySelectorAll(opts.rowsSelector));
+      const haystackByKind = opts.haystackByKind || {};
+      const sources = opts.sources || [];
+      const defaultKind = opts.defaultKind || null;
+      const saved = obstagoonLoadState(opts.stateKey);
+      const chips = (Array.isArray(saved.chips) ? saved.chips : [])
+        .map((c) => c.kind ? c : {kind: defaultKind || 'Pokémon', name: c.name});
+      if (saved.search) input.value = saved.search;
+      let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
+      let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : 'asc';
+      const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const persist = () => obstagoonSaveState(opts.stateKey, {
+        search: input.value, chips,
+        ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
+      });
+
+      const applyFilters = () => {
+        const q = obstagoonNormalize(input.value);
+        let visible = 0;
+        rows.forEach((el) => {
+          const text = obstagoonNormalize(el.dataset.searchText || '');
+          let show = !q || text.includes(q);
+          if (show) for (const c of chips) {
+            const haystack = el.dataset[haystackByKind[c.kind]];
+            if (!haystack || !haystack.includes(`|${c.name}|`)) { show = false; break; }
+          }
+          el.classList.toggle('filter-hidden', !show);
+          if (show) visible += 1;
+        });
+        if (empty) empty.style.display = visible === 0 ? '' : 'none';
+        if (countEl) countEl.textContent = visible;
+        persist();
+      };
+      const renderChips = () => {
+        chipsBox.innerHTML = chips.map((c, i) =>
+          `<span class="filter-chip"><span class="chip-kind">${c.kind}</span> ${esc(c.name)}<button type="button" class="chip-remove" data-idx="${i}" aria-label="Remove">×</button></span>`
+        ).join('');
+        chipsBox.querySelectorAll('.chip-remove').forEach((btn) => btn.addEventListener('click', () => {
+          chips.splice(parseInt(btn.dataset.idx, 10), 1); renderChips(); applyFilters();
+        }));
+      };
+      const renderSuggestions = () => {
+        const q = obstagoonNormalize(input.value);
+        if (q.length < 3) { dropdown.hidden = true; return; }
+        const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
+        const matches = [];
+        for (const [kind, list] of sources) {
+          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+        }
+        if (matches.length === 0) { dropdown.hidden = true; return; }
+        dropdown.innerHTML = matches.slice(0, 30).map((m) =>
+          `<button type="button" class="suggestion" data-kind="${m.kind}" data-name="${esc(m.name)}"><span class="suggestion-kind">${m.kind}</span> ${esc(m.name)}</button>`
+        ).join('');
+        dropdown.hidden = false;
+        dropdown.querySelectorAll('.suggestion').forEach((btn) => btn.addEventListener('click', () => {
+          chips.push({kind: btn.dataset.kind, name: btn.dataset.name});
+          input.value = ''; dropdown.hidden = true; renderChips(); applyFilters();
+        }));
+      };
+      input.addEventListener('input', () => { renderSuggestions(); applyFilters(); });
+      input.addEventListener('focus', renderSuggestions);
+      document.addEventListener('click', (e) => { if (!dropdown.contains(e.target) && e.target !== input) dropdown.hidden = true; });
+      renderChips();
+      applyFilters();
+
+      if (opts.tableSelector) {
+        const tbody = document.querySelector(opts.tableSelector + ' tbody');
+        const headers = Array.from(document.querySelectorAll(opts.tableSelector + ' thead th'));
+        const original = Array.from(tbody.querySelectorAll('tr'));
+        const cellValue = (tr, i, kind) => {
+          const text = tr.cells[i].textContent.trim();
+          if (kind === 'number') { const n = parseFloat(text); return isNaN(n) ? -Infinity : n; }
+          return text.toLowerCase();
+        };
+        const applySort = () => {
+          headers.forEach((h, j) => {
+            h.classList.toggle('sort-asc', activeDir === 'asc' && j === activeCol);
+            h.classList.toggle('sort-desc', activeDir === 'desc' && j === activeCol);
+          });
+          if (!activeDir) { original.forEach((tr) => tbody.appendChild(tr)); return; }
+          const kind = headers[activeCol]?.dataset.sort || 'text';
+          const sign = activeDir === 'asc' ? 1 : -1;
+          [...original].sort((a, b) => {
+            const av = cellValue(a, activeCol, kind), bv = cellValue(b, activeCol, kind);
+            return av < bv ? -sign : av > bv ? sign : 0;
+          }).forEach((tr) => tbody.appendChild(tr));
+        };
+        headers.forEach((th, i) => {
+          if (!th.dataset.sort) return;
+          th.classList.add('sortable');
+          th.addEventListener('click', () => {
+            activeDir = i !== activeCol ? 'asc' : activeDir === 'asc' ? 'desc' : activeDir === 'desc' ? '' : 'asc';
+            activeCol = activeDir ? i : -1;
+            applySort();
+            persist();
+          });
+        });
+        applySort();
+      }
+    };
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../index.html">pokeemerald-expansion</a>
+      <nav>
+        <a href="../pokedex/index.html">Pokédex</a>
+        <a href="../moves/index.html">Moves</a>
+        <a href="../abilities/index.html">Abilities</a>
+        <a href="../forms/index.html">Forms</a>
+        <a href="../encounters/index.html">Encounters</a>
+        <a href="../itemdex/index.html">Itemdex</a>
+        <a href="../trainerdex/index.html">Trainers</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+<h1>Pickup</h1>
+<p class="muted">ABILITY_PICKUP</p>
+<div class="card">
+  <p>May pick up items.</p>
+</div>
+<section class="card">
+  <h2>Pokémon with this Ability <span class="muted small-text">14</span></h2>
+  <ul class="cross-link-grid">
+<li><a href="../pokedex/bunnelby.html">
+<img src="../assets/game/graphics/pokemon/bunnelby/anim_front.png" alt="" class="sprite">  <span class="name">Bunnelby</span>
+</a></li><li><a href="../pokedex/diggersby.html">
+<img src="../assets/game/graphics/pokemon/diggersby/anim_front.png" alt="" class="sprite">  <span class="name">Diggersby</span>
+</a></li><li><a href="../pokedex/gourgeist.html">
+<img src="../assets/game/graphics/pokemon/gourgeist/anim_front.png" alt="" class="sprite">  <span class="name">Gourgeist <span class="muted small-text">(HA)</span></span>
+</a></li><li><a href="../pokedex/herdier.html">
+<img src="../assets/game/graphics/pokemon/herdier/anim_front.png" alt="" class="sprite">  <span class="name">Herdier</span>
+</a></li><li><a href="../pokedex/lillipup.html">
+<img src="../assets/game/graphics/pokemon/lillipup/anim_front.png" alt="" class="sprite">  <span class="name">Lillipup</span>
+</a></li><li><a href="../pokedex/meowth.html">
+<img src="../assets/game/graphics/pokemon/meowth/anim_front.png" alt="" class="sprite">  <span class="name">Meowth</span>
+</a></li><li><a href="../pokedex/meowth-alola.html">
+<img src="../assets/game/graphics/pokemon/meowth/alola/front.png" alt="" class="sprite">  <span class="name">Meowth (Alolan)</span>
+</a></li><li><a href="../pokedex/pachirisu.html">
+<img src="../assets/game/graphics/pokemon/pachirisu/anim_front.png" alt="" class="sprite">  <span class="name">Pachirisu</span>
+</a></li><li><a href="../pokedex/panpour.html">
+<img src="../assets/game/graphics/pokemon/panpour/anim_front.png" alt="" class="sprite">  <span class="name">Panpour</span>
+</a></li><li><a href="../pokedex/pansage.html">
+<img src="../assets/game/graphics/pokemon/pansage/anim_front.png" alt="" class="sprite">  <span class="name">Pansage</span>
+</a></li><li><a href="../pokedex/pansear.html">
+<img src="../assets/game/graphics/pokemon/pansear/anim_front.png" alt="" class="sprite">  <span class="name">Pansear</span>
+</a></li><li><a href="../pokedex/pikipek.html">
+<img src="../assets/game/graphics/pokemon/pikipek/anim_front.png" alt="" class="sprite">  <span class="name">Pikipek <span class="muted small-text">(HA)</span></span>
+</a></li><li><a href="../pokedex/pumpkaboo.html">
+<img src="../assets/game/graphics/pokemon/pumpkaboo/anim_front.png" alt="" class="sprite">  <span class="name">Pumpkaboo <span class="muted small-text">(HA)</span></span>
+</a></li><li><a href="../pokedex/trumbeak.html">
+<img src="../assets/game/graphics/pokemon/trumbeak/anim_front.png" alt="" class="sprite">  <span class="name">Trumbeak <span class="muted small-text">(HA)</span></span>
+</a></li>  </ul>
+</section>
+<section class="card">
+  <h2>Pickup Table</h2>
+  <div class="pickup-table-scroll">
+  <table class="pickup-table">
+    <thead>
+      <tr>
+        <th>Level</th>
+<th colspan="1">35%</th><th colspan="1">30%</th><th colspan="1">25%</th><th colspan="5">10%</th><th colspan="4">9%</th><th colspan="3">8%</th><th colspan="1">7%</th><th colspan="8">5%</th><th colspan="10">4%</th><th colspan="8">3%</th><th colspan="10">1%</th>      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th>1-10</th>
+          <td><a href="../itemdex/potion.html" title="Potion"><img src="../assets/game/graphics/items/icons/potion.png" alt="Potion" class="item-icon"></a></td>
+          <td></td>
+          <td><a href="../itemdex/tiny-mushroom.html" title="Tiny Mushroom"><img src="../assets/game/graphics/items/icons/tiny_mushroom.png" alt="Tiny Mushroom" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/repel.html" title="Repel"><img src="../assets/game/graphics/items/icons/repel.png" alt="Repel" class="item-icon"></a></td>
+          <td><a href="../itemdex/super-potion.html" title="Super Potion"><img src="../assets/game/graphics/items/icons/super_potion.png" alt="Super Potion" class="item-icon"></a></td>
+          <td><a href="../itemdex/poke-doll.html" title="Poké Doll"><img src="../assets/game/graphics/items/icons/poke_doll.png" alt="Poké Doll" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/big-mushroom.html" title="Big Mushroom"><img src="../assets/game/graphics/items/icons/big_mushroom.png" alt="Big Mushroom" class="item-icon"></a></td>
+          <td><a href="../itemdex/super-repel.html" title="Super Repel"><img src="../assets/game/graphics/items/icons/super_repel.png" alt="Super Repel" class="item-icon"></a></td>
+          <td><a href="../itemdex/full-heal.html" title="Full Heal"><img src="../assets/game/graphics/items/icons/full_heal.png" alt="Full Heal" class="item-icon"></a></td>
+          <td><a href="../itemdex/revive.html" title="Revive"><img src="../assets/game/graphics/items/icons/revive.png" alt="Revive" class="item-icon"></a></td>
+          <td><a href="../itemdex/hyper-potion.html" title="Hyper Potion"><img src="../assets/game/graphics/items/icons/hyper_potion.png" alt="Hyper Potion" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/ether.html" title="Ether"><img src="../assets/game/graphics/items/icons/ether.png" alt="Ether" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+        <th>11-20</th>
+          <td></td>
+          <td><a href="../itemdex/repel.html" title="Repel"><img src="../assets/game/graphics/items/icons/repel.png" alt="Repel" class="item-icon"></a></td>
+          <td></td>
+          <td><a href="../itemdex/tiny-mushroom.html" title="Tiny Mushroom"><img src="../assets/game/graphics/items/icons/tiny_mushroom.png" alt="Tiny Mushroom" class="item-icon"></a></td>
+          <td><a href="../itemdex/super-potion.html" title="Super Potion"><img src="../assets/game/graphics/items/icons/super_potion.png" alt="Super Potion" class="item-icon"></a></td>
+          <td><a href="../itemdex/poke-doll.html" title="Poké Doll"><img src="../assets/game/graphics/items/icons/poke_doll.png" alt="Poké Doll" class="item-icon"></a></td>
+          <td><a href="../itemdex/big-mushroom.html" title="Big Mushroom"><img src="../assets/game/graphics/items/icons/big_mushroom.png" alt="Big Mushroom" class="item-icon"></a></td>
+          <td><a href="../itemdex/super-repel.html" title="Super Repel"><img src="../assets/game/graphics/items/icons/super_repel.png" alt="Super Repel" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/full-heal.html" title="Full Heal"><img src="../assets/game/graphics/items/icons/full_heal.png" alt="Full Heal" class="item-icon"></a></td>
+          <td><a href="../itemdex/revive.html" title="Revive"><img src="../assets/game/graphics/items/icons/revive.png" alt="Revive" class="item-icon"></a></td>
+          <td><a href="../itemdex/hyper-potion.html" title="Hyper Potion"><img src="../assets/game/graphics/items/icons/hyper_potion.png" alt="Hyper Potion" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-repel.html" title="Max Repel"><img src="../assets/game/graphics/items/icons/max_repel.png" alt="Max Repel" class="item-icon"></a></td>
+          <td><a href="../itemdex/moon-stone.html" title="Moon Stone"><img src="../assets/game/graphics/items/icons/moon_stone.png" alt="Moon Stone" class="item-icon"></a></td>
+          <td><a href="../itemdex/sun-stone.html" title="Sun Stone"><img src="../assets/game/graphics/items/icons/sun_stone.png" alt="Sun Stone" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/ether.html" title="Ether"><img src="../assets/game/graphics/items/icons/ether.png" alt="Ether" class="item-icon"></a></td>
+          <td><a href="../itemdex/rare-candy.html" title="Rare Candy"><img src="../assets/game/graphics/items/icons/rare_candy.png" alt="Rare Candy" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+        <th>21-30</th>
+          <td></td>
+          <td><a href="../itemdex/super-potion.html" title="Super Potion"><img src="../assets/game/graphics/items/icons/super_potion.png" alt="Super Potion" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/poke-doll.html" title="Poké Doll"><img src="../assets/game/graphics/items/icons/poke_doll.png" alt="Poké Doll" class="item-icon"></a></td>
+          <td><a href="../itemdex/big-mushroom.html" title="Big Mushroom"><img src="../assets/game/graphics/items/icons/big_mushroom.png" alt="Big Mushroom" class="item-icon"></a></td>
+          <td><a href="../itemdex/super-repel.html" title="Super Repel"><img src="../assets/game/graphics/items/icons/super_repel.png" alt="Super Repel" class="item-icon"></a></td>
+          <td><a href="../itemdex/full-heal.html" title="Full Heal"><img src="../assets/game/graphics/items/icons/full_heal.png" alt="Full Heal" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/revive.html" title="Revive"><img src="../assets/game/graphics/items/icons/revive.png" alt="Revive" class="item-icon"></a></td>
+          <td><a href="../itemdex/hyper-potion.html" title="Hyper Potion"><img src="../assets/game/graphics/items/icons/hyper_potion.png" alt="Hyper Potion" class="item-icon"></a></td>
+          <td><a href="../itemdex/ether.html" title="Ether"><img src="../assets/game/graphics/items/icons/ether.png" alt="Ether" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-repel.html" title="Max Repel"><img src="../assets/game/graphics/items/icons/max_repel.png" alt="Max Repel" class="item-icon"></a></td>
+          <td><a href="../itemdex/moon-stone.html" title="Moon Stone"><img src="../assets/game/graphics/items/icons/moon_stone.png" alt="Moon Stone" class="item-icon"></a></td>
+          <td><a href="../itemdex/sun-stone.html" title="Sun Stone"><img src="../assets/game/graphics/items/icons/sun_stone.png" alt="Sun Stone" class="item-icon"></a></td>
+          <td><a href="../itemdex/nugget.html" title="Nugget"><img src="../assets/game/graphics/items/icons/nugget.png" alt="Nugget" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-potion.html" title="Max Potion"><img src="../assets/game/graphics/items/icons/max_potion.png" alt="Max Potion" class="item-icon"></a></td>
+          <td><a href="../itemdex/rare-candy.html" title="Rare Candy"><img src="../assets/game/graphics/items/icons/rare_candy.png" alt="Rare Candy" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-ether.html" title="Max Ether"><img src="../assets/game/graphics/items/icons/max_ether.png" alt="Max Ether" class="item-icon"></a></td>
+          <td><a href="../itemdex/pp-up.html" title="PP Up"><img src="../assets/game/graphics/items/icons/pp_up.png" alt="PP Up" class="item-icon"></a></td>
+          <td><a href="../itemdex/big-nugget.html" title="Big Nugget"><img src="../assets/game/graphics/items/icons/big_nugget.png" alt="Big Nugget" class="item-icon"></a></td>
+          <td><a href="../itemdex/destiny-knot.html" title="Destiny Knot"><img src="../assets/game/graphics/items/icons/destiny_knot.png" alt="Destiny Knot" class="item-icon"></a></td>
+          <td><a href="../itemdex/leftovers.html" title="Leftovers"><img src="../assets/game/graphics/items/icons/leftovers.png" alt="Leftovers" class="item-icon"></a></td>
+          <td><a href="../itemdex/kings-rock.html" title="King&#39;s Rock"><img src="../assets/game/graphics/items/icons/kings_rock.png" alt="King&#39;s Rock" class="item-icon"></a></td>
+          <td><a href="../itemdex/weakness-policy.html" title="Weakness Policy"><img src="../assets/game/graphics/items/icons/weakness_policy.png" alt="Weakness Policy" class="item-icon"></a></td>
+          <td><a href="../itemdex/blunder-policy.html" title="Blunder Policy"><img src="../assets/game/graphics/items/icons/blunder_policy.png" alt="Blunder Policy" class="item-icon"></a></td>
+          <td><a href="../itemdex/focus-sash.html" title="Focus Sash"><img src="../assets/game/graphics/items/icons/focus_sash.png" alt="Focus Sash" class="item-icon"></a></td>
+      </tr>
+      <tr>
+        <th>31-40</th>
+          <td></td>
+          <td><a href="../itemdex/poke-doll.html" title="Poké Doll"><img src="../assets/game/graphics/items/icons/poke_doll.png" alt="Poké Doll" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/super-repel.html" title="Super Repel"><img src="../assets/game/graphics/items/icons/super_repel.png" alt="Super Repel" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/full-heal.html" title="Full Heal"><img src="../assets/game/graphics/items/icons/full_heal.png" alt="Full Heal" class="item-icon"></a></td>
+          <td><a href="../itemdex/revive.html" title="Revive"><img src="../assets/game/graphics/items/icons/revive.png" alt="Revive" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/hyper-potion.html" title="Hyper Potion"><img src="../assets/game/graphics/items/icons/hyper_potion.png" alt="Hyper Potion" class="item-icon"></a></td>
+          <td><a href="../itemdex/ether.html" title="Ether"><img src="../assets/game/graphics/items/icons/ether.png" alt="Ether" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-repel.html" title="Max Repel"><img src="../assets/game/graphics/items/icons/max_repel.png" alt="Max Repel" class="item-icon"></a></td>
+          <td><a href="../itemdex/moon-stone.html" title="Moon Stone"><img src="../assets/game/graphics/items/icons/moon_stone.png" alt="Moon Stone" class="item-icon"></a></td>
+          <td><a href="../itemdex/sun-stone.html" title="Sun Stone"><img src="../assets/game/graphics/items/icons/sun_stone.png" alt="Sun Stone" class="item-icon"></a></td>
+          <td><a href="../itemdex/nugget.html" title="Nugget"><img src="../assets/game/graphics/items/icons/nugget.png" alt="Nugget" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-potion.html" title="Max Potion"><img src="../assets/game/graphics/items/icons/max_potion.png" alt="Max Potion" class="item-icon"></a></td>
+          <td><a href="../itemdex/focus-sash.html" title="Focus Sash"><img src="../assets/game/graphics/items/icons/focus_sash.png" alt="Focus Sash" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-revive.html" title="Max Revive"><img src="../assets/game/graphics/items/icons/max_revive.png" alt="Max Revive" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/rare-candy.html" title="Rare Candy"><img src="../assets/game/graphics/items/icons/rare_candy.png" alt="Rare Candy" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-ether.html" title="Max Ether"><img src="../assets/game/graphics/items/icons/max_ether.png" alt="Max Ether" class="item-icon"></a></td>
+          <td><a href="../itemdex/pp-up.html" title="PP Up"><img src="../assets/game/graphics/items/icons/pp_up.png" alt="PP Up" class="item-icon"></a></td>
+          <td><a href="../itemdex/big-nugget.html" title="Big Nugget"><img src="../assets/game/graphics/items/icons/big_nugget.png" alt="Big Nugget" class="item-icon"></a></td>
+          <td><a href="../itemdex/destiny-knot.html" title="Destiny Knot"><img src="../assets/game/graphics/items/icons/destiny_knot.png" alt="Destiny Knot" class="item-icon"></a></td>
+          <td><a href="../itemdex/leftovers.html" title="Leftovers"><img src="../assets/game/graphics/items/icons/leftovers.png" alt="Leftovers" class="item-icon"></a></td>
+          <td><a href="../itemdex/kings-rock.html" title="King&#39;s Rock"><img src="../assets/game/graphics/items/icons/kings_rock.png" alt="King&#39;s Rock" class="item-icon"></a></td>
+          <td><a href="../itemdex/weakness-policy.html" title="Weakness Policy"><img src="../assets/game/graphics/items/icons/weakness_policy.png" alt="Weakness Policy" class="item-icon"></a></td>
+          <td><a href="../itemdex/blunder-policy.html" title="Blunder Policy"><img src="../assets/game/graphics/items/icons/blunder_policy.png" alt="Blunder Policy" class="item-icon"></a></td>
+          <td></td>
+      </tr>
+      <tr>
+        <th>41-50</th>
+          <td></td>
+          <td><a href="../itemdex/super-repel.html" title="Super Repel"><img src="../assets/game/graphics/items/icons/super_repel.png" alt="Super Repel" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/full-heal.html" title="Full Heal"><img src="../assets/game/graphics/items/icons/full_heal.png" alt="Full Heal" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/revive.html" title="Revive"><img src="../assets/game/graphics/items/icons/revive.png" alt="Revive" class="item-icon"></a></td>
+          <td><a href="../itemdex/hyper-potion.html" title="Hyper Potion"><img src="../assets/game/graphics/items/icons/hyper_potion.png" alt="Hyper Potion" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/ether.html" title="Ether"><img src="../assets/game/graphics/items/icons/ether.png" alt="Ether" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-repel.html" title="Max Repel"><img src="../assets/game/graphics/items/icons/max_repel.png" alt="Max Repel" class="item-icon"></a></td>
+          <td><a href="../itemdex/moon-stone.html" title="Moon Stone"><img src="../assets/game/graphics/items/icons/moon_stone.png" alt="Moon Stone" class="item-icon"></a></td>
+          <td><a href="../itemdex/sun-stone.html" title="Sun Stone"><img src="../assets/game/graphics/items/icons/sun_stone.png" alt="Sun Stone" class="item-icon"></a></td>
+          <td><a href="../itemdex/nugget.html" title="Nugget"><img src="../assets/game/graphics/items/icons/nugget.png" alt="Nugget" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-potion.html" title="Max Potion"><img src="../assets/game/graphics/items/icons/max_potion.png" alt="Max Potion" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-ether.html" title="Max Ether"><img src="../assets/game/graphics/items/icons/max_ether.png" alt="Max Ether" class="item-icon"></a></td>
+          <td><a href="../itemdex/focus-sash.html" title="Focus Sash"><img src="../assets/game/graphics/items/icons/focus_sash.png" alt="Focus Sash" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-revive.html" title="Max Revive"><img src="../assets/game/graphics/items/icons/max_revive.png" alt="Max Revive" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/rare-candy.html" title="Rare Candy"><img src="../assets/game/graphics/items/icons/rare_candy.png" alt="Rare Candy" class="item-icon"></a></td>
+          <td><a href="../itemdex/pp-up.html" title="PP Up"><img src="../assets/game/graphics/items/icons/pp_up.png" alt="PP Up" class="item-icon"></a></td>
+          <td><a href="../itemdex/big-nugget.html" title="Big Nugget"><img src="../assets/game/graphics/items/icons/big_nugget.png" alt="Big Nugget" class="item-icon"></a></td>
+          <td><a href="../itemdex/destiny-knot.html" title="Destiny Knot"><img src="../assets/game/graphics/items/icons/destiny_knot.png" alt="Destiny Knot" class="item-icon"></a></td>
+          <td><a href="../itemdex/leftovers.html" title="Leftovers"><img src="../assets/game/graphics/items/icons/leftovers.png" alt="Leftovers" class="item-icon"></a></td>
+          <td><a href="../itemdex/kings-rock.html" title="King&#39;s Rock"><img src="../assets/game/graphics/items/icons/kings_rock.png" alt="King&#39;s Rock" class="item-icon"></a></td>
+          <td><a href="../itemdex/weakness-policy.html" title="Weakness Policy"><img src="../assets/game/graphics/items/icons/weakness_policy.png" alt="Weakness Policy" class="item-icon"></a></td>
+          <td><a href="../itemdex/blunder-policy.html" title="Blunder Policy"><img src="../assets/game/graphics/items/icons/blunder_policy.png" alt="Blunder Policy" class="item-icon"></a></td>
+          <td><a href="../itemdex/ability-patch.html" title="Ability Patch"><img src="../assets/game/graphics/items/icons/ability_patch.png" alt="Ability Patch" class="item-icon"></a></td>
+          <td></td>
+      </tr>
+      <tr>
+        <th>51-60</th>
+          <td></td>
+          <td><a href="../itemdex/full-heal.html" title="Full Heal"><img src="../assets/game/graphics/items/icons/full_heal.png" alt="Full Heal" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/revive.html" title="Revive"><img src="../assets/game/graphics/items/icons/revive.png" alt="Revive" class="item-icon"></a></td>
+          <td><a href="../itemdex/hyper-potion.html" title="Hyper Potion"><img src="../assets/game/graphics/items/icons/hyper_potion.png" alt="Hyper Potion" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-repel.html" title="Max Repel"><img src="../assets/game/graphics/items/icons/max_repel.png" alt="Max Repel" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/moon-stone.html" title="Moon Stone"><img src="../assets/game/graphics/items/icons/moon_stone.png" alt="Moon Stone" class="item-icon"></a></td>
+          <td><a href="../itemdex/sun-stone.html" title="Sun Stone"><img src="../assets/game/graphics/items/icons/sun_stone.png" alt="Sun Stone" class="item-icon"></a></td>
+          <td><a href="../itemdex/rare-candy.html" title="Rare Candy"><img src="../assets/game/graphics/items/icons/rare_candy.png" alt="Rare Candy" class="item-icon"></a></td>
+          <td><a href="../itemdex/nugget.html" title="Nugget"><img src="../assets/game/graphics/items/icons/nugget.png" alt="Nugget" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-potion.html" title="Max Potion"><img src="../assets/game/graphics/items/icons/max_potion.png" alt="Max Potion" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-ether.html" title="Max Ether"><img src="../assets/game/graphics/items/icons/max_ether.png" alt="Max Ether" class="item-icon"></a></td>
+          <td><a href="../itemdex/pp-up.html" title="PP Up"><img src="../assets/game/graphics/items/icons/pp_up.png" alt="PP Up" class="item-icon"></a></td>
+          <td><a href="../itemdex/focus-sash.html" title="Focus Sash"><img src="../assets/game/graphics/items/icons/focus_sash.png" alt="Focus Sash" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-revive.html" title="Max Revive"><img src="../assets/game/graphics/items/icons/max_revive.png" alt="Max Revive" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/big-nugget.html" title="Big Nugget"><img src="../assets/game/graphics/items/icons/big_nugget.png" alt="Big Nugget" class="item-icon"></a></td>
+          <td><a href="../itemdex/destiny-knot.html" title="Destiny Knot"><img src="../assets/game/graphics/items/icons/destiny_knot.png" alt="Destiny Knot" class="item-icon"></a></td>
+          <td><a href="../itemdex/leftovers.html" title="Leftovers"><img src="../assets/game/graphics/items/icons/leftovers.png" alt="Leftovers" class="item-icon"></a></td>
+          <td><a href="../itemdex/kings-rock.html" title="King&#39;s Rock"><img src="../assets/game/graphics/items/icons/kings_rock.png" alt="King&#39;s Rock" class="item-icon"></a></td>
+          <td><a href="../itemdex/weakness-policy.html" title="Weakness Policy"><img src="../assets/game/graphics/items/icons/weakness_policy.png" alt="Weakness Policy" class="item-icon"></a></td>
+          <td><a href="../itemdex/blunder-policy.html" title="Blunder Policy"><img src="../assets/game/graphics/items/icons/blunder_policy.png" alt="Blunder Policy" class="item-icon"></a></td>
+          <td><a href="../itemdex/ability-patch.html" title="Ability Patch"><img src="../assets/game/graphics/items/icons/ability_patch.png" alt="Ability Patch" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+        <th>61-70</th>
+          <td></td>
+          <td><a href="../itemdex/revive.html" title="Revive"><img src="../assets/game/graphics/items/icons/revive.png" alt="Revive" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/hyper-potion.html" title="Hyper Potion"><img src="../assets/game/graphics/items/icons/hyper_potion.png" alt="Hyper Potion" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-repel.html" title="Max Repel"><img src="../assets/game/graphics/items/icons/max_repel.png" alt="Max Repel" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-potion.html" title="Max Potion"><img src="../assets/game/graphics/items/icons/max_potion.png" alt="Max Potion" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/moon-stone.html" title="Moon Stone"><img src="../assets/game/graphics/items/icons/moon_stone.png" alt="Moon Stone" class="item-icon"></a></td>
+          <td><a href="../itemdex/sun-stone.html" title="Sun Stone"><img src="../assets/game/graphics/items/icons/sun_stone.png" alt="Sun Stone" class="item-icon"></a></td>
+          <td><a href="../itemdex/rare-candy.html" title="Rare Candy"><img src="../assets/game/graphics/items/icons/rare_candy.png" alt="Rare Candy" class="item-icon"></a></td>
+          <td><a href="../itemdex/nugget.html" title="Nugget"><img src="../assets/game/graphics/items/icons/nugget.png" alt="Nugget" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-ether.html" title="Max Ether"><img src="../assets/game/graphics/items/icons/max_ether.png" alt="Max Ether" class="item-icon"></a></td>
+          <td><a href="../itemdex/pp-up.html" title="PP Up"><img src="../assets/game/graphics/items/icons/pp_up.png" alt="PP Up" class="item-icon"></a></td>
+          <td><a href="../itemdex/big-nugget.html" title="Big Nugget"><img src="../assets/game/graphics/items/icons/big_nugget.png" alt="Big Nugget" class="item-icon"></a></td>
+          <td><a href="../itemdex/focus-sash.html" title="Focus Sash"><img src="../assets/game/graphics/items/icons/focus_sash.png" alt="Focus Sash" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-revive.html" title="Max Revive"><img src="../assets/game/graphics/items/icons/max_revive.png" alt="Max Revive" class="item-icon"></a></td>
+          <td><a href="../itemdex/ability-patch.html" title="Ability Patch"><img src="../assets/game/graphics/items/icons/ability_patch.png" alt="Ability Patch" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/destiny-knot.html" title="Destiny Knot"><img src="../assets/game/graphics/items/icons/destiny_knot.png" alt="Destiny Knot" class="item-icon"></a></td>
+          <td><a href="../itemdex/leftovers.html" title="Leftovers"><img src="../assets/game/graphics/items/icons/leftovers.png" alt="Leftovers" class="item-icon"></a></td>
+          <td><a href="../itemdex/kings-rock.html" title="King&#39;s Rock"><img src="../assets/game/graphics/items/icons/kings_rock.png" alt="King&#39;s Rock" class="item-icon"></a></td>
+          <td><a href="../itemdex/weakness-policy.html" title="Weakness Policy"><img src="../assets/game/graphics/items/icons/weakness_policy.png" alt="Weakness Policy" class="item-icon"></a></td>
+          <td><a href="../itemdex/blunder-policy.html" title="Blunder Policy"><img src="../assets/game/graphics/items/icons/blunder_policy.png" alt="Blunder Policy" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-elixir.html" title="Max Elixir"><img src="../assets/game/graphics/items/icons/max_elixir.png" alt="Max Elixir" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+        <th>71-80</th>
+          <td></td>
+          <td><a href="../itemdex/hyper-potion.html" title="Hyper Potion"><img src="../assets/game/graphics/items/icons/hyper_potion.png" alt="Hyper Potion" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/max-repel.html" title="Max Repel"><img src="../assets/game/graphics/items/icons/max_repel.png" alt="Max Repel" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-potion.html" title="Max Potion"><img src="../assets/game/graphics/items/icons/max_potion.png" alt="Max Potion" class="item-icon"></a></td>
+          <td></td>
+          <td><a href="../itemdex/max-revive.html" title="Max Revive"><img src="../assets/game/graphics/items/icons/max_revive.png" alt="Max Revive" class="item-icon"></a></td>
+          <td><a href="../itemdex/moon-stone.html" title="Moon Stone"><img src="../assets/game/graphics/items/icons/moon_stone.png" alt="Moon Stone" class="item-icon"></a></td>
+          <td><a href="../itemdex/sun-stone.html" title="Sun Stone"><img src="../assets/game/graphics/items/icons/sun_stone.png" alt="Sun Stone" class="item-icon"></a></td>
+          <td><a href="../itemdex/rare-candy.html" title="Rare Candy"><img src="../assets/game/graphics/items/icons/rare_candy.png" alt="Rare Candy" class="item-icon"></a></td>
+          <td><a href="../itemdex/nugget.html" title="Nugget"><img src="../assets/game/graphics/items/icons/nugget.png" alt="Nugget" class="item-icon"></a></td>
+          <td><a href="../itemdex/pp-up.html" title="PP Up"><img src="../assets/game/graphics/items/icons/pp_up.png" alt="PP Up" class="item-icon"></a></td>
+          <td><a href="../itemdex/big-nugget.html" title="Big Nugget"><img src="../assets/game/graphics/items/icons/big_nugget.png" alt="Big Nugget" class="item-icon"></a></td>
+          <td><a href="../itemdex/focus-sash.html" title="Focus Sash"><img src="../assets/game/graphics/items/icons/focus_sash.png" alt="Focus Sash" class="item-icon"></a></td>
+          <td><a href="../itemdex/ability-patch.html" title="Ability Patch"><img src="../assets/game/graphics/items/icons/ability_patch.png" alt="Ability Patch" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/destiny-knot.html" title="Destiny Knot"><img src="../assets/game/graphics/items/icons/destiny_knot.png" alt="Destiny Knot" class="item-icon"></a></td>
+          <td><a href="../itemdex/leftovers.html" title="Leftovers"><img src="../assets/game/graphics/items/icons/leftovers.png" alt="Leftovers" class="item-icon"></a></td>
+          <td><a href="../itemdex/kings-rock.html" title="King&#39;s Rock"><img src="../assets/game/graphics/items/icons/kings_rock.png" alt="King&#39;s Rock" class="item-icon"></a></td>
+          <td><a href="../itemdex/weakness-policy.html" title="Weakness Policy"><img src="../assets/game/graphics/items/icons/weakness_policy.png" alt="Weakness Policy" class="item-icon"></a></td>
+          <td><a href="../itemdex/blunder-policy.html" title="Blunder Policy"><img src="../assets/game/graphics/items/icons/blunder_policy.png" alt="Blunder Policy" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-elixir.html" title="Max Elixir"><img src="../assets/game/graphics/items/icons/max_elixir.png" alt="Max Elixir" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+        <th>81-90</th>
+          <td></td>
+          <td><a href="../itemdex/max-repel.html" title="Max Repel"><img src="../assets/game/graphics/items/icons/max_repel.png" alt="Max Repel" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/moon-stone.html" title="Moon Stone"><img src="../assets/game/graphics/items/icons/moon_stone.png" alt="Moon Stone" class="item-icon"></a></td>
+          <td><a href="../itemdex/sun-stone.html" title="Sun Stone"><img src="../assets/game/graphics/items/icons/sun_stone.png" alt="Sun Stone" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-potion.html" title="Max Potion"><img src="../assets/game/graphics/items/icons/max_potion.png" alt="Max Potion" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-revive.html" title="Max Revive"><img src="../assets/game/graphics/items/icons/max_revive.png" alt="Max Revive" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/rare-candy.html" title="Rare Candy"><img src="../assets/game/graphics/items/icons/rare_candy.png" alt="Rare Candy" class="item-icon"></a></td>
+          <td><a href="../itemdex/nugget.html" title="Nugget"><img src="../assets/game/graphics/items/icons/nugget.png" alt="Nugget" class="item-icon"></a></td>
+          <td><a href="../itemdex/pp-up.html" title="PP Up"><img src="../assets/game/graphics/items/icons/pp_up.png" alt="PP Up" class="item-icon"></a></td>
+          <td><a href="../itemdex/big-nugget.html" title="Big Nugget"><img src="../assets/game/graphics/items/icons/big_nugget.png" alt="Big Nugget" class="item-icon"></a></td>
+          <td><a href="../itemdex/focus-sash.html" title="Focus Sash"><img src="../assets/game/graphics/items/icons/focus_sash.png" alt="Focus Sash" class="item-icon"></a></td>
+          <td><a href="../itemdex/ability-patch.html" title="Ability Patch"><img src="../assets/game/graphics/items/icons/ability_patch.png" alt="Ability Patch" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-elixir.html" title="Max Elixir"><img src="../assets/game/graphics/items/icons/max_elixir.png" alt="Max Elixir" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/destiny-knot.html" title="Destiny Knot"><img src="../assets/game/graphics/items/icons/destiny_knot.png" alt="Destiny Knot" class="item-icon"></a></td>
+          <td><a href="../itemdex/leftovers.html" title="Leftovers"><img src="../assets/game/graphics/items/icons/leftovers.png" alt="Leftovers" class="item-icon"></a></td>
+          <td><a href="../itemdex/kings-rock.html" title="King&#39;s Rock"><img src="../assets/game/graphics/items/icons/kings_rock.png" alt="King&#39;s Rock" class="item-icon"></a></td>
+          <td><a href="../itemdex/weakness-policy.html" title="Weakness Policy"><img src="../assets/game/graphics/items/icons/weakness_policy.png" alt="Weakness Policy" class="item-icon"></a></td>
+          <td><a href="../itemdex/blunder-policy.html" title="Blunder Policy"><img src="../assets/game/graphics/items/icons/blunder_policy.png" alt="Blunder Policy" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+        <th>91-100</th>
+          <td></td>
+          <td><a href="../itemdex/max-potion.html" title="Max Potion"><img src="../assets/game/graphics/items/icons/max_potion.png" alt="Max Potion" class="item-icon"></a></td>
+          <td></td>
+          <td><a href="../itemdex/moon-stone.html" title="Moon Stone"><img src="../assets/game/graphics/items/icons/moon_stone.png" alt="Moon Stone" class="item-icon"></a></td>
+          <td><a href="../itemdex/sun-stone.html" title="Sun Stone"><img src="../assets/game/graphics/items/icons/sun_stone.png" alt="Sun Stone" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/max-revive.html" title="Max Revive"><img src="../assets/game/graphics/items/icons/max_revive.png" alt="Max Revive" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/rare-candy.html" title="Rare Candy"><img src="../assets/game/graphics/items/icons/rare_candy.png" alt="Rare Candy" class="item-icon"></a></td>
+          <td><a href="../itemdex/nugget.html" title="Nugget"><img src="../assets/game/graphics/items/icons/nugget.png" alt="Nugget" class="item-icon"></a></td>
+          <td><a href="../itemdex/pp-up.html" title="PP Up"><img src="../assets/game/graphics/items/icons/pp_up.png" alt="PP Up" class="item-icon"></a></td>
+          <td><a href="../itemdex/big-nugget.html" title="Big Nugget"><img src="../assets/game/graphics/items/icons/big_nugget.png" alt="Big Nugget" class="item-icon"></a></td>
+          <td><a href="../itemdex/focus-sash.html" title="Focus Sash"><img src="../assets/game/graphics/items/icons/focus_sash.png" alt="Focus Sash" class="item-icon"></a></td>
+          <td><a href="../itemdex/ability-patch.html" title="Ability Patch"><img src="../assets/game/graphics/items/icons/ability_patch.png" alt="Ability Patch" class="item-icon"></a></td>
+          <td><a href="../itemdex/max-elixir.html" title="Max Elixir"><img src="../assets/game/graphics/items/icons/max_elixir.png" alt="Max Elixir" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><a href="../itemdex/destiny-knot.html" title="Destiny Knot"><img src="../assets/game/graphics/items/icons/destiny_knot.png" alt="Destiny Knot" class="item-icon"></a></td>
+          <td><a href="../itemdex/leftovers.html" title="Leftovers"><img src="../assets/game/graphics/items/icons/leftovers.png" alt="Leftovers" class="item-icon"></a></td>
+          <td><a href="../itemdex/kings-rock.html" title="King&#39;s Rock"><img src="../assets/game/graphics/items/icons/kings_rock.png" alt="King&#39;s Rock" class="item-icon"></a></td>
+          <td><a href="../itemdex/weakness-policy.html" title="Weakness Policy"><img src="../assets/game/graphics/items/icons/weakness_policy.png" alt="Weakness Policy" class="item-icon"></a></td>
+          <td><a href="../itemdex/blunder-policy.html" title="Blunder Policy"><img src="../assets/game/graphics/items/icons/blunder_policy.png" alt="Blunder Policy" class="item-icon"></a></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+  </main>
+  <script>
+    function obstagoonBindFilters() {
+      const inputs = document.querySelectorAll('[data-filter-input]');
+      inputs.forEach((input) => {
+        const selector = input.getAttribute('data-filter-target');
+        const emptyTextSelector = input.getAttribute('data-filter-empty');
+        const countSelector = input.getAttribute('data-filter-count');
+        const items = Array.from(document.querySelectorAll(selector || ''));
+        const emptyNode = emptyTextSelector ? document.querySelector(emptyTextSelector) : null;
+        const countNode = countSelector ? document.querySelector(countSelector) : null;
+        const stateKey = input.id || selector || '';
+        const apply = () => {
+          const query = obstagoonNormalize(input.value);
+          let visible = 0;
+          items.forEach((item) => {
+            const haystack = obstagoonNormalize(item.getAttribute('data-search-text') || item.textContent || '');
+            const match = !query || haystack.includes(query);
+            item.classList.toggle('filter-hidden', !match);
+            if (match) visible += 1;
+          });
+          if (emptyNode) emptyNode.style.display = visible === 0 ? '' : 'none';
+          if (countNode) countNode.textContent = visible;
+          if (stateKey) obstagoonSaveState(stateKey, {search: input.value});
+        };
+        if (stateKey) {
+          const saved = obstagoonLoadState(stateKey);
+          if (saved.search) input.value = saved.search;
+        }
+        input.addEventListener('input', apply);
+        apply();
+      });
+    }
+    function obstagoonBindRowLinks() {
+      // Elements with data-href behave as buttons: clicking anywhere navigates,
+      // except clicks on nested links/buttons which retain their own behavior
+      // (e.g. ability links inside a pokedex row stay individually clickable).
+      document.querySelectorAll('tr[data-href], li[data-href]').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('a, button')) return;
+          window.location = row.getAttribute('data-href');
+        });
+      });
+    }
+    function obstagoonBindLinkedHotspots() {
+      // Mirror hover between encounter-map hotspots and the section's link-grid
+      // tile by matching href. Hovering one outlines the other so it's clear
+      // which spot on the map corresponds to which list entry.
+      const partners = new Map();
+      document.querySelectorAll('.region-map a[href], .link-grid > li > a[href]').forEach((a) => {
+        const key = a.getAttribute('href');
+        if (!partners.has(key)) partners.set(key, []);
+        partners.get(key).push(a);
+      });
+      partners.forEach((group) => {
+        if (group.length < 2) return;
+        group.forEach((el) => {
+          el.addEventListener('mouseenter', () => group.forEach((other) => { if (other !== el) other.classList.add('linked-hover'); }));
+          el.addEventListener('mouseleave', () => group.forEach((other) => other.classList.remove('linked-hover')));
+        });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+    } else {
+      obstagoonBindFilters();
+      obstagoonBindRowLinks();
+      obstagoonBindLinkedHotspots();
+    }
+  </script>
+</body>
+</html>

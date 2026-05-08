@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vivillon - pokeemerald-expansion</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script>
+    // Lowercase, strip diacritics (é→e), and drop non-alphanumerics so a query
+    // like "basculinwhitestriped" still matches "Basculin (White-Striped)".
+    // Defined in <head> so per-page IIFEs in the content can call it.
+    window.obstagoonNormalize = (s) => (s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+    // Per-tab index state (search, chips, sort) restored on back/forward and
+    // reload only — fresh clicks of nav links start clean.
+    window.obstagoonShouldRestoreState = () => {
+      const nav = performance.getEntriesByType('navigation')[0];
+      return !!(nav && (nav.type === 'back_forward' || nav.type === 'reload'));
+    };
+    window.obstagoonLoadState = (key) => {
+      if (!obstagoonShouldRestoreState()) return {};
+      try { return JSON.parse(sessionStorage.getItem('obstagoon:' + key) || '{}'); }
+      catch (e) { return {}; }
+    };
+    window.obstagoonSaveState = (key, state) => {
+      // Private browsing / quota-exceeded throws; degrade silently.
+      try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
+      catch (e) {}
+    };
+    // Shared search+chips+sort filter binding for index pages. Each page
+    // passes its element ids, a haystack-by-chip-kind map (for filtering),
+    // suggestion sources, and optionally a table selector to enable
+    // click-to-sort. State persists in sessionStorage under stateKey. Defined
+    // in <head> so per-page IIFEs in the content can call it.
+    window.obstagoonBindIndexPage = (opts) => {
+      const input = document.getElementById(opts.inputId);
+      const dropdown = document.getElementById(opts.dropdownId);
+      const chipsBox = document.getElementById(opts.chipsBoxId);
+      const empty = opts.emptyId ? document.getElementById(opts.emptyId) : null;
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      const rows = Array.from(document.querySelectorAll(opts.rowsSelector));
+      const haystackByKind = opts.haystackByKind || {};
+      const sources = opts.sources || [];
+      const defaultKind = opts.defaultKind || null;
+      const saved = obstagoonLoadState(opts.stateKey);
+      const chips = (Array.isArray(saved.chips) ? saved.chips : [])
+        .map((c) => c.kind ? c : {kind: defaultKind || 'Pokémon', name: c.name});
+      if (saved.search) input.value = saved.search;
+      let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
+      let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : 'asc';
+      const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const persist = () => obstagoonSaveState(opts.stateKey, {
+        search: input.value, chips,
+        ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
+      });
+
+      const applyFilters = () => {
+        const q = obstagoonNormalize(input.value);
+        let visible = 0;
+        rows.forEach((el) => {
+          const text = obstagoonNormalize(el.dataset.searchText || '');
+          let show = !q || text.includes(q);
+          if (show) for (const c of chips) {
+            const haystack = el.dataset[haystackByKind[c.kind]];
+            if (!haystack || !haystack.includes(`|${c.name}|`)) { show = false; break; }
+          }
+          el.classList.toggle('filter-hidden', !show);
+          if (show) visible += 1;
+        });
+        if (empty) empty.style.display = visible === 0 ? '' : 'none';
+        if (countEl) countEl.textContent = visible;
+        persist();
+      };
+      const renderChips = () => {
+        chipsBox.innerHTML = chips.map((c, i) =>
+          `<span class="filter-chip"><span class="chip-kind">${c.kind}</span> ${esc(c.name)}<button type="button" class="chip-remove" data-idx="${i}" aria-label="Remove">×</button></span>`
+        ).join('');
+        chipsBox.querySelectorAll('.chip-remove').forEach((btn) => btn.addEventListener('click', () => {
+          chips.splice(parseInt(btn.dataset.idx, 10), 1); renderChips(); applyFilters();
+        }));
+      };
+      const renderSuggestions = () => {
+        const q = obstagoonNormalize(input.value);
+        if (q.length < 3) { dropdown.hidden = true; return; }
+        const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
+        const matches = [];
+        for (const [kind, list] of sources) {
+          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+        }
+        if (matches.length === 0) { dropdown.hidden = true; return; }
+        dropdown.innerHTML = matches.slice(0, 30).map((m) =>
+          `<button type="button" class="suggestion" data-kind="${m.kind}" data-name="${esc(m.name)}"><span class="suggestion-kind">${m.kind}</span> ${esc(m.name)}</button>`
+        ).join('');
+        dropdown.hidden = false;
+        dropdown.querySelectorAll('.suggestion').forEach((btn) => btn.addEventListener('click', () => {
+          chips.push({kind: btn.dataset.kind, name: btn.dataset.name});
+          input.value = ''; dropdown.hidden = true; renderChips(); applyFilters();
+        }));
+      };
+      input.addEventListener('input', () => { renderSuggestions(); applyFilters(); });
+      input.addEventListener('focus', renderSuggestions);
+      document.addEventListener('click', (e) => { if (!dropdown.contains(e.target) && e.target !== input) dropdown.hidden = true; });
+      renderChips();
+      applyFilters();
+
+      if (opts.tableSelector) {
+        const tbody = document.querySelector(opts.tableSelector + ' tbody');
+        const headers = Array.from(document.querySelectorAll(opts.tableSelector + ' thead th'));
+        const original = Array.from(tbody.querySelectorAll('tr'));
+        const cellValue = (tr, i, kind) => {
+          const text = tr.cells[i].textContent.trim();
+          if (kind === 'number') { const n = parseFloat(text); return isNaN(n) ? -Infinity : n; }
+          return text.toLowerCase();
+        };
+        const applySort = () => {
+          headers.forEach((h, j) => {
+            h.classList.toggle('sort-asc', activeDir === 'asc' && j === activeCol);
+            h.classList.toggle('sort-desc', activeDir === 'desc' && j === activeCol);
+          });
+          if (!activeDir) { original.forEach((tr) => tbody.appendChild(tr)); return; }
+          const kind = headers[activeCol]?.dataset.sort || 'text';
+          const sign = activeDir === 'asc' ? 1 : -1;
+          [...original].sort((a, b) => {
+            const av = cellValue(a, activeCol, kind), bv = cellValue(b, activeCol, kind);
+            return av < bv ? -sign : av > bv ? sign : 0;
+          }).forEach((tr) => tbody.appendChild(tr));
+        };
+        headers.forEach((th, i) => {
+          if (!th.dataset.sort) return;
+          th.classList.add('sortable');
+          th.addEventListener('click', () => {
+            activeDir = i !== activeCol ? 'asc' : activeDir === 'asc' ? 'desc' : activeDir === 'desc' ? '' : 'asc';
+            activeCol = activeDir ? i : -1;
+            applySort();
+            persist();
+          });
+        });
+        applySort();
+      }
+    };
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../index.html">pokeemerald-expansion</a>
+      <nav>
+        <a href="../pokedex/index.html">Pokédex</a>
+        <a href="../moves/index.html">Moves</a>
+        <a href="../abilities/index.html">Abilities</a>
+        <a href="../forms/index.html">Forms</a>
+        <a href="../encounters/index.html">Encounters</a>
+        <a href="../itemdex/index.html">Itemdex</a>
+        <a href="../trainerdex/index.html">Trainers</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+<h1>Vivillon (Icy Snow Pattern)</h1>
+<section class="card pokemon-hero-card">
+  <div class="pokemon-hero">
+    <div class="pokemon-hero-sprites">
+      <img src="../assets/game/graphics/pokemon/vivillon/anim_front.png" alt="Vivillon (Icy Snow Pattern) front sprite" class="pokemon-hero-sprite">
+<img src="../assets/game/graphics/pokemon/vivillon/anim_front__shiny.png" alt="Vivillon (Icy Snow Pattern) shiny front sprite" class="pokemon-hero-sprite">    </div>
+    <div>
+      <p class="muted">Hoenn Dex #23</p>
+      <p><strong>Vivillon (Icy Snow Pattern)</strong></p>
+    </div>
+  </div>
+</section>
+<div class="grid two">
+  <section class="card">
+    <h2>Profile</h2>
+    <p><strong>Category:</strong> Scale</p>
+    <p><strong>Types:</strong> <span class="type-badge type-bug">Bug</span> <span class="type-badge type-flying">Flying</span></p>
+    <p><strong>Abilities:</strong> <a href="../abilities/shield-dust.html">Shield Dust</a>, <a href="../abilities/compound-eyes.html">Compound Eyes</a>, <a href="../abilities/color-change.html">Color Change</a> <em class="muted">(Hidden)</em></p>
+    <p><strong>Growth Rate:</strong> Medium Fast</p>
+    <p><strong>Egg Groups:</strong> Bug</p>
+  </section>
+  <section class="card">
+    <h2>Base Stats</h2>
+    <table class="stat-table">
+        <tr>
+          <td class="stat-label">HP:</td>
+          <td class="stat-value">80</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-hp" style="width: 31.4%;"></div></div></td>
+        </tr>
+        <tr>
+          <td class="stat-label">Attack:</td>
+          <td class="stat-value">52</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-atk" style="width: 20.4%;"></div></div></td>
+        </tr>
+        <tr>
+          <td class="stat-label">Defense:</td>
+          <td class="stat-value">50</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-def" style="width: 19.6%;"></div></div></td>
+        </tr>
+        <tr>
+          <td class="stat-label">Sp. Atk:</td>
+          <td class="stat-value">90</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-spa" style="width: 35.3%;"></div></div></td>
+        </tr>
+        <tr>
+          <td class="stat-label">Sp. Def:</td>
+          <td class="stat-value">50</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-spd" style="width: 19.6%;"></div></div></td>
+        </tr>
+        <tr>
+          <td class="stat-label">Speed:</td>
+          <td class="stat-value">89</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-spe" style="width: 34.9%;"></div></div></td>
+        </tr>
+      <tr class="stat-total"><td class="stat-label"><strong>Total:</strong></td><td class="stat-value"><strong>411</strong></td><td></td></tr>
+    </table>
+    <p class="stat-physical">
+1.2 m / 17.0 kg    </p>
+  </section>
+</div>
+<section class="card species-section">
+  <h2>Description</h2>
+  <p>Its pattern depends on the climate and
+topography of the land it was born in.
+This form is from frigid lands.
+It scatters toxic color scales in battle.</p>
+</section>
+<section class="grid two species-section">
+  <div class="card">
+    <h2>Evolutions</h2>
+    <ul>
+        <li>  <a href="spewpa.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/spewpa/anim_front.png" alt="Spewpa" class="species-inline-sprite"><span>Spewpa</span>
+  </a>
+ → Level up: 12</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Forms</h2>
+    <ul>
+        <li>  <a href="vivillon-polar.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/polar/anim_front.png" alt="Vivillon (Polar Pattern)" class="species-inline-sprite"><span>Vivillon (Polar Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-tundra.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/tundra/anim_front.png" alt="Vivillon (Tundra Pattern)" class="species-inline-sprite"><span>Vivillon (Tundra Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-continental.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/continental/anim_front.png" alt="Vivillon (Continental Pattern)" class="species-inline-sprite"><span>Vivillon (Continental Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-garden.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/garden/anim_front.png" alt="Vivillon (Garden Pattern)" class="species-inline-sprite"><span>Vivillon (Garden Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-elegant.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/elegant/anim_front.png" alt="Vivillon (Elegant Pattern)" class="species-inline-sprite"><span>Vivillon (Elegant Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-meadow.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/meadow/anim_front.png" alt="Vivillon (Meadow Pattern)" class="species-inline-sprite"><span>Vivillon (Meadow Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-modern.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/modern/anim_front.png" alt="Vivillon (Modern Pattern)" class="species-inline-sprite"><span>Vivillon (Modern Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-marine.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/marine/anim_front.png" alt="Vivillon (Marine Pattern)" class="species-inline-sprite"><span>Vivillon (Marine Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-archipelago.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/archipelago/anim_front.png" alt="Vivillon (Archipelago Pattern)" class="species-inline-sprite"><span>Vivillon (Archipelago Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-high-plains.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/high_plains/anim_front.png" alt="Vivillon (High Plains Pattern)" class="species-inline-sprite"><span>Vivillon (High Plains Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-sandstorm.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/sandstorm/anim_front.png" alt="Vivillon (Sandstorm Pattern)" class="species-inline-sprite"><span>Vivillon (Sandstorm Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-river.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/river/anim_front.png" alt="Vivillon (River Pattern)" class="species-inline-sprite"><span>Vivillon (River Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-monsoon.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/monsoon/anim_front.png" alt="Vivillon (Monsoon Pattern)" class="species-inline-sprite"><span>Vivillon (Monsoon Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-savanna.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/savanna/anim_front.png" alt="Vivillon (Savanna Pattern)" class="species-inline-sprite"><span>Vivillon (Savanna Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-sun.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/sun/anim_front.png" alt="Vivillon (Sun Pattern)" class="species-inline-sprite"><span>Vivillon (Sun Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-ocean.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/ocean/anim_front.png" alt="Vivillon (Ocean Pattern)" class="species-inline-sprite"><span>Vivillon (Ocean Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-jungle.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/jungle/anim_front.png" alt="Vivillon (Jungle Pattern)" class="species-inline-sprite"><span>Vivillon (Jungle Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-fancy.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/fancy/anim_front.png" alt="Vivillon (Fancy Pattern)" class="species-inline-sprite"><span>Vivillon (Fancy Pattern)</span>
+  </a>
+</li>
+        <li>  <a href="vivillon-pokeball.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/vivillon/poke_ball/anim_front.png" alt="Vivillon (Poké Ball Pattern)" class="species-inline-sprite"><span>Vivillon (Poké Ball Pattern)</span>
+  </a>
+</li>
+    </ul>
+  </div>
+</section>
+<section class="grid two species-section">
+  <div class="card">
+    <h2>Level-Up Learnset</h2>
+    <ul class="move-list">
+        <li><span class="move-source">Evo</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sketch.html">Sketch</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/morning-sun.html">Morning Sun</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/stun-spore.html">Stun Spore</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/doodle.html">Doodle</a></span></span></li>
+        <li><span class="move-source">Lv. 12</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/gust.html" class="stab">Gust</a></span></span></li>
+        <li><span class="move-source">Lv. 14</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/poison-powder.html">Poison Powder</a></span></span></li>
+        <li><span class="move-source">Lv. 14</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/powder.html">Powder</a></span></span></li>
+        <li><span class="move-source">Lv. 16</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/fairy.svg" alt="Fairy type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/draining-kiss.html">Draining Kiss</a></span></span></li>
+        <li><span class="move-source">Lv. 20</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/me-first.html">Me First</a></span></span></li>
+        <li><span class="move-source">Lv. 24</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/safeguard.html">Safeguard</a></span></span></li>
+        <li><span class="move-source">Lv. 28</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sleep-powder.html">Sleep Powder</a></span></span></li>
+        <li><span class="move-source">Lv. 31</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/silver-wind.html" class="stab">Silver Wind</a></span></span></li>
+        <li><span class="move-source">Lv. 34</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/quiver-dance.html">Quiver Dance</a></span></span></li>
+        <li><span class="move-source">Lv. 37</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/hurricane.html" class="stab">Hurricane</a></span></span></li>
+        <li><span class="move-source">Lv. 40</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/baton-pass.html">Baton Pass</a></span></span></li>
+        <li><span class="move-source">Lv. 43</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/aromatherapy.html">Aromatherapy</a></span></span></li>
+        <li><span class="move-source">Lv. 46</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/fairy.svg" alt="Fairy type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/moonblast.html">Moonblast</a></span></span></li>
+        <li><span class="move-source">Lv. 50</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/bug-buzz.html" class="stab">Bug Buzz</a></span></span></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Teachable Moves</h2>
+    <h3>TMs/HMs</h3>
+    <ul class="move-list">
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_grass.png" alt="Grass TM" class="tm-icon">TM01</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/aromatherapy.html">Aromatherapy</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_grass.png" alt="Grass TM" class="tm-icon">TM03</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/energy-ball.html">Energy Ball</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_grass.png" alt="Grass TM" class="tm-icon">TM04</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/giga-drain.html">Giga Drain</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_grass.png" alt="Grass TM" class="tm-icon">TM07</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/solar-beam.html">Solar Beam</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_fire.png" alt="Fire TM" class="tm-icon">TM12</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sunny-day.html">Sunny Day</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_water.png" alt="Water TM" class="tm-icon">TM16</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/rain-dance.html">Rain Dance</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM23</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/baton-pass.html">Baton Pass</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM25</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/endeavor.html">Endeavor</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM26</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/hidden-power.html">Hidden Power</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM27</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/hyper-beam.html">Hyper Beam</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM29</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/protect.html">Protect</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM30</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/return.html">Return</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM31</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sleep-talk.html">Sleep Talk</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM32</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/substitute.html">Substitute</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM34</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/weather-ball.html">Weather Ball</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="Psychic TM" class="tm-icon">TM43</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/calm-mind.html">Calm Mind</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="Psychic TM" class="tm-icon">TM44</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/light-screen.html">Light Screen</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="Psychic TM" class="tm-icon">TM45</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/psychic.html">Psychic</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="Psychic TM" class="tm-icon">TM48</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/rest.html">Rest</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_flying.png" alt="Flying TM" class="tm-icon">TM51</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/acrobatics.html" class="stab">Acrobatics</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_flying.png" alt="Flying TM" class="tm-icon">TM52</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/air-slash.html" class="stab">Air Slash</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_flying.png" alt="Flying TM" class="tm-icon">TM53</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/tailwind.html">Tailwind</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_flying.png" alt="Flying TM" class="tm-icon">TM54</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/roost.html">Roost</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM55</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/whirlwind.html">Whirlwind</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_bug.png" alt="Bug TM" class="tm-icon">TM72</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/pollen-puff.html" class="stab">Pollen Puff</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_bug.png" alt="Bug TM" class="tm-icon">TM74</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/u-turn.html" class="stab">U-turn</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_poison.png" alt="Poison TM" class="tm-icon">TM77</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/toxic.html">Toxic</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_steel.png" alt="Steel TM" class="tm-icon">TM96</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/iron-defense.html">Iron Defense</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_fairy.png" alt="Fairy TM" class="tm-icon">TM98</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/fairy.svg" alt="Fairy type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/dazzling-gleam.html">Dazzling Gleam</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_fairy.png" alt="Fairy TM" class="tm-icon">TM99</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/fairy.svg" alt="Fairy type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/draining-kiss.html">Draining Kiss</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/hm_normal.png" alt="Normal HM" class="tm-icon">HM05</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/flash.html">Flash</a></span></span></li>
+    </ul>
+    <h3>Move Tutors</h3>
+    <ul class="move-list">
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/dream-eater.html">Dream Eater</a></span></span></li>
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/endure.html">Endure</a></span></span></li>
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/psych-up.html">Psych Up</a></span></span></li>
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/snore.html">Snore</a></span></span></li>
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/swift.html">Swift</a></span></span></li>
+        <li><span class="move-source">Lavaridge Town House</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/copycat.html">Copycat</a></span></span></li>
+        <li><span class="move-source">Lilycove City Department Store Rooftop</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/power-split.html">Power Split</a></span></span></li>
+        <li><span class="move-source">Slateport City Pokemon Fan Club</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/swagger.html">Swagger</a></span></span></li>
+        <li><span class="move-source">Sootopolis City Pokemon Center 1F</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/laser-focus.html">Laser Focus</a></span></span></li>
+    </ul>
+  </div>
+</section>
+<section class="card species-section">
+  <h2>Egg Moves</h2>
+  <p><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/stun-spore.html">Stun Spore</a></span>, <span class="move-row"><img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/poison-powder.html">Poison Powder</a></span>, <span class="move-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/rage-powder.html">Rage Powder</a></span></p>
+</section>
+<section class="card species-section">
+  <h2>Pre-Evolution Moves</h2>
+  <p><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/harden.html">Harden</a></span>, <span class="move-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/string-shot.html">String Shot</a></span>, <span class="move-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/struggle-bug.html" class="stab">Struggle Bug</a></span></p>
+</section>
+
+  </main>
+  <script>
+    function obstagoonBindFilters() {
+      const inputs = document.querySelectorAll('[data-filter-input]');
+      inputs.forEach((input) => {
+        const selector = input.getAttribute('data-filter-target');
+        const emptyTextSelector = input.getAttribute('data-filter-empty');
+        const countSelector = input.getAttribute('data-filter-count');
+        const items = Array.from(document.querySelectorAll(selector || ''));
+        const emptyNode = emptyTextSelector ? document.querySelector(emptyTextSelector) : null;
+        const countNode = countSelector ? document.querySelector(countSelector) : null;
+        const stateKey = input.id || selector || '';
+        const apply = () => {
+          const query = obstagoonNormalize(input.value);
+          let visible = 0;
+          items.forEach((item) => {
+            const haystack = obstagoonNormalize(item.getAttribute('data-search-text') || item.textContent || '');
+            const match = !query || haystack.includes(query);
+            item.classList.toggle('filter-hidden', !match);
+            if (match) visible += 1;
+          });
+          if (emptyNode) emptyNode.style.display = visible === 0 ? '' : 'none';
+          if (countNode) countNode.textContent = visible;
+          if (stateKey) obstagoonSaveState(stateKey, {search: input.value});
+        };
+        if (stateKey) {
+          const saved = obstagoonLoadState(stateKey);
+          if (saved.search) input.value = saved.search;
+        }
+        input.addEventListener('input', apply);
+        apply();
+      });
+    }
+    function obstagoonBindRowLinks() {
+      // Elements with data-href behave as buttons: clicking anywhere navigates,
+      // except clicks on nested links/buttons which retain their own behavior
+      // (e.g. ability links inside a pokedex row stay individually clickable).
+      document.querySelectorAll('tr[data-href], li[data-href]').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('a, button')) return;
+          window.location = row.getAttribute('data-href');
+        });
+      });
+    }
+    function obstagoonBindLinkedHotspots() {
+      // Mirror hover between encounter-map hotspots and the section's link-grid
+      // tile by matching href. Hovering one outlines the other so it's clear
+      // which spot on the map corresponds to which list entry.
+      const partners = new Map();
+      document.querySelectorAll('.region-map a[href], .link-grid > li > a[href]').forEach((a) => {
+        const key = a.getAttribute('href');
+        if (!partners.has(key)) partners.set(key, []);
+        partners.get(key).push(a);
+      });
+      partners.forEach((group) => {
+        if (group.length < 2) return;
+        group.forEach((el) => {
+          el.addEventListener('mouseenter', () => group.forEach((other) => { if (other !== el) other.classList.add('linked-hover'); }));
+          el.addEventListener('mouseleave', () => group.forEach((other) => other.classList.remove('linked-hover')));
+        });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+    } else {
+      obstagoonBindFilters();
+      obstagoonBindRowLinks();
+      obstagoonBindLinkedHotspots();
+    }
+  </script>
+</body>
+</html>

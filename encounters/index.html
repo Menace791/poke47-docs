@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Encounters - pokeemerald-expansion</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script>
+    // Lowercase, strip diacritics (é→e), and drop non-alphanumerics so a query
+    // like "basculinwhitestriped" still matches "Basculin (White-Striped)".
+    // Defined in <head> so per-page IIFEs in the content can call it.
+    window.obstagoonNormalize = (s) => (s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+    // Per-tab index state (search, chips, sort) restored on back/forward and
+    // reload only — fresh clicks of nav links start clean.
+    window.obstagoonShouldRestoreState = () => {
+      const nav = performance.getEntriesByType('navigation')[0];
+      return !!(nav && (nav.type === 'back_forward' || nav.type === 'reload'));
+    };
+    window.obstagoonLoadState = (key) => {
+      if (!obstagoonShouldRestoreState()) return {};
+      try { return JSON.parse(sessionStorage.getItem('obstagoon:' + key) || '{}'); }
+      catch (e) { return {}; }
+    };
+    window.obstagoonSaveState = (key, state) => {
+      // Private browsing / quota-exceeded throws; degrade silently.
+      try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
+      catch (e) {}
+    };
+    // Shared search+chips+sort filter binding for index pages. Each page
+    // passes its element ids, a haystack-by-chip-kind map (for filtering),
+    // suggestion sources, and optionally a table selector to enable
+    // click-to-sort. State persists in sessionStorage under stateKey. Defined
+    // in <head> so per-page IIFEs in the content can call it.
+    window.obstagoonBindIndexPage = (opts) => {
+      const input = document.getElementById(opts.inputId);
+      const dropdown = document.getElementById(opts.dropdownId);
+      const chipsBox = document.getElementById(opts.chipsBoxId);
+      const empty = opts.emptyId ? document.getElementById(opts.emptyId) : null;
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      const rows = Array.from(document.querySelectorAll(opts.rowsSelector));
+      const haystackByKind = opts.haystackByKind || {};
+      const sources = opts.sources || [];
+      const defaultKind = opts.defaultKind || null;
+      const saved = obstagoonLoadState(opts.stateKey);
+      const chips = (Array.isArray(saved.chips) ? saved.chips : [])
+        .map((c) => c.kind ? c : {kind: defaultKind || 'Pokémon', name: c.name});
+      if (saved.search) input.value = saved.search;
+      let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
+      let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : 'asc';
+      const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const persist = () => obstagoonSaveState(opts.stateKey, {
+        search: input.value, chips,
+        ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
+      });
+
+      const applyFilters = () => {
+        const q = obstagoonNormalize(input.value);
+        let visible = 0;
+        rows.forEach((el) => {
+          const text = obstagoonNormalize(el.dataset.searchText || '');
+          let show = !q || text.includes(q);
+          if (show) for (const c of chips) {
+            const haystack = el.dataset[haystackByKind[c.kind]];
+            if (!haystack || !haystack.includes(`|${c.name}|`)) { show = false; break; }
+          }
+          el.classList.toggle('filter-hidden', !show);
+          if (show) visible += 1;
+        });
+        if (empty) empty.style.display = visible === 0 ? '' : 'none';
+        if (countEl) countEl.textContent = visible;
+        persist();
+      };
+      const renderChips = () => {
+        chipsBox.innerHTML = chips.map((c, i) =>
+          `<span class="filter-chip"><span class="chip-kind">${c.kind}</span> ${esc(c.name)}<button type="button" class="chip-remove" data-idx="${i}" aria-label="Remove">×</button></span>`
+        ).join('');
+        chipsBox.querySelectorAll('.chip-remove').forEach((btn) => btn.addEventListener('click', () => {
+          chips.splice(parseInt(btn.dataset.idx, 10), 1); renderChips(); applyFilters();
+        }));
+      };
+      const renderSuggestions = () => {
+        const q = obstagoonNormalize(input.value);
+        if (q.length < 3) { dropdown.hidden = true; return; }
+        const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
+        const matches = [];
+        for (const [kind, list] of sources) {
+          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+        }
+        if (matches.length === 0) { dropdown.hidden = true; return; }
+        dropdown.innerHTML = matches.slice(0, 30).map((m) =>
+          `<button type="button" class="suggestion" data-kind="${m.kind}" data-name="${esc(m.name)}"><span class="suggestion-kind">${m.kind}</span> ${esc(m.name)}</button>`
+        ).join('');
+        dropdown.hidden = false;
+        dropdown.querySelectorAll('.suggestion').forEach((btn) => btn.addEventListener('click', () => {
+          chips.push({kind: btn.dataset.kind, name: btn.dataset.name});
+          input.value = ''; dropdown.hidden = true; renderChips(); applyFilters();
+        }));
+      };
+      input.addEventListener('input', () => { renderSuggestions(); applyFilters(); });
+      input.addEventListener('focus', renderSuggestions);
+      document.addEventListener('click', (e) => { if (!dropdown.contains(e.target) && e.target !== input) dropdown.hidden = true; });
+      renderChips();
+      applyFilters();
+
+      if (opts.tableSelector) {
+        const tbody = document.querySelector(opts.tableSelector + ' tbody');
+        const headers = Array.from(document.querySelectorAll(opts.tableSelector + ' thead th'));
+        const original = Array.from(tbody.querySelectorAll('tr'));
+        const cellValue = (tr, i, kind) => {
+          const text = tr.cells[i].textContent.trim();
+          if (kind === 'number') { const n = parseFloat(text); return isNaN(n) ? -Infinity : n; }
+          return text.toLowerCase();
+        };
+        const applySort = () => {
+          headers.forEach((h, j) => {
+            h.classList.toggle('sort-asc', activeDir === 'asc' && j === activeCol);
+            h.classList.toggle('sort-desc', activeDir === 'desc' && j === activeCol);
+          });
+          if (!activeDir) { original.forEach((tr) => tbody.appendChild(tr)); return; }
+          const kind = headers[activeCol]?.dataset.sort || 'text';
+          const sign = activeDir === 'asc' ? 1 : -1;
+          [...original].sort((a, b) => {
+            const av = cellValue(a, activeCol, kind), bv = cellValue(b, activeCol, kind);
+            return av < bv ? -sign : av > bv ? sign : 0;
+          }).forEach((tr) => tbody.appendChild(tr));
+        };
+        headers.forEach((th, i) => {
+          if (!th.dataset.sort) return;
+          th.classList.add('sortable');
+          th.addEventListener('click', () => {
+            activeDir = i !== activeCol ? 'asc' : activeDir === 'asc' ? 'desc' : activeDir === 'desc' ? '' : 'asc';
+            activeCol = activeDir ? i : -1;
+            applySort();
+            persist();
+          });
+        });
+        applySort();
+      }
+    };
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../index.html">pokeemerald-expansion</a>
+      <nav>
+        <a href="../pokedex/index.html">Pokédex</a>
+        <a href="../moves/index.html">Moves</a>
+        <a href="../abilities/index.html">Abilities</a>
+        <a href="../forms/index.html">Forms</a>
+        <a href="../encounters/index.html">Encounters</a>
+        <a href="../itemdex/index.html">Itemdex</a>
+        <a href="../trainerdex/index.html">Trainers</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+<h1>Encounters <span class="muted small-text" id="encounters-count">68</span></h1>
+<div class="region-map">
+  <img src="../assets/region_map.png" alt="Hoenn region map">
+  <a href="route-101.html" aria-label="Route 101"
+     style="left:14.286%; top:66.667%; width:3.571%; height:6.667%;"></a>
+  <a href="route-102.html" aria-label="Route 102"
+     style="left:7.143%; top:60.000%; width:7.143%; height:6.667%;"></a>
+  <a href="petalburg-city.html" aria-label="Petalburg City"
+     style="left:3.571%; top:60.000%; width:3.571%; height:6.667%;"></a>
+  <a href="route-103.html" aria-label="Route 103"
+     style="left:14.286%; top:53.333%; width:14.286%; height:6.667%;"></a>
+  <a href="route-137.html" aria-label="Route 137"
+     style="left:17.857%; top:46.667%; width:10.714%; height:6.667%;"></a>
+  <a href="route-104.html" aria-label="Route 104"
+     style="left:0.000%; top:46.667%; width:3.571%; height:20.000%;"></a>
+  <a href="route-105.html" aria-label="Route 105"
+     style="left:0.000%; top:66.667%; width:3.571%; height:20.000%;"></a>
+  <a href="route-106.html" aria-label="Route 106"
+     style="left:0.000%; top:86.667%; width:7.143%; height:6.667%;"></a>
+  <a href="dewford-town.html" aria-label="Dewford Town"
+     style="left:7.143%; top:93.333%; width:3.571%; height:6.667%;"></a>
+  <a href="dew-beach.html" aria-label="Dew Beach"
+     style="left:0.000%; top:93.333%; width:7.143%; height:6.667%;"></a>
+  <a href="route-107.html" aria-label="Route 107"
+     style="left:10.714%; top:93.333%; width:10.714%; height:6.667%;"></a>
+  <a href="route-108.html" aria-label="Route 108"
+     style="left:21.429%; top:93.333%; width:7.143%; height:6.667%;"></a>
+  <a href="route-109.html" aria-label="Route 109"
+     style="left:28.571%; top:80.000%; width:3.571%; height:20.000%;"></a>
+  <a href="slateport-city.html" aria-label="Slateport City"
+     style="left:28.571%; top:66.667%; width:3.571%; height:13.333%;"></a>
+  <a href="route-110.html" aria-label="Route 110"
+     style="left:28.571%; top:46.667%; width:3.571%; height:20.000%;"></a>
+  <a href="route-111.html" aria-label="Route 111"
+     style="left:28.571%; top:0.000%; width:3.571%; height:40.000%;"></a>
+  <a href="route-136.html" aria-label="Route 136"
+     style="left:32.143%; top:6.667%; width:3.571%; height:26.667%;"></a>
+  <a href="route-112.html" aria-label="Route 112"
+     style="left:21.429%; top:20.000%; width:7.143%; height:6.667%;"></a>
+  <a href="route-113.html" aria-label="Route 113"
+     style="left:14.286%; top:0.000%; width:14.286%; height:6.667%;"></a>
+  <a href="route-114.html" aria-label="Route 114"
+     style="left:3.571%; top:0.000%; width:7.143%; height:20.000%;"></a>
+  <a href="route-115.html" aria-label="Route 115"
+     style="left:0.000%; top:13.333%; width:3.571%; height:20.000%;"></a>
+  <a href="route-116.html" aria-label="Route 116"
+     style="left:3.571%; top:33.333%; width:14.286%; height:6.667%;"></a>
+  <a href="route-117.html" aria-label="Route 117"
+     style="left:17.857%; top:40.000%; width:10.714%; height:6.667%;"></a>
+  <a href="route-118.html" aria-label="Route 118"
+     style="left:35.714%; top:40.000%; width:7.143%; height:6.667%;"></a>
+  <a href="route-119.html" aria-label="Route 119"
+     style="left:39.286%; top:0.000%; width:3.571%; height:40.000%;"></a>
+  <a href="route-120.html" aria-label="Route 120"
+     style="left:46.429%; top:0.000%; width:3.571%; height:26.667%;"></a>
+  <a href="route-121.html" aria-label="Route 121"
+     style="left:50.000%; top:20.000%; width:14.286%; height:6.667%;"></a>
+  <a href="lilycove-city.html" aria-label="Lilycove City"
+     style="left:64.286%; top:20.000%; width:7.143%; height:6.667%;"></a>
+  <a href="safari-zone.html" aria-label="Safari Zone"
+     style="left:57.143%; top:13.333%; width:3.571%; height:6.667%;"></a>
+  <a href="route-122.html" aria-label="Route 122"
+     style="left:57.143%; top:26.667%; width:3.571%; height:13.333%;"></a>
+  <a href="route-123.html" aria-label="Route 123"
+     style="left:42.857%; top:40.000%; width:17.857%; height:6.667%;"></a>
+  <a href="route-135.html" aria-label="Route 135"
+     style="left:57.143%; top:46.667%; width:3.571%; height:20.000%;"></a>
+  <a href="route-124.html" aria-label="Route 124"
+     style="left:71.429%; top:20.000%; width:14.286%; height:20.000%;"></a>
+  <a href="mossdeep-city.html" aria-label="Mossdeep City"
+     style="left:85.714%; top:33.333%; width:7.143%; height:6.667%;"></a>
+  <a href="route-125.html" aria-label="Route 125"
+     style="left:85.714%; top:20.000%; width:7.143%; height:13.333%;"></a>
+  <a href="route-126.html" aria-label="Route 126"
+     style="left:71.429%; top:40.000%; width:10.714%; height:20.000%;"></a>
+  <a href="route-127.html" aria-label="Route 127"
+     style="left:82.143%; top:40.000%; width:10.714%; height:20.000%;"></a>
+  <a href="route-128.html" aria-label="Route 128"
+     style="left:82.143%; top:60.000%; width:14.286%; height:6.667%;"></a>
+  <a href="route-129.html" aria-label="Route 129"
+     style="left:85.714%; top:66.667%; width:7.143%; height:6.667%;"></a>
+  <a href="ever-grande-city.html" aria-label="Ever Grande City"
+     style="left:96.429%; top:53.333%; width:3.571%; height:13.333%;"></a>
+  <a href="route-130.html" aria-label="Route 130"
+     style="left:75.000%; top:66.667%; width:10.714%; height:6.667%;"></a>
+  <a href="route-131.html" aria-label="Route 131"
+     style="left:64.286%; top:66.667%; width:10.714%; height:6.667%;"></a>
+  <a href="pacifidlog-town.html" aria-label="Pacifidlog Town"
+     style="left:60.714%; top:66.667%; width:3.571%; height:6.667%;"></a>
+  <a href="sky-pillar.html" aria-label="Sky Pillar"
+     style="left:71.429%; top:60.000%; width:3.571%; height:6.667%;"></a>
+  <a href="route-132.html" aria-label="Route 132"
+     style="left:53.571%; top:66.667%; width:7.143%; height:6.667%;"></a>
+  <a href="route-133.html" aria-label="Route 133"
+     style="left:42.857%; top:66.667%; width:10.714%; height:6.667%;"></a>
+  <a href="route-134.html" aria-label="Route 134"
+     style="left:32.143%; top:66.667%; width:10.714%; height:6.667%;"></a>
+  <a href="artisan-cave.html" aria-label="Artisan Cave"
+     style="left:78.571%; top:80.000%; width:3.571%; height:6.667%;"></a>
+  <a href="altering-cave.html" aria-label="Altering Cave"
+     style="left:21.429%; top:53.333%; width:3.571%; height:6.667%;"></a>
+  <a href="old-house.html" aria-label="Old House"
+     style="left:0.000%; top:46.667%; width:3.571%; height:6.667%;"></a>
+  <a href="petalburg-woods.html" aria-label="Petalburg Woods"
+     style="left:0.000%; top:53.333%; width:3.571%; height:6.667%;"></a>
+  <a href="granite-cave.html" aria-label="Granite Cave"
+     style="left:3.571%; top:86.667%; width:3.571%; height:6.667%;"></a>
+  <a href="abandoned-ship.html" aria-label="Abandoned Ship"
+     style="left:21.429%; top:93.333%; width:3.571%; height:6.667%;"></a>
+  <a href="new-mauville.html" aria-label="New Mauville"
+     style="left:28.571%; top:46.667%; width:3.571%; height:6.667%;"></a>
+  <a href="mirage-tower.html" aria-label="Mirage Tower"
+     style="left:28.571%; top:13.333%; width:3.571%; height:6.667%;"></a>
+  <a href="fiery-path.html" aria-label="Fiery Path"
+     style="left:21.429%; top:20.000%; width:1.190%; height:6.667%;"></a>
+  <a href="jagged-pass.html" aria-label="Jagged Pass"
+     style="left:22.619%; top:20.000%; width:1.190%; height:6.667%;"></a>
+  <a href="magma-hideout.html" aria-label="Magma Hideout"
+     style="left:23.810%; top:20.000%; width:1.190%; height:6.667%;"></a>
+  <a href="desert-underpass.html" aria-label="Desert Underpass"
+     style="left:7.143%; top:0.000%; width:3.571%; height:6.667%;"></a>
+  <a href="meteor-falls.html" aria-label="Meteor Falls"
+     style="left:0.000%; top:20.000%; width:3.571%; height:6.667%;"></a>
+  <a href="rusturf-tunnel.html" aria-label="Rusturf Tunnel"
+     style="left:7.143%; top:33.333%; width:3.571%; height:6.667%;"></a>
+  <a href="scorched-slab.html" aria-label="Scorched Slab"
+     style="left:46.429%; top:0.000%; width:3.571%; height:6.667%;"></a>
+  <a href="mt-pyre.html" aria-label="Mt. Pyre"
+     style="left:57.143%; top:26.667%; width:3.571%; height:6.667%;"></a>
+  <a href="seafloor-cavern.html" aria-label="Seafloor Cavern"
+     style="left:85.714%; top:60.000%; width:3.571%; height:6.667%;"></a>
+  <a href="shoal-cave.html" aria-label="Shoal Cave"
+     style="left:85.714%; top:26.667%; width:3.571%; height:6.667%;"></a>
+  <a href="cave-of-origin.html" aria-label="Cave Of Origin"
+     style="left:75.000%; top:46.667%; width:1.786%; height:6.667%;"></a>
+  <a href="sootopolis-city.html" aria-label="Sootopolis City"
+     style="left:76.786%; top:46.667%; width:1.786%; height:6.667%;"></a>
+  <a href="victory-road.html" aria-label="Victory Road"
+     style="left:96.429%; top:60.000%; width:3.571%; height:6.667%;"></a>
+</div>
+<div class="filter-bar pokedex-filter-bar">
+  <label class="filter-label" for="encounters-search">Search Encounters</label>
+  <input id="encounters-search" class="filter-input" type="search" placeholder="Filter by area, encounter method, or Pokémon" autocomplete="off">
+  <div id="encounters-suggestions" class="search-suggestions" hidden></div>
+</div>
+<div id="encounters-chips" class="filter-chips"></div>
+<ul id="encounter-list" class="link-grid">
+  <li data-search-text="Route 101 Route 101 Land "
+      data-species="|Bidoof|Budew|Lillipup|Purrloin|Scatterbug|Scatterbug (Fancy Pattern)|Scatterbug (Garden Pattern)|Scatterbug (Meadow Pattern)|Scatterbug (Modern Pattern)|Scatterbug (Poké Ball Pattern)|">
+    <a href="route-101.html" class="has-map" style="--map-bg: url('../assets/maps/route-101.png');">Route 101</a>
+  </li>
+  <li data-search-text="Route 102 Route 102 Land Water Fishing "
+      data-species="|Bidoof|Clauncher|Cottonee|Dewpider|Ducklett|Flabébé|Flabébé (Blue Flower)|Flabébé (Red Flower)|Froakie|Frogadier|Kricketot|Lillipup|Palpitoad|Petilil|Purrloin|Scatterbug|Scatterbug (Archipelago Pattern)|Scatterbug (Continental Pattern)|Scatterbug (Elegant Pattern)|Scatterbug (Garden Pattern)|Scatterbug (High Plains Pattern)|Scatterbug (Icy Snow Pattern)|Scatterbug (Jungle Pattern)|Scatterbug (Marine Pattern)|Scatterbug (Meadow Pattern)|Scatterbug (Modern Pattern)|Scatterbug (Monsoon Pattern)|Scatterbug (Ocean Pattern)|Scatterbug (Polar Pattern)|Scatterbug (River Pattern)|Scatterbug (Sandstorm Pattern)|Scatterbug (Savanna Pattern)|Scatterbug (Sun Pattern)|Scatterbug (Tundra Pattern)|Shinx|Skiddo|Tympole|">
+    <a href="route-102.html" class="has-map" style="--map-bg: url('../assets/maps/route-102.png');">Route 102</a>
+  </li>
+  <li data-search-text="Petalburg City Petalburg City Water Fishing "
+      data-species="|Clauncher|Dewpider|Ducklett|Froakie|Frogadier|Palpitoad|Tympole|">
+    <a href="petalburg-city.html" class="has-map" style="--map-bg: url('../assets/maps/petalburg-city.png');">Petalburg City</a>
+  </li>
+  <li data-search-text="Route 103 Route 103 Land Water Fishing "
+      data-species="|Basculin|Basculin (Red-Striped)|Bidoof|Chatot|Finneon|Frillish|Kricketot|Lillipup|Lumineon|Purrloin|Scatterbug|Scatterbug (Elegant Pattern)|Scatterbug (Fancy Pattern)|Scatterbug (Garden Pattern)|Scatterbug (Poké Ball Pattern)|Shellos|Shellos (West Sea)|Shinx|Wishiwashi|Wishiwashi (Solo)|">
+    <a href="route-103.html" class="has-map" style="--map-bg: url('../assets/maps/route-103.png');">Route 103</a>
+  </li>
+  <li data-search-text="Altering Cave Altering Cave Land "
+      data-species="|Noibat|Woobat|">
+    <a href="altering-cave.html" class="has-map" style="--map-bg: url('../assets/maps/altering-cave.png');">Altering Cave</a>
+  </li>
+  <li data-search-text="Route 137 Ingy Bingy Island Land Water Fishing "
+      data-species="|Basculin|Basculin (Red-Striped)|Bergmite|Cubchoo|Darumaka|Darumaka (Galarian)|Finneon|Frillish|Inkay|Lumineon|Riolu|Roggenrola|Shellos|Shellos (West Sea)|Shelmet|Snover|Starly|Timburr|Wishiwashi|Wishiwashi (Solo)|">
+    <a href="route-137.html" class="has-map" style="--map-bg: url('../assets/maps/route-137.png');">Route 137</a>
+  </li>
+  <li data-search-text="Route 104 Route 104 Land Water Fishing "
+      data-species="|Basculin|Basculin (Red-Striped)|Buizel|Clauncher|Ducklett|Kricketot|Lillipup|Pachirisu|Shellos|Shellos (West Sea)|Skiddo|Starly|">
+    <a href="route-104.html" class="has-map" style="--map-bg: url('../assets/maps/route-104.png');">Route 104</a>
+  </li>
+  <li data-search-text="Old House Old House C1 2 Land Old House C1 3 Land Old House C2 Land Old House C2 2 Land Old House Room 1 Land Old House Room 1 2 Land "
+      data-species="|Audino|Honedge|Mimikyu|Mimikyu (Disguised)|Noibat|Phantump|Snivy|">
+    <a href="old-house.html" class="has-map" style="--map-bg: url('../assets/maps/old-house.png');">Old House</a>
+  </li>
+  <li data-search-text="Petalburg Woods Petalburg Woods Land "
+      data-species="|Burmy|Burmy (Plant Cloak)|Combee|Foongus|Pansage|Pidove|Purrloin|Scatterbug|Scatterbug (Jungle Pattern)|Scatterbug (Monsoon Pattern)|Sewaddle|Starly|">
+    <a href="petalburg-woods.html" class="has-map" style="--map-bg: url('../assets/maps/petalburg-woods.png');">Petalburg Woods</a>
+  </li>
+  <li data-search-text="Route 105 Route 105 Water Fishing "
+      data-species="|Basculin|Basculin (Red-Striped)|Finneon|Frillish|Lumineon|Shellos|Shellos (West Sea)|Wishiwashi|Wishiwashi (Solo)|">
+    <a href="route-105.html" class="has-map" style="--map-bg: url('../assets/maps/route-105.png');">Route 105</a>
+  </li>
+  <li data-search-text="Route 106 Route 106 Water Fishing "
+      data-species="|Basculin|Basculin (Red-Striped)|Bruxish|Finneon|Frillish|Lumineon|Shellos|Shellos (West Sea)|Wishiwashi|Wishiwashi (Solo)|">
+    <a href="route-106.html" class="has-map" style="--map-bg: url('../assets/maps/route-106.png');">Route 106</a>
+  </li>
+  <li data-search-text="Dewford Town Dewford Town Water Fishing "
+      data-species="|Basculin|Basculin (Red-Striped)|Bruxish|Finneon|Frillish|Lumineon|Shellos|Shellos (West Sea)|Wishiwashi|Wishiwashi (Solo)|">
+    <a href="dewford-town.html" class="has-map" style="--map-bg: url('../assets/maps/dewford-town.png');">Dewford Town</a>
+  </li>
+  <li data-search-text="Dew Beach Dew Beach 106 Land Water Fishing "
+      data-species="|Basculin|Basculin (Red-Striped)|Bruxish|Crabrawler|Finneon|Frillish|Lumineon|Pyukumuku|Riolu|Sandygast|Shellos|Shellos (West Sea)|Starly|Timburr|Wishiwashi|Wishiwashi (Solo)|">
+    <a href="dew-beach.html" class="has-map" style="--map-bg: url('../assets/maps/dew-beach.png');">Dew Beach</a>
+  </li>
+  <li data-search-text="Granite Cave Granite Cave 1F Land Granite Cave B1F Land Granite Cave B2F Land Rock Smash Granite Cave Steven&#39;s Room Land "
+      data-species="|Bronzor|Carbink|Drilbur|Gible|Klink|Munna|Noibat|Riolu|Roggenrola|Timburr|Woobat|">
+    <a href="granite-cave.html" class="has-map" style="--map-bg: url('../assets/maps/granite-cave.png');">Granite Cave</a>
+  </li>
+  <li data-search-text="Route 107 Route 107 Water Fishing "
+      data-species="|Basculin|Basculin (Red-Striped)|Bruxish|Finneon|Frillish|Lumineon|Shellos|Shellos (West Sea)|Wishiwashi|Wishiwashi (Solo)|">
+    <a href="route-107.html" class="has-map" style="--map-bg: url('../assets/maps/route-107.png');">Route 107</a>
+  </li>
+  <li data-search-text="Route 108 Route 108 Water Fishing "
+      data-species="|Basculin|Basculin (Red-Striped)|Finneon|Frillish|Lumineon|Shellos|Shellos (West Sea)|Wishiwashi|Wishiwashi (Solo)|">
+    <a href="route-108.html" class="has-map" style="--map-bg: url('../assets/maps/route-108.png');">Route 108</a>
+  </li>
+  <li data-search-text="Abandoned Ship Abandoned Ship Rooms B1F Water Fishing Abandoned Ship Hidden Floor Corridors Water Fishing "
+      data-species="|Dhelmise|Finneon|Frillish|Lumineon|">
+    <a href="abandoned-ship.html" class="has-map" style="--map-bg: url('../assets/maps/abandoned-ship.png');">Abandoned Ship</a>
+  </li>
+  <li data-search-text="Route 109 Route 109 Water Fishing "
+      data-species="|Basculin|Basculin (Red-Striped)|Finneon|Frillish|Lumineon|Shellos|Shellos (West Sea)|Wishiwashi|Wishiwashi (Solo)|">
+    <a href="route-109.html" class="has-map" style="--map-bg: url('../assets/maps/route-109.png');">Route 109</a>
+  </li>
+  <li data-search-text="Slateport City Slateport City Water Fishing "
+      data-species="|Basculin|Basculin (Red-Striped)|Finneon|Frillish|Lumineon|Shellos|Shellos (West Sea)|Skrelp|Wishiwashi|Wishiwashi (Solo)|">
+    <a href="slateport-city.html" class="has-map" style="--map-bg: url('../assets/maps/slateport-city.png');">Slateport City</a>
+  </li>
+  <li data-search-text="Route 110 Route 110 Land Water Fishing "
+      data-species="|Basculin|Basculin (Red-Striped)|Finneon|Frillish|Glameow|Grubbin|Lumineon|Oricorio|Oricorio (Pom-Pom Style)|Pidove|Purrloin|Shellos|Shellos (West Sea)|Shinx|Skiddo|Spewpa|Spewpa (Archipelago Pattern)|Spewpa (Continental Pattern)|Spewpa (Elegant Pattern)|Spewpa (Garden Pattern)|Spewpa (High Plains Pattern)|Spewpa (Icy Snow Pattern)|Spewpa (Jungle Pattern)|Spewpa (Marine Pattern)|Spewpa (Meadow Pattern)|Spewpa (Modern Pattern)|Spewpa (Monsoon Pattern)|Spewpa (Ocean Pattern)|Spewpa (Poké Ball Pattern)|Spewpa (Polar Pattern)|Spewpa (River Pattern)|Spewpa (Sandstorm Pattern)|Spewpa (Savanna Pattern)|Spewpa (Sun Pattern)|Spewpa (Tundra Pattern)|Stunky|Trubbish|Wishiwashi|Wishiwashi (Solo)|Yungoos|">
+    <a href="route-110.html" class="has-map" style="--map-bg: url('../assets/maps/route-110.png');">Route 110</a>
+  </li>
+  <li data-search-text="New Mauville New Mauville Entrance Land New Mauville Inside Land "
+      data-species="|Eelektrik|Elgyem|Joltik|Solosis|Togedemaru|Tynamo|">
+    <a href="new-mauville.html" class="has-map" style="--map-bg: url('../assets/maps/new-mauville.png');">New Mauville</a>
+  </li>
+  <li data-search-text="Route 111 Route 111 Land Water Rock Smash Fishing "
+      data-species="|Basculin|Basculin (Red-Striped)|Darumaka|Dwebble|Helioptile|Hippopotas|Maractus|Roggenrola|Sandile|Sigilyph|Stunfisk|Tympole|Wimpod|Yamask|Yamask (Galarian)|">
+    <a href="route-111.html" class="has-map" style="--map-bg: url('../assets/maps/route-111.png');">Route 111</a>
+  </li>
+  <li data-search-text="Mirage Tower Mirage Tower 1F Land Mirage Tower 2F Land Mirage Tower 3F Land Mirage Tower 4F Land "
+      data-species="|Darumaka|Sandile|Sigilyph|Yamask|Yamask (Galarian)|">
+    <a href="mirage-tower.html" class="has-map" style="--map-bg: url('../assets/maps/mirage-tower.png');">Mirage Tower</a>
+  </li>
+  <li data-search-text="Route 136 Route 136 Land Rock Smash "
+      data-species="|Bronzor|Golett|Helioptile|Mienfoo|Minior|Minior (Blue Core)|Minior (Green Core)|Minior (Indigo Core)|Minior (Orange Core)|Minior (Red Core)|Minior (Violet Core)|Minior (Yellow Core)|Munna|Oricorio|Oricorio (Sensu Style)|Roggenrola|Sigilyph|Tranquill|">
+    <a href="route-136.html" class="has-map" style="--map-bg: url('../assets/maps/route-136.png');">Route 136</a>
+  </li>
+  <li data-search-text="Route 112 Route 112 Land "
+      data-species="|Ferroseed|Fletchling|Litleo|Oricorio|Oricorio (Baile Style)|Yungoos|">
+    <a href="route-112.html" class="has-map" style="--map-bg: url('../assets/maps/route-112.png');">Route 112</a>
+  </li>
+  <li data-search-text="Fiery Path Fiery Path Land "
+      data-species="|Heatmor|Litleo|Roggenrola|Salandit|Turtonator|">
+    <a href="fiery-path.html" class="has-map" style="--map-bg: url('../assets/maps/fiery-path.png');">Fiery Path</a>
+  </li>
+  <li data-search-text="Jagged Pass Jagged Pass Land "
+      data-species="|Fletchinder|Fletchling|Litleo|Mienfoo|Salandit|Tepig|">
+    <a href="jagged-pass.html" class="has-map" style="--map-bg: url('../assets/maps/jagged-pass.png');">Jagged Pass</a>
+  </li>
+  <li data-search-text="Magma Hideout Magma Hideout 1F Land Magma Hideout 2F 1R Land Magma Hideout 2F 2R Land Magma Hideout 2F 3R Land Magma Hideout 3F 1R Land Magma Hideout 3F 2R Land Magma Hideout 3F 3R Land Magma Hideout 4F Land "
+      data-species="|Boldore|Heatmor|Roggenrola|Salandit|Turtonator|">
+    <a href="magma-hideout.html" class="has-map" style="--map-bg: url('../assets/maps/magma-hideout.png');">Magma Hideout</a>
+  </li>
+  <li data-search-text="Route 113 Route 113 Land "
+      data-species="|Bunnelby|Durant|Dwebble|Mudbray|Scraggy|Shelmet|Skorupi|Zorua|">
+    <a href="route-113.html" class="has-map" style="--map-bg: url('../assets/maps/route-113.png');">Route 113</a>
+  </li>
+  <li data-search-text="Route 114 Route 114 Land Water Rock Smash Fishing Underwater "
+      data-species="|Basculin|Basculin (Red-Striped)|Cubchoo|Drampa|Espurr|Ferroseed|Morelull|Pancham|Roggenrola|Snover|Staravia|Stunfisk|Stunfisk (Galarian)|Tympole|Wimpod|">
+    <a href="route-114.html" class="has-map" style="--map-bg: url('../assets/maps/route-114.png');">Route 114</a>
+  </li>
+  <li data-search-text="Desert Underpass Desert Underpass Land "
+      data-species="|Ditto|Loudred|Whismur|">
+    <a href="desert-underpass.html" class="has-map" style="--map-bg: url('../assets/maps/desert-underpass.png');">Desert Underpass</a>
+  </li>
+  <li data-search-text="Meteor Falls Meteor Falls 1F 1R Land Water Fishing Meteor Falls 1F 2R Land Water Fishing Meteor Falls B1F 1R Land Water Fishing Meteor Falls B1F 2R Land Water Fishing Meteor Falls Steven&#39;s Cave Land "
+      data-species="|Basculin|Basculin (Red-Striped)|Clauncher|Clawitzer|Druddigon|Golett|Jangmo-o|Minior|Minior (Blue Core)|Minior (Green Core)|Minior (Indigo Core)|Minior (Orange Core)|Minior (Red Core)|Minior (Violet Core)|Minior (Yellow Core)|Morelull|Munna|Noibat|Noivern|">
+    <a href="meteor-falls.html" class="has-map" style="--map-bg: url('../assets/maps/meteor-falls.png');">Meteor Falls</a>
+  </li>
+  <li data-search-text="Route 115 Route 115 Land Water Fishing "
+      data-species="|Basculin|Basculin (Red-Striped)|Espurr|Finneon|Frillish|Inkay|Lillipup|Lumineon|Sawk|Shellos|Shellos (West Sea)|Spritzee|Staravia|Starly|Swirlix|Throh|Wishiwashi|Wishiwashi (Solo)|">
+    <a href="route-115.html" class="has-map" style="--map-bg: url('../assets/maps/route-115.png');">Route 115</a>
+  </li>
+  <li data-search-text="Route 116 Route 116 Land "
+      data-species="|Buneary|Chatot|Espurr|Lillipup|Munna|Patrat|Pidove|Purrloin|Stufful|Swirlix|">
+    <a href="route-116.html" class="has-map" style="--map-bg: url('../assets/maps/route-116.png');">Route 116</a>
+  </li>
+  <li data-search-text="Rusturf Tunnel Rusturf Tunnel Land "
+      data-species="|Carbink|Munna|Noibat|">
+    <a href="rusturf-tunnel.html" class="has-map" style="--map-bg: url('../assets/maps/rusturf-tunnel.png');">Rusturf Tunnel</a>
+  </li>
+  <li data-search-text="Route 117 Route 117 Land Water Fishing "
+      data-species="|Buizel|Cherubi|Clauncher|Cutiefly|Flabébé|Flabébé (Blue Flower)|Flabébé (Orange Flower)|Flabébé (White Flower)|Flabébé (Yellow Flower)|Froakie|Frogadier|Karrablast|Kricketot|Minccino|Palpitoad|Skiddo|Tympole|">
+    <a href="route-117.html" class="has-map" style="--map-bg: url('../assets/maps/route-117.png');">Route 117</a>
+  </li>
+  <li data-search-text="Route 118 Route 118 Land Water Fishing "
+      data-species="|Basculin|Basculin (Blue-Striped)|Clauncher|Deerling|Deerling (Spring)|Finneon|Fomantis|Frillish|Herdier|Jellicent|Lumineon|Shellos|Shellos (East Sea)|Staravia|Starly|Venipede|">
+    <a href="route-118.html" class="has-map" style="--map-bg: url('../assets/maps/route-118.png');">Route 118</a>
+  </li>
+  <li data-search-text="Route 119 Route 119 Land Water Fishing "
+      data-species="|Basculin|Basculin (Blue-Striped)|Basculin (White-Striped)|Bounsweet|Carnivine|Comfey|Deerling|Deerling (Spring)|Fomantis|Oranguru|Oricorio|Oricorio (Pa&#39;u Style)|Oshawott|Passimian|Toucannon|Trumbeak|Venipede|Whirlipede|">
+    <a href="route-119.html" class="has-map" style="--map-bg: url('../assets/maps/route-119.png');">Route 119</a>
+  </li>
+  <li data-search-text="Route 120 Route 120 Land Water Fishing "
+      data-species="|Clauncher|Croagunk|Emolga|Goomy|Herdier|Luxio|Palpitoad|Shinx|Staravia|Stunfisk|Tympole|">
+    <a href="route-120.html" class="has-map" style="--map-bg: url('../assets/maps/route-120.png');">Route 120</a>
+  </li>
+  <li data-search-text="Scorched Slab Scorched Slab Water "
+      data-species="|Tympole|">
+    <a href="scorched-slab.html" class="has-map" style="--map-bg: url('../assets/maps/scorched-slab.png');">Scorched Slab</a>
+  </li>
+  <li data-search-text="Route 121 Route 121 Land Water Fishing "
+      data-species="|Basculin|Basculin (Blue-Striped)|Clauncher|Drifloon|Finneon|Frillish|Furfrou|Furfrou (Dandy Trim)|Furfrou (Debutante Trim)|Furfrou (Diamond Trim)|Furfrou (Heart Trim)|Furfrou (Kabuki Trim)|Furfrou (La Reine Trim)|Furfrou (Matron Trim)|Furfrou (Pharaoh Trim)|Furfrou (Star Trim)|Herdier|Jellicent|Klefki|Litwick|Lumineon|Luxio|Phantump|Purrloin|Shellos|Shellos (East Sea)|Staravia|">
+    <a href="route-121.html" class="has-map" style="--map-bg: url('../assets/maps/route-121.png');">Route 121</a>
+  </li>
+  <li data-search-text="Lilycove City Lilycove City Water Fishing "
+      data-species="|Basculin|Basculin (Blue-Striped)|Clauncher|Finneon|Frillish|Jellicent|Lumineon|Shellos|Shellos (East Sea)|">
+    <a href="lilycove-city.html" class="has-map" style="--map-bg: url('../assets/maps/lilycove-city.png');">Lilycove City</a>
+  </li>
+  <li data-search-text="Safari Zone Safari Zone North Land Rock Smash Safari Zone Northeast Land Rock Smash Safari Zone Northwest Land Water Fishing Safari Zone South Land Safari Zone Southeast Land Water Fishing Safari Zone Southwest Land Water Fishing "
+      data-species="|Basculin|Basculin (Red-Striped)|Blitzle|Bouffalant|Braviary|Bunnelby|Dedenne|Diggersby|Diglett|Diglett (Alolan)|Dugtrio|Dugtrio (Alolan)|Exeggutor|Exeggutor (Alolan)|Geodude|Geodude (Alolan)|Graveler|Graveler (Alolan)|Grimer|Grimer (Alolan)|Hawlucha|Komala|Marowak|Marowak (Alolan)|Meowth|Meowth (Alolan)|Pancham|Pyroar|Raichu|Raichu (Alolan)|Raticate|Raticate (Alolan)|Rattata|Rattata (Alolan)|Rockruff|Rockruff (Own Tempo)|Roggenrola|Rufflet|Sandshrew|Sandshrew (Alolan)|Skuntank|Stunky|Vullaby|Vulpix|Vulpix (Alolan)|Watchog|Zebstrika|">
+    <a href="safari-zone.html" class="has-map" style="--map-bg: url('../assets/maps/safari-zone.png');">Safari Zone</a>
+  </li>
+  <li data-search-text="Route 122 Route 122 Water Fishing "
+      data-species="|Basculin|Basculin (Blue-Striped)|Clauncher|Finneon|Frillish|Jellicent|Lumineon|Shellos|Shellos (East Sea)|">
+    <a href="route-122.html" class="has-map" style="--map-bg: url('../assets/maps/route-122.png');">Route 122</a>
+  </li>
+  <li data-search-text="Mt. Pyre Mt Pyre 1F Land Mt Pyre 2F Land Mt Pyre 3F Land Mt Pyre 4F Land Mt Pyre 5F Land Mt Pyre 6F Land Mt Pyre Exterior Land Mt Pyre Summit Land "
+      data-species="|Deino|Drifloon|Fennekin|Gothita|Lampent|Litwick|Mienfoo|Pumpkaboo|Pumpkaboo (Average Size)|Pumpkaboo (Large Size)|Pumpkaboo (Small Size)|Pumpkaboo (Super Size)|Spiritomb|Zorua|Zorua (Hisuian)|">
+    <a href="mt-pyre.html" class="has-map" style="--map-bg: url('../assets/maps/mt-pyre.png');">Mt. Pyre</a>
+  </li>
+  <li data-search-text="Route 123 Route 123 Land Water Fishing "
+      data-species="|Araquanid|Basculin|Basculin (Blue-Striped)|Buizel|Chespin|Clauncher|Dewpider|Ducklett|Herdier|Palpitoad|Rockruff|Rufflet|Skiddo|Staravia|Tympole|">
+    <a href="route-123.html" class="has-map" style="--map-bg: url('../assets/maps/route-123.png');">Route 123</a>
+  </li>
+  <li data-search-text="Route 135 Route 135 Map Land Water Rock Smash Fishing "
+      data-species="|Basculin|Basculin (Blue-Striped)|Charjabug|Clauncher|Crustle|Crustle (Rock Face)|Drilbur|Finneon|Frillish|Gogoat|Herdier|Jellicent|Lumineon|Lycanroc|Lycanroc (Midday)|Rockruff|Rufflet|Skiddo|Staravia|">
+    <a href="route-135.html" class="has-map" style="--map-bg: url('../assets/maps/route-135.png');">Route 135</a>
+  </li>
+  <li data-search-text="Route 124 Route 124 Water Fishing Underwater "
+      data-species="|Basculin|Basculin (Blue-Striped)|Binacle|Bruxish|Clauncher|Finneon|Frillish|Jellicent|Lumineon|Mareanie|Pyukumuku|Shellos|Shellos (East Sea)|Skrelp|Toxapex|Wishiwashi|Wishiwashi (Solo)|">
+    <a href="route-124.html" class="has-map" style="--map-bg: url('../assets/maps/route-124.png');">Route 124</a>
+  </li>
+  <li data-search-text="Mossdeep City Mossdeep City Water Fishing "
+      data-species="|Basculin|Basculin (Blue-Striped)|Clauncher|Finneon|Frillish|Jellicent|Lumineon|Shellos|Shellos (East Sea)|">
+    <a href="mossdeep-city.html" class="has-map" style="--map-bg: url('../assets/maps/mossdeep-city.png');">Mossdeep City</a>
+  </li>
+  <li data-search-text="Seafloor Cavern Seafloor Cavern Entrance Water Fishing Seafloor Cavern Room 1 Land Seafloor Cavern Room 2 Land Seafloor Cavern Room 3 Land Seafloor Cavern Room 4 Land Seafloor Cavern Room 5 Land Seafloor Cavern Room 6 Land Water Fishing Seafloor Cavern Room 7 Land Water Fishing Seafloor Cavern Room 8 Land "
+      data-species="|Basculin|Basculin (Blue-Striped)|Clauncher|Frillish|Noibat|">
+    <a href="seafloor-cavern.html" class="has-map" style="--map-bg: url('../assets/maps/seafloor-cavern.png');">Seafloor Cavern</a>
+  </li>
+  <li data-search-text="Route 125 Route 125 Water Fishing "
+      data-species="|Basculin|Basculin (Blue-Striped)|Bergmite|Clauncher|Finneon|Frillish|Jellicent|Lumineon|Shellos|Shellos (East Sea)|">
+    <a href="route-125.html" class="has-map" style="--map-bg: url('../assets/maps/route-125.png');">Route 125</a>
+  </li>
+  <li data-search-text="Shoal Cave Shoal Cave Low Tide Entrance Room Land Water Fishing Shoal Cave Low Tide Ice Room Land Shoal Cave Low Tide Inner Room Land Water Fishing Shoal Cave Low Tide Lower Room Land Shoal Cave Low Tide Stairs Room Land "
+      data-species="|Basculin|Basculin (Blue-Striped)|Bergmite|Clauncher|Cryogonal|Darumaka|Darumaka (Galarian)|Frillish|Noibat|Vanillish|Vanillite|">
+    <a href="shoal-cave.html" class="has-map" style="--map-bg: url('../assets/maps/shoal-cave.png');">Shoal Cave</a>
+  </li>
+  <li data-search-text="Route 126 Route 126 Water Fishing Underwater "
+      data-species="|Basculin|Basculin (Blue-Striped)|Binacle|Bruxish|Clauncher|Finneon|Frillish|Jellicent|Lumineon|Mareanie|Pyukumuku|Shellos|Shellos (East Sea)|Skrelp|Toxapex|Wishiwashi|Wishiwashi (Solo)|">
+    <a href="route-126.html" class="has-map" style="--map-bg: url('../assets/maps/route-126.png');">Route 126</a>
+  </li>
+  <li data-search-text="Cave Of Origin Cave Of Origin Entrance Land Cave Of Origin 1F Land "
+      data-species="|Carbink|Noibat|Pawniard|">
+    <a href="cave-of-origin.html" class="has-map" style="--map-bg: url('../assets/maps/cave-of-origin.png');">Cave Of Origin</a>
+  </li>
+  <li data-search-text="Sootopolis City Sootopolis City Water Fishing "
+      data-species="|Basculin|Basculin (Blue-Striped)|Clauncher|Dewpider|Finneon|Lumineon|Palpitoad|Tympole|">
+    <a href="sootopolis-city.html" class="has-map" style="--map-bg: url('../assets/maps/sootopolis-city.png');">Sootopolis City</a>
+  </li>
+  <li data-search-text="Route 127 Route 127 Water Fishing "
+      data-species="|Basculin|Basculin (Blue-Striped)|Clauncher|Finneon|Frillish|Jellicent|Lumineon|Shellos|Shellos (East Sea)|">
+    <a href="route-127.html" class="has-map" style="--map-bg: url('../assets/maps/route-127.png');">Route 127</a>
+  </li>
+  <li data-search-text="Route 128 Route 128 Land Water Fishing "
+      data-species="|Alomomola|Basculin|Basculin (Blue-Striped)|Clauncher|Crabrawler|Frillish|Gastrodon|Gastrodon (East Sea)|Jellicent|Lumineon|Pyukumuku|Sandygast|Shellos|Shellos (East Sea)|">
+    <a href="route-128.html" class="has-map" style="--map-bg: url('../assets/maps/route-128.png');">Route 128</a>
+  </li>
+  <li data-search-text="Route 129 Route 129 Water Fishing Route 129 Cavern Land "
+      data-species="|Basculin|Basculin (Blue-Striped)|Clauncher|Finneon|Frillish|Jellicent|Lumineon|Noibat|Shellos|Shellos (East Sea)|Woobat|">
+    <a href="route-129.html" class="has-map" style="--map-bg: url('../assets/maps/route-129.png');">Route 129</a>
+  </li>
+  <li data-search-text="Ever Grande City Ever Grande City Water Fishing "
+      data-species="|Alomomola|Basculin|Basculin (Blue-Striped)|Clauncher|Frillish|Jellicent|Lumineon|Shellos|Shellos (East Sea)|">
+    <a href="ever-grande-city.html" class="has-map" style="--map-bg: url('../assets/maps/ever-grande-city.png');">Ever Grande City</a>
+  </li>
+  <li data-search-text="Victory Road Victory Road 1F Land Victory Road B1F Land Rock Smash Victory Road B2F Land Water Fishing "
+      data-species="|Axew|Basculin|Basculin (Red-Striped)|Bisharp|Boldore|Bronzong|Bronzor|Clauncher|Clawitzer|Fraxure|Gurdurr|Mienshao|Noibat|Noivern|Roggenrola|Swoobat|">
+    <a href="victory-road.html" class="has-map" style="--map-bg: url('../assets/maps/victory-road.png');">Victory Road</a>
+  </li>
+  <li data-search-text="Route 130 Route 130 Land Water Fishing "
+      data-species="|Basculin|Basculin (Blue-Striped)|Chimchar|Clauncher|Finneon|Frillish|Jellicent|Lumineon|Panpour|Pansage|Pansear|Piplup|Shellos|Shellos (East Sea)|Turtwig|">
+    <a href="route-130.html" class="has-map" style="--map-bg: url('../assets/maps/route-130.png');">Route 130</a>
+  </li>
+  <li data-search-text="Route 131 Route 131 Water Fishing "
+      data-species="|Basculin|Basculin (Blue-Striped)|Clauncher|Finneon|Frillish|Jellicent|Lumineon|Shellos|Shellos (East Sea)|">
+    <a href="route-131.html" class="has-map" style="--map-bg: url('../assets/maps/route-131.png');">Route 131</a>
+  </li>
+  <li data-search-text="Pacifidlog Town Pacifidlog Town Water Fishing "
+      data-species="|Basculin|Basculin (Blue-Striped)|Clauncher|Finneon|Frillish|Jellicent|Lumineon|Shellos|Shellos (East Sea)|">
+    <a href="pacifidlog-town.html" class="has-map" style="--map-bg: url('../assets/maps/pacifidlog-town.png');">Pacifidlog Town</a>
+  </li>
+  <li data-search-text="Sky Pillar Sky Pillar 1F Land Sky Pillar 3F Land Sky Pillar 5F Land "
+      data-species="|Cofagrigus|Noivern|Pawniard|Sigilyph|Yamask|">
+    <a href="sky-pillar.html" class="has-map" style="--map-bg: url('../assets/maps/sky-pillar.png');">Sky Pillar</a>
+  </li>
+  <li data-search-text="Route 132 Route 132 Water Fishing "
+      data-species="|Basculin|Basculin (Blue-Striped)|Clauncher|Finneon|Frillish|Jellicent|Lumineon|Shellos|Shellos (East Sea)|">
+    <a href="route-132.html" class="has-map" style="--map-bg: url('../assets/maps/route-132.png');">Route 132</a>
+  </li>
+  <li data-search-text="Route 133 Route 133 Water Fishing "
+      data-species="|Basculin|Basculin (Blue-Striped)|Clauncher|Finneon|Frillish|Jellicent|Shellos|Shellos (East Sea)|Skrelp|">
+    <a href="route-133.html" class="has-map" style="--map-bg: url('../assets/maps/route-133.png');">Route 133</a>
+  </li>
+  <li data-search-text="Route 134 Route 134 Water Fishing "
+      data-species="|Basculin|Basculin (Blue-Striped)|Clauncher|Finneon|Frillish|Jellicent|Lumineon|Skrelp|">
+    <a href="route-134.html" class="has-map" style="--map-bg: url('../assets/maps/route-134.png');">Route 134</a>
+  </li>
+  <li data-search-text="Artisan Cave Artisan Cave 1F Land Artisan Cave B1F Land "
+      data-species="|Smeargle|">
+    <a href="artisan-cave.html" class="has-map" style="--map-bg: url('../assets/maps/artisan-cave.png');">Artisan Cave</a>
+  </li>
+</ul>
+<p id="encounters-empty" class="filter-empty" style="display:none;">No encounter areas match that search.</p>
+<script>
+  obstagoonBindIndexPage({
+    stateKey: 'encounters',
+    inputId: 'encounters-search', dropdownId: 'encounters-suggestions',
+    chipsBoxId: 'encounters-chips', emptyId: 'encounters-empty', countId: 'encounters-count',
+    rowsSelector: '#encounter-list > li',
+    haystackByKind: {'Pokémon': 'species'},
+    sources: [['Pokémon', ["Alomomola", "Araquanid", "Audino", "Axew", "Basculin", "Basculin (Blue-Striped)", "Basculin (Red-Striped)", "Basculin (White-Striped)", "Bergmite", "Bidoof", "Binacle", "Bisharp", "Blitzle", "Boldore", "Bouffalant", "Bounsweet", "Braviary", "Bronzong", "Bronzor", "Bruxish", "Budew", "Buizel", "Buneary", "Bunnelby", "Burmy", "Burmy (Plant Cloak)", "Carbink", "Carnivine", "Charjabug", "Chatot", "Cherubi", "Chespin", "Chimchar", "Clauncher", "Clawitzer", "Cofagrigus", "Combee", "Comfey", "Cottonee", "Crabrawler", "Croagunk", "Crustle", "Crustle (Rock Face)", "Cryogonal", "Cubchoo", "Cutiefly", "Darumaka", "Darumaka (Galarian)", "Dedenne", "Deerling", "Deerling (Spring)", "Deino", "Dewpider", "Dhelmise", "Diggersby", "Diglett", "Diglett (Alolan)", "Ditto", "Drampa", "Drifloon", "Drilbur", "Druddigon", "Ducklett", "Dugtrio", "Dugtrio (Alolan)", "Durant", "Dwebble", "Eelektrik", "Elgyem", "Emolga", "Espurr", "Exeggutor", "Exeggutor (Alolan)", "Fennekin", "Ferroseed", "Finneon", "Flab\u00e9b\u00e9", "Flab\u00e9b\u00e9 (Blue Flower)", "Flab\u00e9b\u00e9 (Orange Flower)", "Flab\u00e9b\u00e9 (Red Flower)", "Flab\u00e9b\u00e9 (White Flower)", "Flab\u00e9b\u00e9 (Yellow Flower)", "Fletchinder", "Fletchling", "Fomantis", "Foongus", "Fraxure", "Frillish", "Froakie", "Frogadier", "Furfrou", "Furfrou (Dandy Trim)", "Furfrou (Debutante Trim)", "Furfrou (Diamond Trim)", "Furfrou (Heart Trim)", "Furfrou (Kabuki Trim)", "Furfrou (La Reine Trim)", "Furfrou (Matron Trim)", "Furfrou (Pharaoh Trim)", "Furfrou (Star Trim)", "Gastrodon", "Gastrodon (East Sea)", "Geodude", "Geodude (Alolan)", "Gible", "Glameow", "Gogoat", "Golett", "Goomy", "Gothita", "Graveler", "Graveler (Alolan)", "Grimer", "Grimer (Alolan)", "Grubbin", "Gurdurr", "Hawlucha", "Heatmor", "Helioptile", "Herdier", "Hippopotas", "Honedge", "Inkay", "Jangmo-o", "Jellicent", "Joltik", "Karrablast", "Klefki", "Klink", "Komala", "Kricketot", "Lampent", "Lillipup", "Litleo", "Litwick", "Loudred", "Lumineon", "Luxio", "Lycanroc", "Lycanroc (Midday)", "Maractus", "Mareanie", "Marowak", "Marowak (Alolan)", "Meowth", "Meowth (Alolan)", "Mienfoo", "Mienshao", "Mimikyu", "Mimikyu (Disguised)", "Minccino", "Minior", "Minior (Blue Core)", "Minior (Green Core)", "Minior (Indigo Core)", "Minior (Orange Core)", "Minior (Red Core)", "Minior (Violet Core)", "Minior (Yellow Core)", "Morelull", "Mudbray", "Munna", "Noibat", "Noivern", "Oranguru", "Oricorio", "Oricorio (Baile Style)", "Oricorio (Pa\u0027u Style)", "Oricorio (Pom-Pom Style)", "Oricorio (Sensu Style)", "Oshawott", "Pachirisu", "Palpitoad", "Pancham", "Panpour", "Pansage", "Pansear", "Passimian", "Patrat", "Pawniard", "Petilil", "Phantump", "Pidove", "Piplup", "Pumpkaboo", "Pumpkaboo (Average Size)", "Pumpkaboo (Large Size)", "Pumpkaboo (Small Size)", "Pumpkaboo (Super Size)", "Purrloin", "Pyroar", "Pyukumuku", "Raichu", "Raichu (Alolan)", "Raticate", "Raticate (Alolan)", "Rattata", "Rattata (Alolan)", "Riolu", "Rockruff", "Rockruff (Own Tempo)", "Roggenrola", "Rufflet", "Salandit", "Sandile", "Sandshrew", "Sandshrew (Alolan)", "Sandygast", "Sawk", "Scatterbug", "Scatterbug (Archipelago Pattern)", "Scatterbug (Continental Pattern)", "Scatterbug (Elegant Pattern)", "Scatterbug (Fancy Pattern)", "Scatterbug (Garden Pattern)", "Scatterbug (High Plains Pattern)", "Scatterbug (Icy Snow Pattern)", "Scatterbug (Jungle Pattern)", "Scatterbug (Marine Pattern)", "Scatterbug (Meadow Pattern)", "Scatterbug (Modern Pattern)", "Scatterbug (Monsoon Pattern)", "Scatterbug (Ocean Pattern)", "Scatterbug (Pok\u00e9 Ball Pattern)", "Scatterbug (Polar Pattern)", "Scatterbug (River Pattern)", "Scatterbug (Sandstorm Pattern)", "Scatterbug (Savanna Pattern)", "Scatterbug (Sun Pattern)", "Scatterbug (Tundra Pattern)", "Scraggy", "Sewaddle", "Shellos", "Shellos (East Sea)", "Shellos (West Sea)", "Shelmet", "Shinx", "Sigilyph", "Skiddo", "Skorupi", "Skrelp", "Skuntank", "Smeargle", "Snivy", "Snover", "Solosis", "Spewpa", "Spewpa (Archipelago Pattern)", "Spewpa (Continental Pattern)", "Spewpa (Elegant Pattern)", "Spewpa (Garden Pattern)", "Spewpa (High Plains Pattern)", "Spewpa (Icy Snow Pattern)", "Spewpa (Jungle Pattern)", "Spewpa (Marine Pattern)", "Spewpa (Meadow Pattern)", "Spewpa (Modern Pattern)", "Spewpa (Monsoon Pattern)", "Spewpa (Ocean Pattern)", "Spewpa (Pok\u00e9 Ball Pattern)", "Spewpa (Polar Pattern)", "Spewpa (River Pattern)", "Spewpa (Sandstorm Pattern)", "Spewpa (Savanna Pattern)", "Spewpa (Sun Pattern)", "Spewpa (Tundra Pattern)", "Spiritomb", "Spritzee", "Staravia", "Starly", "Stufful", "Stunfisk", "Stunfisk (Galarian)", "Stunky", "Swirlix", "Swoobat", "Tepig", "Throh", "Timburr", "Togedemaru", "Toucannon", "Toxapex", "Tranquill", "Trubbish", "Trumbeak", "Turtonator", "Turtwig", "Tympole", "Tynamo", "Vanillish", "Vanillite", "Venipede", "Vullaby", "Vulpix", "Vulpix (Alolan)", "Watchog", "Whirlipede", "Whismur", "Wimpod", "Wishiwashi", "Wishiwashi (Solo)", "Woobat", "Yamask", "Yamask (Galarian)", "Yungoos", "Zebstrika", "Zorua", "Zorua (Hisuian)"]]],
+  });
+</script>
+  </main>
+  <script>
+    function obstagoonBindFilters() {
+      const inputs = document.querySelectorAll('[data-filter-input]');
+      inputs.forEach((input) => {
+        const selector = input.getAttribute('data-filter-target');
+        const emptyTextSelector = input.getAttribute('data-filter-empty');
+        const countSelector = input.getAttribute('data-filter-count');
+        const items = Array.from(document.querySelectorAll(selector || ''));
+        const emptyNode = emptyTextSelector ? document.querySelector(emptyTextSelector) : null;
+        const countNode = countSelector ? document.querySelector(countSelector) : null;
+        const stateKey = input.id || selector || '';
+        const apply = () => {
+          const query = obstagoonNormalize(input.value);
+          let visible = 0;
+          items.forEach((item) => {
+            const haystack = obstagoonNormalize(item.getAttribute('data-search-text') || item.textContent || '');
+            const match = !query || haystack.includes(query);
+            item.classList.toggle('filter-hidden', !match);
+            if (match) visible += 1;
+          });
+          if (emptyNode) emptyNode.style.display = visible === 0 ? '' : 'none';
+          if (countNode) countNode.textContent = visible;
+          if (stateKey) obstagoonSaveState(stateKey, {search: input.value});
+        };
+        if (stateKey) {
+          const saved = obstagoonLoadState(stateKey);
+          if (saved.search) input.value = saved.search;
+        }
+        input.addEventListener('input', apply);
+        apply();
+      });
+    }
+    function obstagoonBindRowLinks() {
+      // Elements with data-href behave as buttons: clicking anywhere navigates,
+      // except clicks on nested links/buttons which retain their own behavior
+      // (e.g. ability links inside a pokedex row stay individually clickable).
+      document.querySelectorAll('tr[data-href], li[data-href]').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('a, button')) return;
+          window.location = row.getAttribute('data-href');
+        });
+      });
+    }
+    function obstagoonBindLinkedHotspots() {
+      // Mirror hover between encounter-map hotspots and the section's link-grid
+      // tile by matching href. Hovering one outlines the other so it's clear
+      // which spot on the map corresponds to which list entry.
+      const partners = new Map();
+      document.querySelectorAll('.region-map a[href], .link-grid > li > a[href]').forEach((a) => {
+        const key = a.getAttribute('href');
+        if (!partners.has(key)) partners.set(key, []);
+        partners.get(key).push(a);
+      });
+      partners.forEach((group) => {
+        if (group.length < 2) return;
+        group.forEach((el) => {
+          el.addEventListener('mouseenter', () => group.forEach((other) => { if (other !== el) other.classList.add('linked-hover'); }));
+          el.addEventListener('mouseleave', () => group.forEach((other) => other.classList.remove('linked-hover')));
+        });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+    } else {
+      obstagoonBindFilters();
+      obstagoonBindRowLinks();
+      obstagoonBindLinkedHotspots();
+    }
+  </script>
+</body>
+</html>
