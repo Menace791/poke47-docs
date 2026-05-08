@@ -6,13 +6,10 @@
   <title>X Defense - pokeemerald-expansion</title>
   <link rel="stylesheet" href="../assets/style.css">
   <script>
-    // Lowercase, strip diacritics (é→e), and drop non-alphanumerics so a query
-    // like "basculinwhitestriped" still matches "Basculin (White-Striped)".
-    // Defined in <head> so per-page IIFEs in the content can call it.
+    // Casefold + diacritic-strip + non-alphanumeric strip so "basculinwhitestriped" matches "Basculin (White-Striped)".
     window.obstagoonNormalize = (s) => (s || '').toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
-    // Per-tab index state (search, chips, sort) restored on back/forward and
-    // reload only — fresh clicks of nav links start clean.
+    // Per-tab index state restored on back/forward + reload, not on fresh nav-link clicks.
     window.obstagoonShouldRestoreState = () => {
       const nav = performance.getEntriesByType('navigation')[0];
       return !!(nav && (nav.type === 'back_forward' || nav.type === 'reload'));
@@ -27,11 +24,7 @@
       try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
       catch (e) {}
     };
-    // Shared search+chips+sort filter binding for index pages. Each page
-    // passes its element ids, a haystack-by-chip-kind map (for filtering),
-    // suggestion sources, and optionally a table selector to enable
-    // click-to-sort. State persists in sessionStorage under stateKey. Defined
-    // in <head> so per-page IIFEs in the content can call it.
+    // Shared search+chips+sort binding for index pages; opts carry the per-page ids and source lists.
     window.obstagoonBindIndexPage = (opts) => {
       const input = document.getElementById(opts.inputId);
       const dropdown = document.getElementById(opts.dropdownId);
@@ -54,22 +47,56 @@
         ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
       });
 
+      const formCellTargets = ['spriteHtml', 'nameHtml', 'typesHtml', 'abilitiesHtml'];
+      const formMatchesChips = (form) => chips.every((c) => {
+        const list = form[haystackByKind[c.kind]];
+        return Array.isArray(list) && list.includes(c.name);
+      });
       const applyFilters = () => {
         const q = obstagoonNormalize(input.value);
         let visible = 0;
         rows.forEach((el) => {
           const text = obstagoonNormalize(el.dataset.searchText || '');
           let show = !q || text.includes(q);
-          if (show) for (const c of chips) {
-            const haystack = el.dataset[haystackByKind[c.kind]];
-            if (!haystack || !haystack.includes(`|${c.name}|`)) { show = false; break; }
+          let target = null;
+          if (show && chips.length) {
+            if (el.dataset.forms) {
+              const forms = JSON.parse(el.dataset.forms);
+              target = formMatchesChips(forms[0]) ? forms[0] : forms.find(formMatchesChips) || null;
+              show = !!target;
+            } else {
+              for (const c of chips) {
+                const haystack = el.dataset[haystackByKind[c.kind]];
+                if (!haystack || !haystack.includes(`|${c.name}|`)) { show = false; break; }
+              }
+            }
           }
           el.classList.toggle('filter-hidden', !show);
           if (show) visible += 1;
+          if (show && el.dataset.forms) applyFormSwap(el, target);
         });
         if (empty) empty.style.display = visible === 0 ? '' : 'none';
         if (countEl) countEl.textContent = visible;
         persist();
+      };
+      const applyFormSwap = (el, target) => {
+        const forms = JSON.parse(el.dataset.forms);
+        if (!target) target = forms[0];
+        if (el._activeFormSlug === target.slug) return;
+        if (el._activeFormSlug === undefined) {
+          const cells = el.querySelectorAll('td');
+          el._origCells = [cells[1].innerHTML, cells[2].innerHTML, cells[3].innerHTML, cells[4].innerHTML];
+          el._origHref = el.dataset.href;
+        }
+        const cells = el.querySelectorAll('td');
+        if (target === forms[0]) {
+          [cells[1].innerHTML, cells[2].innerHTML, cells[3].innerHTML, cells[4].innerHTML] = el._origCells;
+          el.dataset.href = el._origHref;
+        } else {
+          formCellTargets.forEach((key, i) => { cells[i + 1].innerHTML = target[key]; });
+          el.dataset.href = target.slug + '.html';
+        }
+        el._activeFormSlug = target.slug;
       };
       const renderChips = () => {
         chipsBox.innerHTML = chips.map((c, i) =>
@@ -79,26 +106,47 @@
           chips.splice(parseInt(btn.dataset.idx, 10), 1); renderChips(); applyFilters();
         }));
       };
+      let activeIdx = -1;
+      const setActiveIdx = (i) => {
+        const items = dropdown.querySelectorAll('.suggestion');
+        if (!items.length) return;
+        activeIdx = (i + items.length) % items.length;
+        items.forEach((b, j) => b.classList.toggle('is-active', j === activeIdx));
+        items[activeIdx].scrollIntoView({block: 'nearest'});
+      };
+      const acceptSuggestion = (btn) => {
+        chips.push({kind: btn.dataset.kind, name: btn.dataset.name});
+        input.value = ''; dropdown.hidden = true; activeIdx = -1; renderChips(); applyFilters();
+      };
       const renderSuggestions = () => {
         const q = obstagoonNormalize(input.value);
-        if (q.length < 3) { dropdown.hidden = true; return; }
+        if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
         for (const [kind, list] of sources) {
           for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
         }
-        if (matches.length === 0) { dropdown.hidden = true; return; }
+        if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
           `<button type="button" class="suggestion" data-kind="${m.kind}" data-name="${esc(m.name)}"><span class="suggestion-kind">${m.kind}</span> ${esc(m.name)}</button>`
         ).join('');
         dropdown.hidden = false;
-        dropdown.querySelectorAll('.suggestion').forEach((btn) => btn.addEventListener('click', () => {
-          chips.push({kind: btn.dataset.kind, name: btn.dataset.name});
-          input.value = ''; dropdown.hidden = true; renderChips(); applyFilters();
-        }));
+        activeIdx = -1;
+        dropdown.querySelectorAll('.suggestion').forEach((btn) => btn.addEventListener('click', () => acceptSuggestion(btn)));
       };
       input.addEventListener('input', () => { renderSuggestions(); applyFilters(); });
       input.addEventListener('focus', renderSuggestions);
+      input.addEventListener('keydown', (e) => {
+        if (dropdown.hidden) return;
+        const items = dropdown.querySelectorAll('.suggestion');
+        if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(activeIdx + 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(activeIdx <= 0 ? items.length - 1 : activeIdx - 1); }
+        else if (e.key === 'Enter' && activeIdx >= 0) {
+          e.preventDefault();
+          acceptSuggestion(items[activeIdx]);
+        }
+        else if (e.key === 'Escape') { dropdown.hidden = true; activeIdx = -1; }
+      });
       document.addEventListener('click', (e) => { if (!dropdown.contains(e.target) && e.target !== input) dropdown.hidden = true; });
       renderChips();
       applyFilters();
@@ -213,9 +261,7 @@
       });
     }
     function obstagoonBindRowLinks() {
-      // Elements with data-href behave as buttons: clicking anywhere navigates,
-      // except clicks on nested links/buttons which retain their own behavior
-      // (e.g. ability links inside a pokedex row stay individually clickable).
+      // data-href rows act as buttons; nested <a>/<button> keep their own click semantics.
       document.querySelectorAll('tr[data-href], li[data-href]').forEach((row) => {
         row.addEventListener('click', (e) => {
           if (e.target.closest('a, button')) return;
@@ -224,9 +270,7 @@
       });
     }
     function obstagoonBindLinkedHotspots() {
-      // Mirror hover between encounter-map hotspots and the section's link-grid
-      // tile by matching href. Hovering one outlines the other so it's clear
-      // which spot on the map corresponds to which list entry.
+      // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
       document.querySelectorAll('.region-map a[href], .link-grid > li > a[href]').forEach((a) => {
         const key = a.getAttribute('href');
