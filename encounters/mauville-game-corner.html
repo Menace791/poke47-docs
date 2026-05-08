@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mauville Game Corner - Poké47</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script>
+    // Casefold + diacritic-strip + non-alphanumeric strip so "basculinwhitestriped" matches "Basculin (White-Striped)".
+    window.obstagoonNormalize = (s) => (s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+    // Per-tab index state restored on back/forward + reload, not on fresh nav-link clicks.
+    window.obstagoonShouldRestoreState = () => {
+      const nav = performance.getEntriesByType('navigation')[0];
+      return !!(nav && (nav.type === 'back_forward' || nav.type === 'reload'));
+    };
+    window.obstagoonLoadState = (key) => {
+      if (!obstagoonShouldRestoreState()) return {};
+      try { return JSON.parse(sessionStorage.getItem('obstagoon:' + key) || '{}'); }
+      catch (e) { return {}; }
+    };
+    window.obstagoonSaveState = (key, state) => {
+      // Private browsing / quota-exceeded throws; degrade silently.
+      try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
+      catch (e) {}
+    };
+    // Shared search+chips+sort binding for index pages; opts carry the per-page ids and source lists.
+    window.obstagoonBindIndexPage = (opts) => {
+      const input = document.getElementById(opts.inputId);
+      const dropdown = document.getElementById(opts.dropdownId);
+      const chipsBox = document.getElementById(opts.chipsBoxId);
+      const empty = opts.emptyId ? document.getElementById(opts.emptyId) : null;
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      const rows = Array.from(document.querySelectorAll(opts.rowsSelector));
+      const haystackByKind = opts.haystackByKind || {};
+      const sources = opts.sources || [];
+      const defaultKind = opts.defaultKind || null;
+      const saved = obstagoonLoadState(opts.stateKey);
+      const chips = (Array.isArray(saved.chips) ? saved.chips : [])
+        .map((c) => c.kind ? c : {kind: defaultKind || 'Pokémon', name: c.name});
+      if (saved.search) input.value = saved.search;
+      let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
+      let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : 'asc';
+      const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const persist = () => obstagoonSaveState(opts.stateKey, {
+        search: input.value, chips,
+        ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
+      });
+
+      const formCellTargets = ['spriteHtml', 'nameHtml', 'typesHtml', 'abilitiesHtml'];
+      const formMatchesChips = (form) => chips.every((c) => {
+        const list = form[haystackByKind[c.kind]];
+        return Array.isArray(list) && list.includes(c.name);
+      });
+      const applyFilters = () => {
+        const q = obstagoonNormalize(input.value);
+        let visible = 0;
+        rows.forEach((el) => {
+          const text = obstagoonNormalize(el.dataset.searchText || '');
+          let show = !q || text.includes(q);
+          let target = null;
+          if (show && chips.length) {
+            if (el.dataset.forms) {
+              const forms = JSON.parse(el.dataset.forms);
+              target = formMatchesChips(forms[0]) ? forms[0] : forms.find(formMatchesChips) || null;
+              show = !!target;
+            } else {
+              for (const c of chips) {
+                const haystack = el.dataset[haystackByKind[c.kind]];
+                if (!haystack || !haystack.includes(`|${c.name}|`)) { show = false; break; }
+              }
+            }
+          }
+          el.classList.toggle('filter-hidden', !show);
+          if (show) visible += 1;
+          if (show && el.dataset.forms) applyFormSwap(el, target);
+        });
+        if (empty) empty.style.display = visible === 0 ? '' : 'none';
+        if (countEl) countEl.textContent = visible;
+        persist();
+      };
+      const applyFormSwap = (el, target) => {
+        const forms = JSON.parse(el.dataset.forms);
+        if (!target) target = forms[0];
+        if (el._activeFormSlug === target.slug) return;
+        if (el._activeFormSlug === undefined) {
+          const cells = el.querySelectorAll('td');
+          el._origCells = [cells[1].innerHTML, cells[2].innerHTML, cells[3].innerHTML, cells[4].innerHTML];
+          el._origHref = el.dataset.href;
+        }
+        const cells = el.querySelectorAll('td');
+        if (target === forms[0]) {
+          [cells[1].innerHTML, cells[2].innerHTML, cells[3].innerHTML, cells[4].innerHTML] = el._origCells;
+          el.dataset.href = el._origHref;
+        } else {
+          formCellTargets.forEach((key, i) => { cells[i + 1].innerHTML = target[key]; });
+          el.dataset.href = target.slug + '.html';
+        }
+        el._activeFormSlug = target.slug;
+      };
+      const renderChips = () => {
+        chipsBox.innerHTML = chips.map((c, i) =>
+          `<span class="filter-chip"><span class="chip-kind">${c.kind}</span> ${esc(c.name)}<button type="button" class="chip-remove" data-idx="${i}" aria-label="Remove">×</button></span>`
+        ).join('');
+        chipsBox.querySelectorAll('.chip-remove').forEach((btn) => btn.addEventListener('click', () => {
+          chips.splice(parseInt(btn.dataset.idx, 10), 1); renderChips(); applyFilters();
+        }));
+      };
+      let activeIdx = -1;
+      const setActiveIdx = (i) => {
+        const items = dropdown.querySelectorAll('.suggestion');
+        if (!items.length) return;
+        activeIdx = (i + items.length) % items.length;
+        items.forEach((b, j) => b.classList.toggle('is-active', j === activeIdx));
+        items[activeIdx].scrollIntoView({block: 'nearest'});
+      };
+      const acceptSuggestion = (btn) => {
+        chips.push({kind: btn.dataset.kind, name: btn.dataset.name});
+        input.value = ''; dropdown.hidden = true; activeIdx = -1; renderChips(); applyFilters();
+      };
+      const renderSuggestions = () => {
+        const q = obstagoonNormalize(input.value);
+        if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
+        const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
+        const matches = [];
+        for (const [kind, list] of sources) {
+          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+        }
+        if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
+        dropdown.innerHTML = matches.slice(0, 30).map((m) =>
+          `<button type="button" class="suggestion" data-kind="${m.kind}" data-name="${esc(m.name)}"><span class="suggestion-kind">${m.kind}</span> ${esc(m.name)}</button>`
+        ).join('');
+        dropdown.hidden = false;
+        activeIdx = -1;
+        dropdown.querySelectorAll('.suggestion').forEach((btn) => btn.addEventListener('click', () => acceptSuggestion(btn)));
+      };
+      input.addEventListener('input', () => { renderSuggestions(); applyFilters(); });
+      input.addEventListener('focus', renderSuggestions);
+      input.addEventListener('keydown', (e) => {
+        if (dropdown.hidden) return;
+        const items = dropdown.querySelectorAll('.suggestion');
+        if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(activeIdx + 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(activeIdx <= 0 ? items.length - 1 : activeIdx - 1); }
+        else if (e.key === 'Enter' && activeIdx >= 0) {
+          e.preventDefault();
+          acceptSuggestion(items[activeIdx]);
+        }
+        else if (e.key === 'Escape') { dropdown.hidden = true; activeIdx = -1; }
+      });
+      document.addEventListener('click', (e) => { if (!dropdown.contains(e.target) && e.target !== input) dropdown.hidden = true; });
+      renderChips();
+      applyFilters();
+
+      if (opts.tableSelector) {
+        const tbody = document.querySelector(opts.tableSelector + ' tbody');
+        const headers = Array.from(document.querySelectorAll(opts.tableSelector + ' thead th'));
+        const original = Array.from(tbody.querySelectorAll('tr'));
+        const cellValue = (tr, i, kind) => {
+          const text = tr.cells[i].textContent.trim();
+          if (kind === 'number') { const n = parseFloat(text); return isNaN(n) ? -Infinity : n; }
+          return text.toLowerCase();
+        };
+        const applySort = () => {
+          headers.forEach((h, j) => {
+            h.classList.toggle('sort-asc', activeDir === 'asc' && j === activeCol);
+            h.classList.toggle('sort-desc', activeDir === 'desc' && j === activeCol);
+          });
+          if (!activeDir) { original.forEach((tr) => tbody.appendChild(tr)); return; }
+          const kind = headers[activeCol]?.dataset.sort || 'text';
+          const sign = activeDir === 'asc' ? 1 : -1;
+          [...original].sort((a, b) => {
+            const av = cellValue(a, activeCol, kind), bv = cellValue(b, activeCol, kind);
+            return av < bv ? -sign : av > bv ? sign : 0;
+          }).forEach((tr) => tbody.appendChild(tr));
+        };
+        headers.forEach((th, i) => {
+          if (!th.dataset.sort) return;
+          th.classList.add('sortable');
+          th.addEventListener('click', () => {
+            activeDir = i !== activeCol ? 'asc' : activeDir === 'asc' ? 'desc' : activeDir === 'desc' ? '' : 'asc';
+            activeCol = activeDir ? i : -1;
+            applySort();
+            persist();
+          });
+        });
+        applySort();
+      }
+    };
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../index.html">Poké47</a>
+      <nav>
+        <a href="../pokedex/index.html">Pokédex</a>
+        <a href="../moves/index.html">Moves</a>
+        <a href="../abilities/index.html">Abilities</a>
+        <a href="../forms/index.html">Forms</a>
+        <a href="../encounters/index.html">Encounters</a>
+        <a href="../itemdex/index.html">Itemdex</a>
+        <a href="../trainerdex/index.html">Trainers</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+<p class="muted"><a href="index.html">&larr; All encounters</a></p>
+<h1>Mauville Game Corner</h1>
+<section class="card encounter-block">
+    <h3>Gacha</h3>
+          <h4>Basic Gacha</h4>
+      <ul>
+<li>    <a href="../pokedex/starly.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/starly/anim_front.png" alt="Starly" class="encounter-sprite"><span>Starly</span>
+    </a> Lv. 15-30 Rate: 6.2%</li><li>    <a href="../pokedex/lillipup.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/lillipup/anim_front.png" alt="Lillipup" class="encounter-sprite"><span>Lillipup</span>
+    </a> Lv. 15-30 Rate: 6.2%</li><li>    <a href="../pokedex/woobat.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/woobat/anim_front.png" alt="Woobat" class="encounter-sprite"><span>Woobat</span>
+    </a> Lv. 15-30 Rate: 6.2%</li><li>    <a href="../pokedex/cottonee.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/cottonee/anim_front.png" alt="Cottonee" class="encounter-sprite"><span>Cottonee</span>
+    </a> Lv. 15-30 Rate: 6.2%</li><li>    <a href="../pokedex/petilil.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/petilil/anim_front.png" alt="Petilil" class="encounter-sprite"><span>Petilil</span>
+    </a> Lv. 15-30 Rate: 6.2%</li><li>    <a href="../pokedex/scatterbug.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/scatterbug/anim_front.png" alt="Scatterbug Pokeball" class="encounter-sprite"><span>Scatterbug (Poké Ball Pattern)</span>
+    </a> Lv. 15-30 Rate: 6.2%</li><li>    <a href="../pokedex/swirlix.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/swirlix/anim_front.png" alt="Swirlix" class="encounter-sprite"><span>Swirlix</span>
+    </a> Lv. 15-30 Rate: 6.2%</li><li>    <a href="../pokedex/pumpkaboo-super.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/pumpkaboo/super/anim_front.png" alt="Pumpkaboo Super" class="encounter-sprite"><span>Pumpkaboo (Super Size)</span>
+    </a> Lv. 15-30 Rate: 6.2%</li><li>    <a href="../pokedex/budew.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/budew/anim_front.png" alt="Budew" class="encounter-sprite"><span>Budew</span>
+    </a> Lv. 15-30 Rate: 4.3%</li><li>    <a href="../pokedex/buneary.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/buneary/anim_front.png" alt="Buneary" class="encounter-sprite"><span>Buneary</span>
+    </a> Lv. 15-30 Rate: 4.3%</li><li>    <a href="../pokedex/munna.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/munna/anim_front.png" alt="Munna" class="encounter-sprite"><span>Munna</span>
+    </a> Lv. 15-30 Rate: 4.3%</li><li>    <a href="../pokedex/sewaddle.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/sewaddle/anim_front.png" alt="Sewaddle" class="encounter-sprite"><span>Sewaddle</span>
+    </a> Lv. 15-30 Rate: 4.3%</li><li>    <a href="../pokedex/minccino.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/minccino/anim_front.png" alt="Minccino" class="encounter-sprite"><span>Minccino</span>
+    </a> Lv. 15-30 Rate: 4.3%</li><li>    <a href="../pokedex/grubbin.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/grubbin/anim_front.png" alt="Grubbin" class="encounter-sprite"><span>Grubbin</span>
+    </a> Lv. 15-30 Rate: 4.3%</li><li>    <a href="../pokedex/stufful.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/stufful/anim_front.png" alt="Stufful" class="encounter-sprite"><span>Stufful</span>
+    </a> Lv. 15-30 Rate: 4.3%</li><li>    <a href="../pokedex/shinx.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/shinx/anim_front.png" alt="Shinx" class="encounter-sprite"><span>Shinx</span>
+    </a> Lv. 15-30 Rate: 2.1%</li><li>    <a href="../pokedex/chatot.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/chatot/anim_front.png" alt="Chatot" class="encounter-sprite"><span>Chatot</span>
+    </a> Lv. 15-30 Rate: 2.1%</li><li>    <a href="../pokedex/gible.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/gible/anim_front.png" alt="Gible" class="encounter-sprite"><span>Gible</span>
+    </a> Lv. 15-30 Rate: 2.1%</li><li>    <a href="../pokedex/riolu.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/riolu/anim_front.png" alt="Riolu" class="encounter-sprite"><span>Riolu</span>
+    </a> Lv. 15-30 Rate: 2.1%</li><li>    <a href="../pokedex/flabebe.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/flabebe/anim_front.png" alt="Flabebe Red" class="encounter-sprite"><span>Flabébé (Red Flower)</span>
+    </a> Lv. 15-30 Rate: 2.1%</li><li>    <a href="../pokedex/honedge.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/honedge/anim_front.png" alt="Honedge" class="encounter-sprite"><span>Honedge</span>
+    </a> Lv. 15-30 Rate: 2.1%</li><li>    <a href="../pokedex/oricorio-pom-pom.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/oricorio/pom_pom/front.png" alt="Oricorio Pom Pom" class="encounter-sprite"><span>Oricorio (Pom-Pom Style)</span>
+    </a> Lv. 15-30 Rate: 2.1%</li><li>    <a href="../pokedex/audino.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/audino/anim_front.png" alt="Audino" class="encounter-sprite"><span>Audino</span>
+    </a> Lv. 15-30 Rate: 1%</li><li>    <a href="../pokedex/pyukumuku.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/pyukumuku/anim_front.png" alt="Pyukumuku" class="encounter-sprite"><span>Pyukumuku</span>
+    </a> Lv. 15-30 Rate: 1%</li><li>    <a href="../pokedex/turtonator.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/turtonator/anim_front.png" alt="Turtonator" class="encounter-sprite"><span>Turtonator</span>
+    </a> Lv. 15-30 Rate: 1%</li><li>    <a href="../pokedex/meltan.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/meltan/front.png" alt="Meltan" class="encounter-sprite"><span>Meltan</span>
+    </a> Lv. 15-30 Rate: 1%</li>      </ul>
+      <h4>Great Gacha</h4>
+      <ul>
+<li>    <a href="../pokedex/pikachu.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/pikachu/anim_front.png" alt="Pikachu" class="encounter-sprite"><span>Pikachu</span>
+    </a> Lv. 15-30 Rate: 0.8%</li><li>    <a href="../pokedex/sandslash.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/sandslash/anim_front.png" alt="Sandslash" class="encounter-sprite"><span>Sandslash</span>
+    </a> Lv. 15-30 Rate: 0.8%</li><li>    <a href="../pokedex/persian.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/persian/anim_front.png" alt="Persian" class="encounter-sprite"><span>Persian</span>
+    </a> Lv. 15-30 Rate: 0.8%</li><li>    <a href="../pokedex/graveler.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/graveler/anim_front.png" alt="Graveler" class="encounter-sprite"><span>Graveler</span>
+    </a> Lv. 15-30 Rate: 0.8%</li><li>    <a href="../pokedex/grimer.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/grimer/anim_front.png" alt="Grimer" class="encounter-sprite"><span>Grimer</span>
+    </a> Lv. 15-30 Rate: 0.8%</li><li>    <a href="../pokedex/exeggcute.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/exeggcute/anim_front.png" alt="Exeggcute" class="encounter-sprite"><span>Exeggcute</span>
+    </a> Lv. 15-30 Rate: 0.8%</li><li>    <a href="../pokedex/nuzleaf.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/nuzleaf/anim_front.png" alt="Nuzleaf" class="encounter-sprite"><span>Nuzleaf</span>
+    </a> Lv. 15-30 Rate: 0.8%</li><li>    <a href="../pokedex/loudred.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/loudred/anim_front.png" alt="Loudred" class="encounter-sprite"><span>Loudred</span>
+    </a> Lv. 15-30 Rate: 0.8%</li><li>    <a href="../pokedex/raticate.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/raticate/anim_front.png" alt="Raticate" class="encounter-sprite"><span>Raticate</span>
+    </a> Lv. 15-30 Rate: 0.6%</li><li>    <a href="../pokedex/cubone.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/cubone/anim_front.png" alt="Cubone" class="encounter-sprite"><span>Cubone</span>
+    </a> Lv. 15-30 Rate: 0.6%</li><li>    <a href="../pokedex/delcatty.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/delcatty/anim_front.png" alt="Delcatty" class="encounter-sprite"><span>Delcatty</span>
+    </a> Lv. 15-30 Rate: 0.6%</li><li>    <a href="../pokedex/roselia.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/roselia/anim_front.png" alt="Roselia" class="encounter-sprite"><span>Roselia</span>
+    </a> Lv. 15-30 Rate: 0.6%</li><li>    <a href="../pokedex/dugtrio.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/dugtrio/anim_front.png" alt="Dugtrio" class="encounter-sprite"><span>Dugtrio</span>
+    </a> Lv. 15-30 Rate: 0.4%</li>      </ul>
+      <h4>Ultra Gacha</h4>
+      <ul>
+<li>    <a href="../pokedex/persian-alola.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/persian/alola/front.png" alt="Persian Alola" class="encounter-sprite"><span>Persian (Alolan)</span>
+    </a> Lv. 15-30 Rate: 50%</li><li>    <a href="../pokedex/muk.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/muk/anim_front.png" alt="Muk" class="encounter-sprite"><span>Muk</span>
+    </a> Lv. 15-30 Rate: 0.6%</li><li>    <a href="../pokedex/marowak.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/marowak/anim_front.png" alt="Marowak" class="encounter-sprite"><span>Marowak</span>
+    </a> Lv. 15-30 Rate: 0.6%</li><li>    <a href="../pokedex/shiftry.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/shiftry/anim_front.png" alt="Shiftry" class="encounter-sprite"><span>Shiftry</span>
+    </a> Lv. 15-30 Rate: 0.6%</li><li>    <a href="../pokedex/exploud.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/exploud/anim_front.png" alt="Exploud" class="encounter-sprite"><span>Exploud</span>
+    </a> Lv. 15-30 Rate: 0.6%</li><li>    <a href="../pokedex/ditto.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/ditto/anim_front.png" alt="Ditto" class="encounter-sprite"><span>Ditto</span>
+    </a> Lv. 15-30 Rate: 0.5%</li><li>    <a href="../pokedex/smeargle.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/smeargle/anim_front.png" alt="Smeargle" class="encounter-sprite"><span>Smeargle</span>
+    </a> Lv. 15-30 Rate: 0.2%</li>      </ul>
+      <h4>Master Gacha</h4>
+      <ul>
+<li>    <a href="../pokedex/meltan.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/meltan/front.png" alt="Meltan" class="encounter-sprite"><span>Meltan</span>
+    </a> Lv. 15-30 Rate: 24%</li><li>    <a href="../pokedex/drifloon.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/drifloon/anim_front.png" alt="Drifloon" class="encounter-sprite"><span>Drifloon</span>
+    </a> Lv. 15-30 Rate: 10%</li><li>    <a href="../pokedex/audino.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/audino/anim_front.png" alt="Audino" class="encounter-sprite"><span>Audino</span>
+    </a> Lv. 15-30 Rate: 10%</li><li>    <a href="../pokedex/vanillite.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/vanillite/anim_front.png" alt="Vanillite" class="encounter-sprite"><span>Vanillite</span>
+    </a> Lv. 15-30 Rate: 10%</li><li>    <a href="../pokedex/axew.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/axew/anim_front.png" alt="Axew" class="encounter-sprite"><span>Axew</span>
+    </a> Lv. 15-30 Rate: 10%</li><li>    <a href="../pokedex/cryogonal.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/cryogonal/anim_front.png" alt="Cryogonal" class="encounter-sprite"><span>Cryogonal</span>
+    </a> Lv. 15-30 Rate: 6%</li><li>    <a href="../pokedex/bouffalant.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/bouffalant/anim_front.png" alt="Bouffalant" class="encounter-sprite"><span>Bouffalant</span>
+    </a> Lv. 15-30 Rate: 6%</li><li>    <a href="../pokedex/comfey.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/comfey/front.png" alt="Comfey" class="encounter-sprite"><span>Comfey</span>
+    </a> Lv. 15-30 Rate: 6%</li><li>    <a href="../pokedex/komala.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/komala/front.png" alt="Komala" class="encounter-sprite"><span>Komala</span>
+    </a> Lv. 15-30 Rate: 6%</li><li>    <a href="../pokedex/marowak-alola.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/marowak/alola/front.png" alt="Marowak Alola" class="encounter-sprite"><span>Marowak (Alolan)</span>
+    </a> Lv. 15-30 Rate: 3%</li><li>    <a href="../pokedex/escavalier.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/escavalier/anim_front.png" alt="Escavalier" class="encounter-sprite"><span>Escavalier</span>
+    </a> Lv. 15-30 Rate: 3%</li><li>    <a href="../pokedex/accelgor.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/accelgor/anim_front.png" alt="Accelgor" class="encounter-sprite"><span>Accelgor</span>
+    </a> Lv. 15-30 Rate: 3%</li><li>    <a href="../pokedex/crabominable.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/crabominable/front.png" alt="Crabominable" class="encounter-sprite"><span>Crabominable</span>
+    </a> Lv. 15-30 Rate: 3%</li>      </ul>
+
+</section>
+  </main>
+  <script>
+    function obstagoonBindFilters() {
+      const inputs = document.querySelectorAll('[data-filter-input]');
+      inputs.forEach((input) => {
+        const selector = input.getAttribute('data-filter-target');
+        const emptyTextSelector = input.getAttribute('data-filter-empty');
+        const countSelector = input.getAttribute('data-filter-count');
+        const items = Array.from(document.querySelectorAll(selector || ''));
+        const emptyNode = emptyTextSelector ? document.querySelector(emptyTextSelector) : null;
+        const countNode = countSelector ? document.querySelector(countSelector) : null;
+        const stateKey = input.id || selector || '';
+        const apply = () => {
+          const query = obstagoonNormalize(input.value);
+          let visible = 0;
+          items.forEach((item) => {
+            const haystack = obstagoonNormalize(item.getAttribute('data-search-text') || item.textContent || '');
+            const match = !query || haystack.includes(query);
+            item.classList.toggle('filter-hidden', !match);
+            if (match) visible += 1;
+          });
+          if (emptyNode) emptyNode.style.display = visible === 0 ? '' : 'none';
+          if (countNode) countNode.textContent = visible;
+          if (stateKey) obstagoonSaveState(stateKey, {search: input.value});
+        };
+        if (stateKey) {
+          const saved = obstagoonLoadState(stateKey);
+          if (saved.search) input.value = saved.search;
+        }
+        input.addEventListener('input', apply);
+        apply();
+      });
+    }
+    function obstagoonBindRowLinks() {
+      // data-href rows act as buttons; nested <a>/<button> keep their own click semantics.
+      document.querySelectorAll('tr[data-href], li[data-href]').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('a, button')) return;
+          window.location = row.getAttribute('data-href');
+        });
+      });
+    }
+    function obstagoonBindLinkedHotspots() {
+      // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
+      const partners = new Map();
+      document.querySelectorAll('.region-map a[href], .link-grid > li > a[href]').forEach((a) => {
+        const key = a.getAttribute('href');
+        if (!partners.has(key)) partners.set(key, []);
+        partners.get(key).push(a);
+      });
+      partners.forEach((group) => {
+        if (group.length < 2) return;
+        group.forEach((el) => {
+          el.addEventListener('mouseenter', () => group.forEach((other) => { if (other !== el) other.classList.add('linked-hover'); }));
+          el.addEventListener('mouseleave', () => group.forEach((other) => other.classList.remove('linked-hover')));
+        });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+    } else {
+      obstagoonBindFilters();
+      obstagoonBindRowLinks();
+      obstagoonBindLinkedHotspots();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Delcatty - Poké47</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script>
+    // Casefold + diacritic-strip + non-alphanumeric strip so "basculinwhitestriped" matches "Basculin (White-Striped)".
+    window.obstagoonNormalize = (s) => (s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+    // Per-tab index state restored on back/forward + reload, not on fresh nav-link clicks.
+    window.obstagoonShouldRestoreState = () => {
+      const nav = performance.getEntriesByType('navigation')[0];
+      return !!(nav && (nav.type === 'back_forward' || nav.type === 'reload'));
+    };
+    window.obstagoonLoadState = (key) => {
+      if (!obstagoonShouldRestoreState()) return {};
+      try { return JSON.parse(sessionStorage.getItem('obstagoon:' + key) || '{}'); }
+      catch (e) { return {}; }
+    };
+    window.obstagoonSaveState = (key, state) => {
+      // Private browsing / quota-exceeded throws; degrade silently.
+      try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
+      catch (e) {}
+    };
+    // Shared search+chips+sort binding for index pages; opts carry the per-page ids and source lists.
+    window.obstagoonBindIndexPage = (opts) => {
+      const input = document.getElementById(opts.inputId);
+      const dropdown = document.getElementById(opts.dropdownId);
+      const chipsBox = document.getElementById(opts.chipsBoxId);
+      const empty = opts.emptyId ? document.getElementById(opts.emptyId) : null;
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      const rows = Array.from(document.querySelectorAll(opts.rowsSelector));
+      const haystackByKind = opts.haystackByKind || {};
+      const sources = opts.sources || [];
+      const defaultKind = opts.defaultKind || null;
+      const saved = obstagoonLoadState(opts.stateKey);
+      const chips = (Array.isArray(saved.chips) ? saved.chips : [])
+        .map((c) => c.kind ? c : {kind: defaultKind || 'Pokémon', name: c.name});
+      if (saved.search) input.value = saved.search;
+      let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
+      let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : 'asc';
+      const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const persist = () => obstagoonSaveState(opts.stateKey, {
+        search: input.value, chips,
+        ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
+      });
+
+      const formCellTargets = ['spriteHtml', 'nameHtml', 'typesHtml', 'abilitiesHtml'];
+      const formMatchesChips = (form) => chips.every((c) => {
+        const list = form[haystackByKind[c.kind]];
+        return Array.isArray(list) && list.includes(c.name);
+      });
+      const applyFilters = () => {
+        const q = obstagoonNormalize(input.value);
+        let visible = 0;
+        rows.forEach((el) => {
+          const text = obstagoonNormalize(el.dataset.searchText || '');
+          let show = !q || text.includes(q);
+          let target = null;
+          if (show && chips.length) {
+            if (el.dataset.forms) {
+              const forms = JSON.parse(el.dataset.forms);
+              target = formMatchesChips(forms[0]) ? forms[0] : forms.find(formMatchesChips) || null;
+              show = !!target;
+            } else {
+              for (const c of chips) {
+                const haystack = el.dataset[haystackByKind[c.kind]];
+                if (!haystack || !haystack.includes(`|${c.name}|`)) { show = false; break; }
+              }
+            }
+          }
+          el.classList.toggle('filter-hidden', !show);
+          if (show) visible += 1;
+          if (show && el.dataset.forms) applyFormSwap(el, target);
+        });
+        if (empty) empty.style.display = visible === 0 ? '' : 'none';
+        if (countEl) countEl.textContent = visible;
+        persist();
+      };
+      const applyFormSwap = (el, target) => {
+        const forms = JSON.parse(el.dataset.forms);
+        if (!target) target = forms[0];
+        if (el._activeFormSlug === target.slug) return;
+        if (el._activeFormSlug === undefined) {
+          const cells = el.querySelectorAll('td');
+          el._origCells = [cells[1].innerHTML, cells[2].innerHTML, cells[3].innerHTML, cells[4].innerHTML];
+          el._origHref = el.dataset.href;
+        }
+        const cells = el.querySelectorAll('td');
+        if (target === forms[0]) {
+          [cells[1].innerHTML, cells[2].innerHTML, cells[3].innerHTML, cells[4].innerHTML] = el._origCells;
+          el.dataset.href = el._origHref;
+        } else {
+          formCellTargets.forEach((key, i) => { cells[i + 1].innerHTML = target[key]; });
+          el.dataset.href = target.slug + '.html';
+        }
+        el._activeFormSlug = target.slug;
+      };
+      const renderChips = () => {
+        chipsBox.innerHTML = chips.map((c, i) =>
+          `<span class="filter-chip"><span class="chip-kind">${c.kind}</span> ${esc(c.name)}<button type="button" class="chip-remove" data-idx="${i}" aria-label="Remove">×</button></span>`
+        ).join('');
+        chipsBox.querySelectorAll('.chip-remove').forEach((btn) => btn.addEventListener('click', () => {
+          chips.splice(parseInt(btn.dataset.idx, 10), 1); renderChips(); applyFilters();
+        }));
+      };
+      let activeIdx = -1;
+      const setActiveIdx = (i) => {
+        const items = dropdown.querySelectorAll('.suggestion');
+        if (!items.length) return;
+        activeIdx = (i + items.length) % items.length;
+        items.forEach((b, j) => b.classList.toggle('is-active', j === activeIdx));
+        items[activeIdx].scrollIntoView({block: 'nearest'});
+      };
+      const acceptSuggestion = (btn) => {
+        chips.push({kind: btn.dataset.kind, name: btn.dataset.name});
+        input.value = ''; dropdown.hidden = true; activeIdx = -1; renderChips(); applyFilters();
+      };
+      const renderSuggestions = () => {
+        const q = obstagoonNormalize(input.value);
+        if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
+        const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
+        const matches = [];
+        for (const [kind, list] of sources) {
+          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+        }
+        if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
+        dropdown.innerHTML = matches.slice(0, 30).map((m) =>
+          `<button type="button" class="suggestion" data-kind="${m.kind}" data-name="${esc(m.name)}"><span class="suggestion-kind">${m.kind}</span> ${esc(m.name)}</button>`
+        ).join('');
+        dropdown.hidden = false;
+        activeIdx = -1;
+        dropdown.querySelectorAll('.suggestion').forEach((btn) => btn.addEventListener('click', () => acceptSuggestion(btn)));
+      };
+      input.addEventListener('input', () => { renderSuggestions(); applyFilters(); });
+      input.addEventListener('focus', renderSuggestions);
+      input.addEventListener('keydown', (e) => {
+        if (dropdown.hidden) return;
+        const items = dropdown.querySelectorAll('.suggestion');
+        if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(activeIdx + 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(activeIdx <= 0 ? items.length - 1 : activeIdx - 1); }
+        else if (e.key === 'Enter' && activeIdx >= 0) {
+          e.preventDefault();
+          acceptSuggestion(items[activeIdx]);
+        }
+        else if (e.key === 'Escape') { dropdown.hidden = true; activeIdx = -1; }
+      });
+      document.addEventListener('click', (e) => { if (!dropdown.contains(e.target) && e.target !== input) dropdown.hidden = true; });
+      renderChips();
+      applyFilters();
+
+      if (opts.tableSelector) {
+        const tbody = document.querySelector(opts.tableSelector + ' tbody');
+        const headers = Array.from(document.querySelectorAll(opts.tableSelector + ' thead th'));
+        const original = Array.from(tbody.querySelectorAll('tr'));
+        const cellValue = (tr, i, kind) => {
+          const text = tr.cells[i].textContent.trim();
+          if (kind === 'number') { const n = parseFloat(text); return isNaN(n) ? -Infinity : n; }
+          return text.toLowerCase();
+        };
+        const applySort = () => {
+          headers.forEach((h, j) => {
+            h.classList.toggle('sort-asc', activeDir === 'asc' && j === activeCol);
+            h.classList.toggle('sort-desc', activeDir === 'desc' && j === activeCol);
+          });
+          if (!activeDir) { original.forEach((tr) => tbody.appendChild(tr)); return; }
+          const kind = headers[activeCol]?.dataset.sort || 'text';
+          const sign = activeDir === 'asc' ? 1 : -1;
+          [...original].sort((a, b) => {
+            const av = cellValue(a, activeCol, kind), bv = cellValue(b, activeCol, kind);
+            return av < bv ? -sign : av > bv ? sign : 0;
+          }).forEach((tr) => tbody.appendChild(tr));
+        };
+        headers.forEach((th, i) => {
+          if (!th.dataset.sort) return;
+          th.classList.add('sortable');
+          th.addEventListener('click', () => {
+            activeDir = i !== activeCol ? 'asc' : activeDir === 'asc' ? 'desc' : activeDir === 'desc' ? '' : 'asc';
+            activeCol = activeDir ? i : -1;
+            applySort();
+            persist();
+          });
+        });
+        applySort();
+      }
+    };
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../index.html">Poké47</a>
+      <nav>
+        <a href="../pokedex/index.html">Pokédex</a>
+        <a href="../moves/index.html">Moves</a>
+        <a href="../abilities/index.html">Abilities</a>
+        <a href="../forms/index.html">Forms</a>
+        <a href="../encounters/index.html">Encounters</a>
+        <a href="../itemdex/index.html">Itemdex</a>
+        <a href="../trainerdex/index.html">Trainers</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+<h1>Delcatty</h1>
+<section class="card pokemon-hero-card">
+  <div class="pokemon-hero">
+    <div class="pokemon-hero-sprites">
+      <img src="../assets/game/graphics/pokemon/delcatty/anim_front.png" alt="Delcatty front sprite" class="pokemon-hero-sprite">
+<img src="../assets/game/graphics/pokemon/delcatty/anim_front__shiny.png" alt="Delcatty shiny front sprite" class="pokemon-hero-sprite">    </div>
+    <div>
+      <p class="muted">National Dex #301</p>
+      <p><strong>Delcatty</strong></p>
+    </div>
+  </div>
+</section>
+<div class="grid two">
+  <section class="card">
+    <h2>Profile</h2>
+    <p><strong>Category:</strong> Prim</p>
+    <p><strong>Types:</strong> <span class="type-badge type-normal">Normal</span></p>
+    <p><strong>Abilities:</strong> <a href="../abilities/cute-charm.html">Cute Charm</a>, <a href="../abilities/normalize.html">Normalize</a>, <a href="../abilities/wonder-skin.html">Wonder Skin</a> <em class="muted">(Hidden)</em></p>
+    <p><strong>Growth Rate:</strong> Fast</p>
+    <p><strong>Egg Groups:</strong> Field, Fairy</p>
+  </section>
+  <section class="card">
+    <h2>Base Stats</h2>
+    <table class="stat-table">
+        <tr>
+          <td class="stat-label">HP:</td>
+          <td class="stat-value">70</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-hp" style="width: 27.5%;"></div></div></td>
+        </tr>
+        <tr>
+          <td class="stat-label">Attack:</td>
+          <td class="stat-value">65</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-atk" style="width: 25.5%;"></div></div></td>
+        </tr>
+        <tr>
+          <td class="stat-label">Defense:</td>
+          <td class="stat-value">65</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-def" style="width: 25.5%;"></div></div></td>
+        </tr>
+        <tr>
+          <td class="stat-label">Sp. Atk:</td>
+          <td class="stat-value">55</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-spa" style="width: 21.6%;"></div></div></td>
+        </tr>
+        <tr>
+          <td class="stat-label">Sp. Def:</td>
+          <td class="stat-value">55</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-spd" style="width: 21.6%;"></div></div></td>
+        </tr>
+        <tr>
+          <td class="stat-label">Speed:</td>
+          <td class="stat-value">90</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-spe" style="width: 35.3%;"></div></div></td>
+        </tr>
+      <tr class="stat-total"><td class="stat-label"><strong>Total:</strong></td><td class="stat-value"><strong>400</strong></td><td></td></tr>
+    </table>
+    <p class="stat-physical">
+1.1 m / 32.6 kg    </p>
+  </section>
+</div>
+<section class="card species-section">
+  <h2>Description</h2>
+  <p>Rather than keeping a permanent lair,
+it habitually seeks comfortable spots and
+sleeps there. It is nocturnal and becomes
+active at dusk.</p>
+</section>
+<section class="grid two species-section">
+  <div class="card">
+    <h2>Evolutions</h2>
+    <ul>
+        <li>  <a href="skitty.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/skitty/anim_front.png" alt="Skitty" class="species-inline-sprite"><span>Skitty</span>
+  </a>
+ → Use <a href="../itemdex/moon-stone.html">Moon Stone</a></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Forms</h2>
+    <ul>
+        <li>No alternate forms.</li>
+    </ul>
+  </div>
+</section>
+<section class="grid two species-section">
+  <div class="card">
+    <h2>Level-Up Learnset</h2>
+    <ul class="move-list">
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/fake-out.html" class="stab">Fake Out</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sing.html">Sing</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/attract.html">Attract</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/growl.html">Growl</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/tail-whip.html">Tail Whip</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/tackle.html" class="stab">Tackle</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/fairy.svg" alt="Fairy type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/disarming-voice.html">Disarming Voice</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/fury-swipes.html" class="stab">Fury Swipes</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/copycat.html">Copycat</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/payback.html">Payback</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/fairy.svg" alt="Fairy type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/charm.html">Charm</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/facade.html" class="stab">Facade</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/covet.html" class="stab">Covet</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/heal-bell.html">Heal Bell</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/double-edge.html" class="stab">Double-Edge</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/fairy.svg" alt="Fairy type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/baby-doll-eyes.html">Baby-Doll Eyes</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/fairy.svg" alt="Fairy type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/play-rough.html">Play Rough</a></span></span></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Teachable Moves</h2>
+    <h3>TMs/HMs</h3>
+    <ul class="move-list">
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_grass.png" alt="Grass TM" class="tm-icon">TM07</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/solar-beam.html">Solar Beam</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_fire.png" alt="Fire TM" class="tm-icon">TM12</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sunny-day.html">Sunny Day</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_water.png" alt="Water TM" class="tm-icon">TM16</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/rain-dance.html">Rain Dance</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_electric.png" alt="Electric TM" class="tm-icon">TM18</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/thunder.html">Thunder</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_electric.png" alt="Electric TM" class="tm-icon">TM19</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/thunderbolt.html">Thunderbolt</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_electric.png" alt="Electric TM" class="tm-icon">TM20</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/thunder-wave.html">Thunder Wave</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM23</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/baton-pass.html">Baton Pass</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM26</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/hidden-power.html" class="stab">Hidden Power</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM27</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/hyper-beam.html" class="stab">Hyper Beam</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM29</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/protect.html">Protect</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM30</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/return.html" class="stab">Return</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM31</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sleep-talk.html">Sleep Talk</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM32</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/substitute.html">Substitute</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM35</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/wish.html">Wish</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="Psychic TM" class="tm-icon">TM43</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/calm-mind.html">Calm Mind</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="Psychic TM" class="tm-icon">TM48</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/rest.html">Rest</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_ice.png" alt="Ice TM" class="tm-icon">TM57</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/blizzard.html">Blizzard</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_ice.png" alt="Ice TM" class="tm-icon">TM59</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/ice-beam.html">Ice Beam</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_ground.png" alt="Ground TM" class="tm-icon">TM66</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/dig.html">Dig</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_poison.png" alt="Poison TM" class="tm-icon">TM77</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/toxic.html">Toxic</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_ghost.png" alt="Ghost TM" class="tm-icon">TM84</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/shadow-ball.html">Shadow Ball</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_dark.png" alt="Dark TM" class="tm-icon">TM91</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/nasty-plot.html">Nasty Plot</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_dark.png" alt="Dark TM" class="tm-icon">TM92</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/sucker-punch.html">Sucker Punch</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_fairy.png" alt="Fairy TM" class="tm-icon">TM100</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/fairy.svg" alt="Fairy type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/play-rough.html">Play Rough</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/hm_normal.png" alt="Normal HM" class="tm-icon">HM04</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/strength.html" class="stab">Strength</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/hm_normal.png" alt="Normal HM" class="tm-icon">HM05</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/flash.html">Flash</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/hm_fighting.png" alt="Fighting HM" class="tm-icon">HM06</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/rock-smash.html">Rock Smash</a></span></span></li>
+    </ul>
+    <h3>Move Tutors</h3>
+    <ul class="move-list">
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/body-slam.html" class="stab">Body Slam</a></span></span></li>
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/defense-curl.html">Defense Curl</a></span></span></li>
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/dream-eater.html">Dream Eater</a></span></span></li>
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/endure.html">Endure</a></span></span></li>
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/mud-slap.html">Mud-Slap</a></span></span></li>
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/psych-up.html">Psych Up</a></span></span></li>
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/snore.html" class="stab">Snore</a></span></span></li>
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/swift.html" class="stab">Swift</a></span></span></li>
+        <li><span class="move-source">Lavaridge Town House</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/copycat.html">Copycat</a></span></span></li>
+        <li><span class="move-source">Lilycove City Department Store Rooftop</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/power-split.html">Power Split</a></span></span></li>
+        <li><span class="move-source">Mauville City</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/rollout.html">Rollout</a></span></span></li>
+        <li><span class="move-source">Slateport City Pokemon Fan Club</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/swagger.html">Swagger</a></span></span></li>
+        <li><span class="move-source">Sootopolis City Pokemon Center 1F</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/laser-focus.html">Laser Focus</a></span></span></li>
+    </ul>
+  </div>
+</section>
+<section class="card species-section">
+  <h2>Egg Moves</h2>
+  <p><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/helping-hand.html">Helping Hand</a></span>, <span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/uproar.html" class="stab">Uproar</a></span>, <span class="move-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/fake-tears.html">Fake Tears</a></span>, <span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/wish.html">Wish</a></span>, <span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/baton-pass.html">Baton Pass</a></span>, <span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/tickle.html">Tickle</a></span>, <span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/last-resort.html" class="stab">Last Resort</a></span>, <span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/fake-out.html" class="stab">Fake Out</a></span>, <span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/zen-headbutt.html">Zen Headbutt</a></span>, <span class="move-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/sucker-punch.html">Sucker Punch</a></span>, <span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/mud-bomb.html">Mud Bomb</a></span>, <span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/simple-beam.html">Simple Beam</a></span>, <span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/captivate.html">Captivate</a></span>, <span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/cosmic-power.html">Cosmic Power</a></span></p>
+</section>
+
+<section class="card species-section">
+  <h2>Encounter Locations</h2>
+    <div class="encounter-block">
+      <h3 class="encounter-section-name"><a href="../encounters/mauville-game-corner.html">Mauville Game Corner</a></h3>
+          <h4 class="encounter-method-name">Gacha</h4>
+                <h5>Great Gacha</h5>
+      <ul>
+<li>Lv. 15-30 · 0.6%</li>      </ul>
+
+    </div>
+</section>
+  </main>
+  <script>
+    function obstagoonBindFilters() {
+      const inputs = document.querySelectorAll('[data-filter-input]');
+      inputs.forEach((input) => {
+        const selector = input.getAttribute('data-filter-target');
+        const emptyTextSelector = input.getAttribute('data-filter-empty');
+        const countSelector = input.getAttribute('data-filter-count');
+        const items = Array.from(document.querySelectorAll(selector || ''));
+        const emptyNode = emptyTextSelector ? document.querySelector(emptyTextSelector) : null;
+        const countNode = countSelector ? document.querySelector(countSelector) : null;
+        const stateKey = input.id || selector || '';
+        const apply = () => {
+          const query = obstagoonNormalize(input.value);
+          let visible = 0;
+          items.forEach((item) => {
+            const haystack = obstagoonNormalize(item.getAttribute('data-search-text') || item.textContent || '');
+            const match = !query || haystack.includes(query);
+            item.classList.toggle('filter-hidden', !match);
+            if (match) visible += 1;
+          });
+          if (emptyNode) emptyNode.style.display = visible === 0 ? '' : 'none';
+          if (countNode) countNode.textContent = visible;
+          if (stateKey) obstagoonSaveState(stateKey, {search: input.value});
+        };
+        if (stateKey) {
+          const saved = obstagoonLoadState(stateKey);
+          if (saved.search) input.value = saved.search;
+        }
+        input.addEventListener('input', apply);
+        apply();
+      });
+    }
+    function obstagoonBindRowLinks() {
+      // data-href rows act as buttons; nested <a>/<button> keep their own click semantics.
+      document.querySelectorAll('tr[data-href], li[data-href]').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('a, button')) return;
+          window.location = row.getAttribute('data-href');
+        });
+      });
+    }
+    function obstagoonBindLinkedHotspots() {
+      // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
+      const partners = new Map();
+      document.querySelectorAll('.region-map a[href], .link-grid > li > a[href]').forEach((a) => {
+        const key = a.getAttribute('href');
+        if (!partners.has(key)) partners.set(key, []);
+        partners.get(key).push(a);
+      });
+      partners.forEach((group) => {
+        if (group.length < 2) return;
+        group.forEach((el) => {
+          el.addEventListener('mouseenter', () => group.forEach((other) => { if (other !== el) other.classList.add('linked-hover'); }));
+          el.addEventListener('mouseleave', () => group.forEach((other) => other.classList.remove('linked-hover')));
+        });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+    } else {
+      obstagoonBindFilters();
+      obstagoonBindRowLinks();
+      obstagoonBindLinkedHotspots();
+    }
+  </script>
+</body>
+</html>
