@@ -144,9 +144,15 @@
         const items = dropdown.querySelectorAll('.suggestion');
         if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(activeIdx + 1); }
         else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(activeIdx <= 0 ? items.length - 1 : activeIdx - 1); }
-        else if (e.key === 'Enter' && activeIdx >= 0) {
-          e.preventDefault();
-          acceptSuggestion(items[activeIdx]);
+        else if (e.key === 'Enter') {
+          // Priority: manually-arrowed selection > sole remaining suggestion > exact name match (post-normalize).
+          let idx = activeIdx;
+          if (idx < 0 && items.length === 1) idx = 0;
+          if (idx < 0) {
+            const q = obstagoonNormalize(input.value);
+            idx = Array.from(items).findIndex((b) => obstagoonNormalize(b.dataset.name) === q);
+          }
+          if (idx >= 0) { e.preventDefault(); acceptSuggestion(items[idx]); }
         }
         else if (e.key === 'Escape') { dropdown.hidden = true; activeIdx = -1; }
       });
@@ -259,7 +265,7 @@
 <img src="../assets/game/graphics/items/icons/adrenaline_orb.png" alt="Adrenaline Orb" class="item-icon">        <span>Adrenaline Orb</span>
       </a>
     </li>
-    <li data-search-text="Air Balloon ITEM_AIR_BALLOON Wild Held Items Drifloon Litter Picker 6.25% Trainer Held Item Rival Steven (Meteor Falls - Steven&#39;s Cave)">
+    <li data-search-text="Air Balloon ITEM_AIR_BALLOON Wild Held Items Drifloon Litter Picker 6.25% Trainer Held Item Rival Steven (Meteor Falls - Steven&#39;s Cave) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym)">
       <a href="air-balloon.html">
 <img src="../assets/game/graphics/items/icons/air_balloon.png" alt="Air Balloon" class="item-icon">        <span>Air Balloon</span>
       </a>
@@ -284,7 +290,7 @@
 <img src="../assets/game/graphics/items/icons/armor_fossil.png" alt="Armor Fossil" class="item-icon">        <span>Armor Fossil</span>
       </a>
     </li>
-    <li data-search-text="Assault Vest ITEM_ASSAULT_VEST Shop Battle Frontier - Exchange Service Corner Trainer Held Item Champion Wallace (Ever Grande City - Champion&#39;s Room) Elite Four Drake (Ever Grande City - Drake&#39;s Room) Elite Four Sidney (Ever Grande City - Sidney&#39;s Room) Leader Glacia (Sootopolis City - Gym 1F)">
+    <li data-search-text="Assault Vest ITEM_ASSAULT_VEST Shop Battle Frontier - Exchange Service Corner Trainer Held Item Champion Wallace (Ever Grande City - Champion&#39;s Room) Elite Four Drake (Ever Grande City - Drake&#39;s Room) Elite Four Sidney (Ever Grande City - Sidney&#39;s Room) Leader Wattson (Mauville City - Gym) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F)">
       <a href="assault-vest.html">
 <img src="../assets/game/graphics/items/icons/assault_vest.png" alt="Assault Vest" class="item-icon">        <span>Assault Vest</span>
       </a>
@@ -439,7 +445,7 @@
 <img src="../assets/game/graphics/items/icons/charcoal.png" alt="Charcoal" class="item-icon">        <span>Charcoal</span>
       </a>
     </li>
-    <li data-search-text="Choice Band ITEM_CHOICE_BAND Shop Battle Frontier - Exchange Service Corner">
+    <li data-search-text="Choice Band ITEM_CHOICE_BAND Shop Battle Frontier - Exchange Service Corner Trainer Held Item Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym)">
       <a href="choice-band.html">
 <img src="../assets/game/graphics/items/icons/choice_band.png" alt="Choice Band" class="item-icon">        <span>Choice Band</span>
       </a>
@@ -529,7 +535,7 @@
 <img src="../assets/game/graphics/items/icons/eject_button.png" alt="Eject Button" class="item-icon">        <span>Eject Button</span>
       </a>
     </li>
-    <li data-search-text="Eject Pack ITEM_EJECT_PACK NPC Trick House Puzzle 4 (Reward)">
+    <li data-search-text="Eject Pack ITEM_EJECT_PACK NPC Trick House Puzzle 4 (Reward) Grand Prize (Normal, &lt;12 min) Trainer Hill">
       <a href="eject-pack.html">
 <img src="../assets/game/graphics/items/icons/eject_pack.png" alt="Eject Pack" class="item-icon">        <span>Eject Pack</span>
       </a>
@@ -539,7 +545,7 @@
 <img src="../assets/game/graphics/items/icons/electric_seed.png" alt="Electric Seed" class="item-icon">        <span>Electric Seed</span>
       </a>
     </li>
-    <li data-search-text="Elixir ITEM_ELIXIR Overworld Route 110 Route 111 Route 119 Hidden Item Route 110 Victory Road - B2F">
+    <li data-search-text="Elixir ITEM_ELIXIR Overworld Route 110 Route 111 Route 119 Hidden Item Route 110 Victory Road - B2F Grand Prize (Variety, &lt;12 min) Trainer Hill">
       <a href="elixir.html">
 <img src="../assets/game/graphics/items/icons/elixir.png" alt="Elixir" class="item-icon">        <span>Elixir</span>
       </a>
@@ -559,7 +565,7 @@
 <img src="../assets/game/graphics/items/icons/escape_rope.png" alt="Escape Rope" class="item-icon">        <span>Escape Rope</span>
       </a>
     </li>
-    <li data-search-text="Ether ITEM_ETHER Overworld Petalburg City Petalburg Woods Hidden Item Route 109 Route 113 Pickup Lv. 1-20 Lv. 21-30 Lv. 31-50">
+    <li data-search-text="Ether ITEM_ETHER Overworld Petalburg City Petalburg Woods Hidden Item Route 109 Route 113 Time Prize (12-13 min) Trainer Hill Pickup Lv. 1-20 Lv. 21-30 Lv. 31-50">
       <a href="ether.html">
 <img src="../assets/game/graphics/items/icons/ether.png" alt="Ether" class="item-icon">        <span>Ether</span>
       </a>
@@ -569,7 +575,7 @@
 <img src="../assets/game/graphics/items/icons/everstone.png" alt="Everstone" class="item-icon">        <span>Everstone</span>
       </a>
     </li>
-    <li data-search-text="Eviolite ITEM_EVIOLITE Overworld Mt Pyre - Exterior Trainer Held Item Sr And Jr Anna &amp; Meg (Route 117)">
+    <li data-search-text="Eviolite ITEM_EVIOLITE Overworld Mt Pyre - Exterior Trainer Held Item Leader Wattson (Mauville City - Gym) Sr And Jr Anna &amp; Meg (Route 117)">
       <a href="eviolite.html">
 <img src="../assets/game/graphics/items/icons/eviolite.png" alt="Eviolite" class="item-icon">        <span>Eviolite</span>
       </a>
@@ -599,12 +605,12 @@
 <img src="../assets/game/graphics/items/icons/float_stone.png" alt="Float Stone" class="item-icon">        <span>Float Stone</span>
       </a>
     </li>
-    <li data-search-text="Fluffy Tail ITEM_FLUFFY_TAIL Shop Lilycove City - Department Store 2F Verdanturf Town - Mart">
+    <li data-search-text="Fluffy Tail ITEM_FLUFFY_TAIL Shop Lilycove City - Department Store 2F Verdanturf Town - Mart Time Prize (16-18 min) Trainer Hill">
       <a href="fluffy-tail.html">
 <img src="../assets/game/graphics/items/icons/fluffy_tail.png" alt="Fluffy Tail" class="item-icon">        <span>Fluffy Tail</span>
       </a>
     </li>
-    <li data-search-text="Flying Gem ITEM_FLYING_GEM Hidden Item Underwater - Route 128">
+    <li data-search-text="Flying Gem ITEM_FLYING_GEM Hidden Item Underwater - Route 128 Trainer Held Item Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym)">
       <a href="flying-gem.html">
 <img src="../assets/game/graphics/items/icons/flying_gem.png" alt="Flying Gem" class="item-icon">        <span>Flying Gem</span>
       </a>
@@ -614,7 +620,7 @@
 <img src="../assets/game/graphics/items/icons/focus_band.png" alt="Focus Band" class="item-icon">        <span>Focus Band</span>
       </a>
     </li>
-    <li data-search-text="Focus Sash ITEM_FOCUS_SASH Wild Held Items Mienshao Pickup Lv. 21-30 Lv. 31-70 Lv. 71-80 Lv. 81-90 Lv. 91-100 Trainer Held Item Elite Four Juan (Ever Grande City - Juan&#39;s Room) Rival Steven (Meteor Falls - Steven&#39;s Cave) Lady Cindy (Route 104) Leader Glacia (Sootopolis City - Gym 1F)">
+    <li data-search-text="Focus Sash ITEM_FOCUS_SASH Wild Held Items Mienshao Pickup Lv. 21-30 Lv. 31-70 Lv. 71-80 Lv. 81-90 Lv. 91-100 Trainer Held Item Elite Four Juan (Ever Grande City - Juan&#39;s Room) Leader Wattson (Mauville City - Gym) Rival Steven (Meteor Falls - Steven&#39;s Cave) Lady Cindy (Route 104) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F)">
       <a href="focus-sash.html">
 <img src="../assets/game/graphics/items/icons/focus_sash.png" alt="Focus Sash" class="item-icon">        <span>Focus Sash</span>
       </a>
@@ -699,7 +705,7 @@
 <img src="../assets/game/graphics/items/icons/heat_rock.png" alt="Heat Rock" class="item-icon">        <span>Heat Rock</span>
       </a>
     </li>
-    <li data-search-text="Heavy-Duty Boots ITEM_HEAVY_DUTY_BOOTS Overworld New Mauville - Inside Trainer Held Item Leader Glacia (Sootopolis City - Gym 1F)">
+    <li data-search-text="Heavy-Duty Boots ITEM_HEAVY_DUTY_BOOTS Overworld New Mauville - Inside Trainer Held Item Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F)">
       <a href="heavy-duty-boots.html">
 <img src="../assets/game/graphics/items/icons/heavy_duty_boots.png" alt="Heavy-Duty Boots" class="item-icon">        <span>Heavy-Duty Boots</span>
       </a>
@@ -729,7 +735,7 @@
 <img src="../assets/game/graphics/items/icons/ice_stone.png" alt="Ice Stone" class="item-icon">        <span>Ice Stone</span>
       </a>
     </li>
-    <li data-search-text="Icy Rock ITEM_ICY_ROCK Shop Mauville City - Game Corner Litter Picker 6.25% Trainer Held Item Leader Glacia (Sootopolis City - Gym 1F)">
+    <li data-search-text="Icy Rock ITEM_ICY_ROCK Shop Mauville City - Game Corner Litter Picker 6.25% Trainer Held Item Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F)">
       <a href="icy-rock.html">
 <img src="../assets/game/graphics/items/icons/icy_rock.png" alt="Icy Rock" class="item-icon">        <span>Icy Rock</span>
       </a>
@@ -794,7 +800,7 @@
 <img src="../assets/game/graphics/items/icons/leaf_stone.png" alt="Leaf Stone" class="item-icon">        <span>Leaf Stone</span>
       </a>
     </li>
-    <li data-search-text="Leftovers ITEM_LEFTOVERS Shop Battle Frontier - Exchange Service Corner Hidden Item SS Tidal Lower Deck Pickup Lv. 21-100 Trainer Held Item Elite Four Drake (Ever Grande City - Drake&#39;s Room) Elite Four Juan (Ever Grande City - Juan&#39;s Room) Elite Four Phoebe (Ever Grande City - Phoebe&#39;s Room) Elite Four Sidney (Ever Grande City - Sidney&#39;s Room) Rival Steven (Meteor Falls - Steven&#39;s Cave)">
+    <li data-search-text="Leftovers ITEM_LEFTOVERS Shop Battle Frontier - Exchange Service Corner Hidden Item SS Tidal Lower Deck Pickup Lv. 21-100 Trainer Held Item Elite Four Drake (Ever Grande City - Drake&#39;s Room) Elite Four Juan (Ever Grande City - Juan&#39;s Room) Elite Four Phoebe (Ever Grande City - Phoebe&#39;s Room) Elite Four Sidney (Ever Grande City - Sidney&#39;s Room) Rival Steven (Meteor Falls - Steven&#39;s Cave) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym)">
       <a href="leftovers.html">
 <img src="../assets/game/graphics/items/icons/leftovers.png" alt="Leftovers" class="item-icon">        <span>Leftovers</span>
       </a>
@@ -809,7 +815,7 @@
 <img src="../assets/game/graphics/items/icons/life_orb.png" alt="Life Orb" class="item-icon">        <span>Life Orb</span>
       </a>
     </li>
-    <li data-search-text="Light Ball ITEM_LIGHT_BALL Overworld New Mauville - Inside Wild Held Items Pikachu">
+    <li data-search-text="Light Ball ITEM_LIGHT_BALL Overworld New Mauville - Inside Wild Held Items Pikachu Trainer Held Item Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym)">
       <a href="light-ball.html">
 <img src="../assets/game/graphics/items/icons/light_ball.png" alt="Light Ball" class="item-icon">        <span>Light Ball</span>
       </a>
@@ -859,7 +865,7 @@
 <img src="../assets/game/graphics/items/icons/max_ether.png" alt="Max Ether" class="item-icon">        <span>Max Ether</span>
       </a>
     </li>
-    <li data-search-text="Max Potion ITEM_MAX_POTION Shop Battle Frontier - Mart Ever Grande City - Pokemon League 1F Lilycove City - Department Store 2F Sootopolis City - Mart Trainer Hill - Entrance Pickup Lv. 21-30 Lv. 31-60 Lv. 61-80 Lv. 81-90 Lv. 91-100">
+    <li data-search-text="Max Potion ITEM_MAX_POTION Shop Battle Frontier - Mart Ever Grande City - Pokemon League 1F Lilycove City - Department Store 2F Sootopolis City - Mart Trainer Hill - Entrance Time Prize (13-14 min) Trainer Hill Pickup Lv. 21-30 Lv. 31-60 Lv. 61-80 Lv. 81-90 Lv. 91-100">
       <a href="max-potion.html">
 <img src="../assets/game/graphics/items/icons/max_potion.png" alt="Max Potion" class="item-icon">        <span>Max Potion</span>
       </a>
@@ -1099,7 +1105,7 @@
 <img src="../assets/game/graphics/items/icons/quiet_mint.png" alt="Quiet Mint" class="item-icon">        <span>Quiet Mint</span>
       </a>
     </li>
-    <li data-search-text="Rare Candy ITEM_RARE_CANDY NPC Slateport City Victory Road - 1F Overworld Ever Grande City - Hall 1 Ever Grande City - Hall 2 Ever Grande City - Hall 3 Ever Grande City - Hall 4 Magma Hideout - 1F Route 114 Route 127 Route 132 Route 136 Shoal Cave - Low Tide Inner Room Hidden Item Mt Pyre - Summit Petalburg City Route 108 Route 111 Route 120 Route 123 Safari Zone - Northeast Pickup Lv. 11-50 Lv. 51-70 Lv. 71-80 Lv. 81-90 Lv. 91-100">
+    <li data-search-text="Rare Candy ITEM_RARE_CANDY NPC Slateport City Victory Road - 1F Overworld Ever Grande City - Hall 1 Ever Grande City - Hall 2 Ever Grande City - Hall 3 Ever Grande City - Hall 4 Magma Hideout - 1F Route 114 Route 127 Route 132 Route 136 Shoal Cave - Low Tide Inner Room Hidden Item Mt Pyre - Summit Petalburg City Route 108 Route 111 Route 120 Route 123 Safari Zone - Northeast Pickup Lv. 11-50 Lv. 51-70 Lv. 71-80 Lv. 81-90 Lv. 91-100 Trainer Held Item Leader Glacia (Sootopolis City - Gym 1F)">
       <a href="rare-candy.html">
 <img src="../assets/game/graphics/items/icons/rare_candy.png" alt="Rare Candy" class="item-icon">        <span>Rare Candy</span>
       </a>
@@ -1119,7 +1125,7 @@
 <img src="../assets/game/graphics/items/icons/razor_fang.png" alt="Razor Fang" class="item-icon">        <span>Razor Fang</span>
       </a>
     </li>
-    <li data-search-text="Red Card ITEM_RED_CARD NPC Abandoned Ship - Corridors B1F">
+    <li data-search-text="Red Card ITEM_RED_CARD NPC Abandoned Ship - Corridors B1F Grand Prize (Expert, &lt;12 min) Trainer Hill">
       <a href="red-card.html">
 <img src="../assets/game/graphics/items/icons/red_card.png" alt="Red Card" class="item-icon">        <span>Red Card</span>
       </a>
@@ -1164,7 +1170,7 @@
 <img src="../assets/game/graphics/items/icons/revival_herb.png" alt="Revival Herb" class="item-icon">        <span>Revival Herb</span>
       </a>
     </li>
-    <li data-search-text="Revive ITEM_REVIVE Shop Battle Frontier - Mart Ever Grande City - Pokemon League 1F Fortree City - Mart Lavaridge Town - Mart Lilycove City - Department Store 2F Mossdeep City - Mart Sootopolis City - Mart Trainer Hill - Entrance Overworld Abandoned Ship - Rooms 2 1F Route 121 Hidden Item Route 109 Route 110 Route 120 Route 123 Pickup Lv. 1-30 Lv. 31-50 Lv. 51-60 Lv. 61-70">
+    <li data-search-text="Revive ITEM_REVIVE Shop Battle Frontier - Mart Ever Grande City - Pokemon League 1F Fortree City - Mart Lavaridge Town - Mart Lilycove City - Department Store 2F Mossdeep City - Mart Sootopolis City - Mart Trainer Hill - Entrance Overworld Abandoned Ship - Rooms 2 1F Route 121 Hidden Item Route 109 Route 110 Route 120 Route 123 Time Prize (14-16 min) Trainer Hill Pickup Lv. 1-30 Lv. 31-50 Lv. 51-60 Lv. 61-70">
       <a href="revive.html">
 <img src="../assets/game/graphics/items/icons/revive.png" alt="Revive" class="item-icon">        <span>Revive</span>
       </a>
@@ -1189,7 +1195,7 @@
 <img src="../assets/game/graphics/items/icons/rocky_helmet.png" alt="Rocky Helmet" class="item-icon">        <span>Rocky Helmet</span>
       </a>
     </li>
-    <li data-search-text="Room Service ITEM_ROOM_SERVICE Overworld Old House C2">
+    <li data-search-text="Room Service ITEM_ROOM_SERVICE Overworld Old House C2 Grand Prize (Unique, &lt;12 min) Trainer Hill">
       <a href="room-service.html">
 <img src="../assets/game/graphics/items/icons/room_service.png" alt="Room Service" class="item-icon">        <span>Room Service</span>
       </a>
@@ -1514,7 +1520,7 @@
 <img src="../assets/game/graphics/items/icons/zinc.png" alt="Zinc" class="item-icon">        <span>Zinc</span>
       </a>
     </li>
-    <li data-search-text="Zoom Lens ITEM_ZOOM_LENS Overworld Petalburg Woods">
+    <li data-search-text="Zoom Lens ITEM_ZOOM_LENS Overworld Petalburg Woods Trainer Held Item Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym)">
       <a href="zoom-lens.html">
 <img src="../assets/game/graphics/items/icons/zoom_lens.png" alt="Zoom Lens" class="item-icon">        <span>Zoom Lens</span>
       </a>
@@ -1729,7 +1735,7 @@
 <img src="../assets/game/graphics/items/icons/dusk_ball.png" alt="Dusk Ball" class="item-icon">        <span>Dusk Ball</span>
       </a>
     </li>
-    <li data-search-text="Great Ball ITEM_GREAT_BALL Shop Fallarbor Town - Mart Fortree City - Mart Lavaridge Town - Mart Lilycove City - Department Store 2F Mauville City - Mart Petalburg City - Mart Slateport City - Mart Verdanturf Town - Mart NPC Petalburg Woods Overworld Dew Beach 106 Petalburg Woods Hidden Item Jagged Pass Route 109 Route 110 Route 117 Route 137">
+    <li data-search-text="Great Ball ITEM_GREAT_BALL Shop Fallarbor Town - Mart Fortree City - Mart Lavaridge Town - Mart Lilycove City - Department Store 2F Mauville City - Mart Petalburg City - Mart Slateport City - Mart Verdanturf Town - Mart NPC Petalburg Woods Overworld Dew Beach 106 Petalburg Woods Hidden Item Jagged Pass Route 109 Route 110 Route 117 Route 137 Time Prize (18+ min) Trainer Hill">
       <a href="great-ball.html">
 <img src="../assets/game/graphics/items/icons/great_ball.png" alt="Great Ball" class="item-icon">        <span>Great Ball</span>
       </a>
@@ -2389,7 +2395,7 @@
 <img src="../assets/game/graphics/items/icons/cheri_berry.png" alt="Cheri Berry" class="item-icon">        <span>Cheri Berry</span>
       </a>
     </li>
-    <li data-search-text="Chesto Berry ITEM_CHESTO_BERRY NPC Route 104 Berry Tree Route 116 Route 121 Random Berry Gift Lilycove City Route 104 - Pretty Petal Flower Shop Wild Held Items Mimikyu (Disguised) Trainer Held Item Elite Four Juan (Ever Grande City - Juan&#39;s Room) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Juan (Sootopolis City - Gym 1F) Leader Juan (Sootopolis City - Gym 1F) Leader Juan (Sootopolis City - Gym 1F) Leader Juan (Sootopolis City - Gym 1F)">
+    <li data-search-text="Chesto Berry ITEM_CHESTO_BERRY NPC Route 104 Berry Tree Route 116 Route 121 Random Berry Gift Lilycove City Route 104 - Pretty Petal Flower Shop Wild Held Items Mimikyu (Disguised) Trainer Held Item Elite Four Juan (Ever Grande City - Juan&#39;s Room) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym)">
       <a href="chesto-berry.html">
 <img src="../assets/game/graphics/items/icons/chesto_berry.png" alt="Chesto Berry" class="item-icon">        <span>Chesto Berry</span>
       </a>
@@ -2629,7 +2635,7 @@
 <img src="../assets/game/graphics/items/icons/rowap_berry.png" alt="Rowap Berry" class="item-icon">        <span>Rowap Berry</span>
       </a>
     </li>
-    <li data-search-text="Salac Berry ITEM_SALAC_BERRY Trainer Held Item Leader Wattson (Mauville City - Gym) Leader Glacia (Sootopolis City - Gym 1F) Berry Mutation ">
+    <li data-search-text="Salac Berry ITEM_SALAC_BERRY Trainer Held Item Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Berry Mutation ">
       <a href="salac-berry.html">
 <img src="../assets/game/graphics/items/icons/salac_berry.png" alt="Salac Berry" class="item-icon">        <span>Salac Berry</span>
       </a>
@@ -2639,7 +2645,7 @@
 <img src="../assets/game/graphics/items/icons/shuca_berry.png" alt="Shuca Berry" class="item-icon">        <span>Shuca Berry</span>
       </a>
     </li>
-    <li data-search-text="Sitrus Berry ITEM_SITRUS_BERRY Berry Tree Route 118 Route 119 Route 123 Random Berry Gift Lilycove City Wild Held Items Audino Toucannon Trumbeak Trainer Held Item Leader Brawly (Dewford Town - Gym) Leader Brawly (Dewford Town - Gym) Leader Brawly (Dewford Town - Gym) Leader Brawly (Dewford Town - Gym) Champion Wallace (Ever Grande City - Champion&#39;s Room) Elite Four Juan (Ever Grande City - Juan&#39;s Room) Elite Four Phoebe (Ever Grande City - Phoebe&#39;s Room) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Norman (Petalburg City - Gym) Leader Norman (Petalburg City - Gym) Leader Norman (Petalburg City - Gym) Leader Norman (Petalburg City - Gym) Leader Norman (Petalburg City - Gym) Pokéfan Miguel (Route 103) Cooltrainer Carolina (Route 108) Pokéfan Isabel (Route 110) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym)">
+    <li data-search-text="Sitrus Berry ITEM_SITRUS_BERRY Berry Tree Route 118 Route 119 Route 123 Random Berry Gift Lilycove City Wild Held Items Audino Toucannon Trumbeak Trainer Held Item Leader Brawly (Dewford Town - Gym) Leader Brawly (Dewford Town - Gym) Leader Brawly (Dewford Town - Gym) Leader Brawly (Dewford Town - Gym) Champion Wallace (Ever Grande City - Champion&#39;s Room) Elite Four Juan (Ever Grande City - Juan&#39;s Room) Elite Four Phoebe (Ever Grande City - Phoebe&#39;s Room) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Norman (Petalburg City - Gym) Leader Norman (Petalburg City - Gym) Leader Norman (Petalburg City - Gym) Leader Norman (Petalburg City - Gym) Leader Norman (Petalburg City - Gym) Pokéfan Miguel (Route 103) Cooltrainer Carolina (Route 108) Pokéfan Isabel (Route 110) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F)">
       <a href="sitrus-berry.html">
 <img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="Sitrus Berry" class="item-icon">        <span>Sitrus Berry</span>
       </a>

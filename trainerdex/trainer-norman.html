@@ -144,9 +144,15 @@
         const items = dropdown.querySelectorAll('.suggestion');
         if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(activeIdx + 1); }
         else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(activeIdx <= 0 ? items.length - 1 : activeIdx - 1); }
-        else if (e.key === 'Enter' && activeIdx >= 0) {
-          e.preventDefault();
-          acceptSuggestion(items[activeIdx]);
+        else if (e.key === 'Enter') {
+          // Priority: manually-arrowed selection > sole remaining suggestion > exact name match (post-normalize).
+          let idx = activeIdx;
+          if (idx < 0 && items.length === 1) idx = 0;
+          if (idx < 0) {
+            const q = obstagoonNormalize(input.value);
+            idx = Array.from(items).findIndex((b) => obstagoonNormalize(b.dataset.name) === q);
+          }
+          if (idx >= 0) { e.preventDefault(); acceptSuggestion(items[idx]); }
         }
         else if (e.key === 'Escape') { dropdown.hidden = true; activeIdx = -1; }
       });
@@ -209,6 +215,13 @@
   <main class="wrap">
 <div class="trainer-heading">
   <h1>Leader Norman</h1>
+    <nav class="rematch-tabs" aria-label="Rematch tiers">
+<a class="rematch-tab tier-0" href="#first-fight">First Fight</a>
+<a class="rematch-tab tier-1" href="#rematch-1">Rematch 1</a>
+<a class="rematch-tab tier-2" href="#rematch-2">Rematch 2</a>
+<a class="rematch-tab tier-3" href="#rematch-3">Rematch 3</a>
+<a class="rematch-tab tier-4" href="#rematch-4">Rematch 4</a>
+    </nav>
 </div>
 <section class="card pokemon-hero-card trainer-hero-card">
   <div class="pokemon-hero trainer-hero">
@@ -218,9 +231,9 @@
 <p><strong>Battle Type:</strong> Singles</p>    </div>
   </div>
 </section>
-  <section class="card species-section table-card">
-    <h2>Party</h2>
-    <div class="table-scroll">
+    <section id="first-fight" class="card species-section table-card party-panel tier-0">
+      <h2>Party</h2>
+      <div class="table-scroll">
   <table>
     <thead>
       <tr>
@@ -292,7 +305,334 @@
   </table>
 </div>
 
-  </section>
+    </section>
+    <section id="rematch-1" class="card species-section table-card party-panel tier-1">
+      <h2>Party</h2>
+      <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th><th>Level</th><th>Picture</th><th>Types</th><th>Ability</th><th>EVs</th><th>IVs</th><th>Held Item</th><th>Moves</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Chansey Level 42</td>
+        <td>42</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/light-screen.html">Light Screen</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sing.html">Sing</a></span><br><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/skill-swap.html">Skill Swap</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/focus-punch.html">Focus Punch</a></span></td>
+      </tr>
+      <tr>
+        <td>Slaking Level 42</td>
+        <td>42</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/sitrus-berry.html"><img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="Sitrus Berry" class="item-icon">Sitrus Berry</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/blizzard.html">Blizzard</a></span><br><span class="move-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/shadow-ball.html">Shadow Ball</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/double-edge.html">Double-Edge</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/fire-blast.html">Fire Blast</a></span></td>
+      </tr>
+      <tr>
+        <td>Spinda Level 43</td>
+        <td>43</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/teeter-dance.html">Teeter Dance</a></span><br><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/skill-swap.html">Skill Swap</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/facade.html">Facade</a></span><br><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/hypnosis.html">Hypnosis</a></span></td>
+      </tr>
+      <tr>
+        <td>Slaking Level 45</td>
+        <td>45</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/sitrus-berry.html"><img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="Sitrus Berry" class="item-icon">Sitrus Berry</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/hyper-beam.html">Hyper Beam</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/flamethrower.html">Flamethrower</a></span><br><span class="move-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/thunderbolt.html">Thunderbolt</a></span><br><span class="move-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/shadow-ball.html">Shadow Ball</a></span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+    </section>
+    <section id="rematch-2" class="card species-section table-card party-panel tier-2">
+      <h2>Party</h2>
+      <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th><th>Level</th><th>Picture</th><th>Types</th><th>Ability</th><th>EVs</th><th>IVs</th><th>Held Item</th><th>Moves</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Slaking Level 47</td>
+        <td>47</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/sitrus-berry.html"><img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="Sitrus Berry" class="item-icon">Sitrus Berry</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/blizzard.html">Blizzard</a></span><br><span class="move-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/shadow-ball.html">Shadow Ball</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/double-edge.html">Double-Edge</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/fire-blast.html">Fire Blast</a></span></td>
+      </tr>
+      <tr>
+        <td>Chansey Level 47</td>
+        <td>47</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/light-screen.html">Light Screen</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sing.html">Sing</a></span><br><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/skill-swap.html">Skill Swap</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/focus-punch.html">Focus Punch</a></span></td>
+      </tr>
+      <tr>
+        <td>Kangaskhan Level 45</td>
+        <td>45</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/fake-out.html">Fake Out</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/dizzy-punch.html">Dizzy Punch</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/endure.html">Endure</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/reversal.html">Reversal</a></span></td>
+      </tr>
+      <tr>
+        <td>Spinda Level 48</td>
+        <td>48</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/teeter-dance.html">Teeter Dance</a></span><br><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/skill-swap.html">Skill Swap</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/facade.html">Facade</a></span><br><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/hypnosis.html">Hypnosis</a></span></td>
+      </tr>
+      <tr>
+        <td>Slaking Level 50</td>
+        <td>50</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/sitrus-berry.html"><img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="Sitrus Berry" class="item-icon">Sitrus Berry</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/hyper-beam.html">Hyper Beam</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/flamethrower.html">Flamethrower</a></span><br><span class="move-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/thunderbolt.html">Thunderbolt</a></span><br><span class="move-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/shadow-ball.html">Shadow Ball</a></span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+    </section>
+    <section id="rematch-3" class="card species-section table-card party-panel tier-3">
+      <h2>Party</h2>
+      <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th><th>Level</th><th>Picture</th><th>Types</th><th>Ability</th><th>EVs</th><th>IVs</th><th>Held Item</th><th>Moves</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Slaking Level 52</td>
+        <td>52</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/sitrus-berry.html"><img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="Sitrus Berry" class="item-icon">Sitrus Berry</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/blizzard.html">Blizzard</a></span><br><span class="move-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/shadow-ball.html">Shadow Ball</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/double-edge.html">Double-Edge</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/fire-blast.html">Fire Blast</a></span></td>
+      </tr>
+      <tr>
+        <td>Blissey Level 52</td>
+        <td>52</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/light-screen.html">Light Screen</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sing.html">Sing</a></span><br><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/skill-swap.html">Skill Swap</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/focus-punch.html">Focus Punch</a></span></td>
+      </tr>
+      <tr>
+        <td>Kangaskhan Level 50</td>
+        <td>50</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/fake-out.html">Fake Out</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/dizzy-punch.html">Dizzy Punch</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/endure.html">Endure</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/reversal.html">Reversal</a></span></td>
+      </tr>
+      <tr>
+        <td>Spinda Level 53</td>
+        <td>53</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/teeter-dance.html">Teeter Dance</a></span><br><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/skill-swap.html">Skill Swap</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/facade.html">Facade</a></span><br><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/hypnosis.html">Hypnosis</a></span></td>
+      </tr>
+      <tr>
+        <td>Slaking Level 55</td>
+        <td>55</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/sitrus-berry.html"><img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="Sitrus Berry" class="item-icon">Sitrus Berry</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/hyper-beam.html">Hyper Beam</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/flamethrower.html">Flamethrower</a></span><br><span class="move-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/thunderbolt.html">Thunderbolt</a></span><br><span class="move-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/shadow-ball.html">Shadow Ball</a></span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+    </section>
+    <section id="rematch-4" class="card species-section table-card party-panel tier-4">
+      <h2>Party</h2>
+      <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th><th>Level</th><th>Picture</th><th>Types</th><th>Ability</th><th>EVs</th><th>IVs</th><th>Held Item</th><th>Moves</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Slaking Level 57</td>
+        <td>57</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/sitrus-berry.html"><img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="Sitrus Berry" class="item-icon">Sitrus Berry</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/blizzard.html">Blizzard</a></span><br><span class="move-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/shadow-ball.html">Shadow Ball</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/double-edge.html">Double-Edge</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/fire-blast.html">Fire Blast</a></span></td>
+      </tr>
+      <tr>
+        <td>Blissey Level 57</td>
+        <td>57</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/protect.html">Protect</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sing.html">Sing</a></span><br><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/skill-swap.html">Skill Swap</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/focus-punch.html">Focus Punch</a></span></td>
+      </tr>
+      <tr>
+        <td>Kangaskhan Level 55</td>
+        <td>55</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/fake-out.html">Fake Out</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/dizzy-punch.html">Dizzy Punch</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/endure.html">Endure</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/reversal.html">Reversal</a></span></td>
+      </tr>
+      <tr>
+        <td>Tauros Level 57</td>
+        <td>57</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/take-down.html">Take Down</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/protect.html">Protect</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/fire-blast.html">Fire Blast</a></span><br><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/earthquake.html">Earthquake</a></span></td>
+      </tr>
+      <tr>
+        <td>Spinda Level 58</td>
+        <td>58</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/teeter-dance.html">Teeter Dance</a></span><br><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/skill-swap.html">Skill Swap</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/facade.html">Facade</a></span><br><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/hypnosis.html">Hypnosis</a></span></td>
+      </tr>
+      <tr>
+        <td>Slaking Level 60</td>
+        <td>60</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/sitrus-berry.html"><img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="Sitrus Berry" class="item-icon">Sitrus Berry</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/hyper-beam.html">Hyper Beam</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/flamethrower.html">Flamethrower</a></span><br><span class="move-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/thunderbolt.html">Thunderbolt</a></span><br><span class="move-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/shadow-ball.html">Shadow Ball</a></span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+    </section>
+  <script>
+    // Class-toggle (no URL fragment) so clicking a tab doesn't trigger the browser's scroll-to-anchor.
+    (function () {
+      function bindRematchTabs() {
+        var tabs = document.querySelectorAll('.rematch-tab');
+        var panels = document.querySelectorAll('.party-panel');
+        function tierOf(el) { var m = el.className.match(/tier-(\d+)/); return m ? m[1] : null; }
+        function activate(tier) {
+          tabs.forEach(function (t) { t.classList.toggle('is-active', tierOf(t) === tier); });
+          panels.forEach(function (p) { p.classList.toggle('is-active', tierOf(p) === tier); });
+        }
+        activate('0');
+        tabs.forEach(function (tab) {
+          tab.addEventListener('click', function (e) {
+            e.preventDefault();
+            var t = tierOf(tab);
+            if (t !== null) activate(t);
+          });
+        });
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindRematchTabs);
+      } else {
+        bindRematchTabs();
+      }
+    })();
+  </script>
   </main>
   <script>
     function obstagoonBindFilters() {

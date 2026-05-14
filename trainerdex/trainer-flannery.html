@@ -144,9 +144,15 @@
         const items = dropdown.querySelectorAll('.suggestion');
         if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(activeIdx + 1); }
         else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(activeIdx <= 0 ? items.length - 1 : activeIdx - 1); }
-        else if (e.key === 'Enter' && activeIdx >= 0) {
-          e.preventDefault();
-          acceptSuggestion(items[activeIdx]);
+        else if (e.key === 'Enter') {
+          // Priority: manually-arrowed selection > sole remaining suggestion > exact name match (post-normalize).
+          let idx = activeIdx;
+          if (idx < 0 && items.length === 1) idx = 0;
+          if (idx < 0) {
+            const q = obstagoonNormalize(input.value);
+            idx = Array.from(items).findIndex((b) => obstagoonNormalize(b.dataset.name) === q);
+          }
+          if (idx >= 0) { e.preventDefault(); acceptSuggestion(items[idx]); }
         }
         else if (e.key === 'Escape') { dropdown.hidden = true; activeIdx = -1; }
       });
@@ -209,6 +215,13 @@
   <main class="wrap">
 <div class="trainer-heading">
   <h1>Leader Flannery</h1>
+    <nav class="rematch-tabs" aria-label="Rematch tiers">
+<a class="rematch-tab tier-0" href="#first-fight">First Fight</a>
+<a class="rematch-tab tier-1" href="#rematch-1">Rematch 1</a>
+<a class="rematch-tab tier-2" href="#rematch-2">Rematch 2</a>
+<a class="rematch-tab tier-3" href="#rematch-3">Rematch 3</a>
+<a class="rematch-tab tier-4" href="#rematch-4">Rematch 4</a>
+    </nav>
 </div>
 <section class="card pokemon-hero-card trainer-hero-card">
   <div class="pokemon-hero trainer-hero">
@@ -218,9 +231,9 @@
 <p><strong>Battle Type:</strong> Singles</p>    </div>
   </div>
 </section>
-  <section class="card species-section table-card">
-    <h2>Party</h2>
-    <div class="table-scroll">
+    <section id="first-fight" class="card species-section table-card party-panel tier-0">
+      <h2>Party</h2>
+      <div class="table-scroll">
   <table>
     <thead>
       <tr>
@@ -292,7 +305,346 @@
   </table>
 </div>
 
-  </section>
+    </section>
+    <section id="rematch-1" class="card species-section table-card party-panel tier-1">
+      <h2>Party</h2>
+      <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th><th>Level</th><th>Picture</th><th>Types</th><th>Ability</th><th>EVs</th><th>IVs</th><th>Held Item</th><th>Moves</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Magcargo Level 38</td>
+        <td>38</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/white-herb.html"><img src="../assets/game/graphics/items/icons/white_herb.png" alt="White Herb" class="item-icon">White Herb</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/overheat.html">Overheat</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/attract.html">Attract</a></span><br><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/light-screen.html">Light Screen</a></span><br><span class="move-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/rock-slide.html">Rock Slide</a></span></td>
+      </tr>
+      <tr>
+        <td>Ponyta Level 36</td>
+        <td>36</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/flamethrower.html">Flamethrower</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/attract.html">Attract</a></span><br><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/solar-beam.html">Solar Beam</a></span><br><span class="move-row"><img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/bounce.html">Bounce</a></span></td>
+      </tr>
+      <tr>
+        <td>Camerupt Level 38</td>
+        <td>38</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/white-herb.html"><img src="../assets/game/graphics/items/icons/white_herb.png" alt="White Herb" class="item-icon">White Herb</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/overheat.html">Overheat</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sunny-day.html">Sunny Day</a></span><br><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/earthquake.html">Earthquake</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/attract.html">Attract</a></span></td>
+      </tr>
+      <tr>
+        <td>Torkoal Level 40</td>
+        <td>40</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/white-herb.html"><img src="../assets/game/graphics/items/icons/white_herb.png" alt="White Herb" class="item-icon">White Herb</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/overheat.html">Overheat</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sunny-day.html">Sunny Day</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/explosion.html">Explosion</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/attract.html">Attract</a></span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+    </section>
+    <section id="rematch-2" class="card species-section table-card party-panel tier-2">
+      <h2>Party</h2>
+      <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th><th>Level</th><th>Picture</th><th>Types</th><th>Ability</th><th>EVs</th><th>IVs</th><th>Held Item</th><th>Moves</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Growlithe Level 41</td>
+        <td>41</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/helping-hand.html">Helping Hand</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/flamethrower.html">Flamethrower</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/roar.html">Roar</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sunny-day.html">Sunny Day</a></span></td>
+      </tr>
+      <tr>
+        <td>Magcargo Level 43</td>
+        <td>43</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/white-herb.html"><img src="../assets/game/graphics/items/icons/white_herb.png" alt="White Herb" class="item-icon">White Herb</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/overheat.html">Overheat</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/attract.html">Attract</a></span><br><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/light-screen.html">Light Screen</a></span><br><span class="move-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/rock-slide.html">Rock Slide</a></span></td>
+      </tr>
+      <tr>
+        <td>Ponyta Level 41</td>
+        <td>41</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/flamethrower.html">Flamethrower</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/attract.html">Attract</a></span><br><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/solar-beam.html">Solar Beam</a></span><br><span class="move-row"><img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/bounce.html">Bounce</a></span></td>
+      </tr>
+      <tr>
+        <td>Camerupt Level 43</td>
+        <td>43</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/white-herb.html"><img src="../assets/game/graphics/items/icons/white_herb.png" alt="White Herb" class="item-icon">White Herb</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/overheat.html">Overheat</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sunny-day.html">Sunny Day</a></span><br><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/earthquake.html">Earthquake</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/attract.html">Attract</a></span></td>
+      </tr>
+      <tr>
+        <td>Torkoal Level 45</td>
+        <td>45</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/white-herb.html"><img src="../assets/game/graphics/items/icons/white_herb.png" alt="White Herb" class="item-icon">White Herb</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/overheat.html">Overheat</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sunny-day.html">Sunny Day</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/explosion.html">Explosion</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/attract.html">Attract</a></span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+    </section>
+    <section id="rematch-3" class="card species-section table-card party-panel tier-3">
+      <h2>Party</h2>
+      <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th><th>Level</th><th>Picture</th><th>Types</th><th>Ability</th><th>EVs</th><th>IVs</th><th>Held Item</th><th>Moves</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Houndour Level 46</td>
+        <td>46</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/roar.html">Roar</a></span><br><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/solar-beam.html">Solar Beam</a></span><br><span class="move-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/taunt.html">Taunt</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sunny-day.html">Sunny Day</a></span></td>
+      </tr>
+      <tr>
+        <td>Growlithe Level 46</td>
+        <td>46</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/helping-hand.html">Helping Hand</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/flamethrower.html">Flamethrower</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sunny-day.html">Sunny Day</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/roar.html">Roar</a></span></td>
+      </tr>
+      <tr>
+        <td>Magcargo Level 48</td>
+        <td>48</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/white-herb.html"><img src="../assets/game/graphics/items/icons/white_herb.png" alt="White Herb" class="item-icon">White Herb</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/overheat.html">Overheat</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/attract.html">Attract</a></span><br><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/light-screen.html">Light Screen</a></span><br><span class="move-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/rock-slide.html">Rock Slide</a></span></td>
+      </tr>
+      <tr>
+        <td>Rapidash Level 46</td>
+        <td>46</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/flamethrower.html">Flamethrower</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/attract.html">Attract</a></span><br><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/solar-beam.html">Solar Beam</a></span><br><span class="move-row"><img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/bounce.html">Bounce</a></span></td>
+      </tr>
+      <tr>
+        <td>Camerupt Level 48</td>
+        <td>48</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/white-herb.html"><img src="../assets/game/graphics/items/icons/white_herb.png" alt="White Herb" class="item-icon">White Herb</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/overheat.html">Overheat</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sunny-day.html">Sunny Day</a></span><br><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/earthquake.html">Earthquake</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/attract.html">Attract</a></span></td>
+      </tr>
+      <tr>
+        <td>Torkoal Level 50</td>
+        <td>50</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/white-herb.html"><img src="../assets/game/graphics/items/icons/white_herb.png" alt="White Herb" class="item-icon">White Herb</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/overheat.html">Overheat</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sunny-day.html">Sunny Day</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/explosion.html">Explosion</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/attract.html">Attract</a></span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+    </section>
+    <section id="rematch-4" class="card species-section table-card party-panel tier-4">
+      <h2>Party</h2>
+      <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th><th>Level</th><th>Picture</th><th>Types</th><th>Ability</th><th>EVs</th><th>IVs</th><th>Held Item</th><th>Moves</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Arcanine Level 51</td>
+        <td>51</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/helping-hand.html">Helping Hand</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/flamethrower.html">Flamethrower</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sunny-day.html">Sunny Day</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/roar.html">Roar</a></span></td>
+      </tr>
+      <tr>
+        <td>Magcargo Level 53</td>
+        <td>53</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/white-herb.html"><img src="../assets/game/graphics/items/icons/white_herb.png" alt="White Herb" class="item-icon">White Herb</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/overheat.html">Overheat</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/attract.html">Attract</a></span><br><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/light-screen.html">Light Screen</a></span><br><span class="move-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/rock-slide.html">Rock Slide</a></span></td>
+      </tr>
+      <tr>
+        <td>Houndoom Level 51</td>
+        <td>51</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/roar.html">Roar</a></span><br><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/solar-beam.html">Solar Beam</a></span><br><span class="move-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/taunt.html">Taunt</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sunny-day.html">Sunny Day</a></span></td>
+      </tr>
+      <tr>
+        <td>Rapidash Level 51</td>
+        <td>51</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td>—</td>
+        <td><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/flamethrower.html">Flamethrower</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/attract.html">Attract</a></span><br><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/solar-beam.html">Solar Beam</a></span><br><span class="move-row"><img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/bounce.html">Bounce</a></span></td>
+      </tr>
+      <tr>
+        <td>Camerupt Level 53</td>
+        <td>53</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/white-herb.html"><img src="../assets/game/graphics/items/icons/white_herb.png" alt="White Herb" class="item-icon">White Herb</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/overheat.html">Overheat</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sunny-day.html">Sunny Day</a></span><br><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/earthquake.html">Earthquake</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/attract.html">Attract</a></span></td>
+      </tr>
+      <tr>
+        <td>Torkoal Level 55</td>
+        <td>55</td>
+        <td>—</td>
+        <td>
+—        </td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/white-herb.html"><img src="../assets/game/graphics/items/icons/white_herb.png" alt="White Herb" class="item-icon">White Herb</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/overheat.html">Overheat</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sunny-day.html">Sunny Day</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/explosion.html">Explosion</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/attract.html">Attract</a></span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+    </section>
+  <script>
+    // Class-toggle (no URL fragment) so clicking a tab doesn't trigger the browser's scroll-to-anchor.
+    (function () {
+      function bindRematchTabs() {
+        var tabs = document.querySelectorAll('.rematch-tab');
+        var panels = document.querySelectorAll('.party-panel');
+        function tierOf(el) { var m = el.className.match(/tier-(\d+)/); return m ? m[1] : null; }
+        function activate(tier) {
+          tabs.forEach(function (t) { t.classList.toggle('is-active', tierOf(t) === tier); });
+          panels.forEach(function (p) { p.classList.toggle('is-active', tierOf(p) === tier); });
+        }
+        activate('0');
+        tabs.forEach(function (tab) {
+          tab.addEventListener('click', function (e) {
+            e.preventDefault();
+            var t = tierOf(tab);
+            if (t !== null) activate(t);
+          });
+        });
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindRematchTabs);
+      } else {
+        bindRematchTabs();
+      }
+    })();
+  </script>
   </main>
   <script>
     function obstagoonBindFilters() {

@@ -144,9 +144,15 @@
         const items = dropdown.querySelectorAll('.suggestion');
         if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(activeIdx + 1); }
         else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(activeIdx <= 0 ? items.length - 1 : activeIdx - 1); }
-        else if (e.key === 'Enter' && activeIdx >= 0) {
-          e.preventDefault();
-          acceptSuggestion(items[activeIdx]);
+        else if (e.key === 'Enter') {
+          // Priority: manually-arrowed selection > sole remaining suggestion > exact name match (post-normalize).
+          let idx = activeIdx;
+          if (idx < 0 && items.length === 1) idx = 0;
+          if (idx < 0) {
+            const q = obstagoonNormalize(input.value);
+            idx = Array.from(items).findIndex((b) => obstagoonNormalize(b.dataset.name) === q);
+          }
+          if (idx >= 0) { e.preventDefault(); acceptSuggestion(items[idx]); }
         }
         else if (e.key === 'Escape') { dropdown.hidden = true; activeIdx = -1; }
       });
@@ -209,6 +215,13 @@
   <main class="wrap">
 <div class="trainer-heading">
   <h1>Leader Glacia</h1>
+    <nav class="rematch-tabs" aria-label="Rematch tiers">
+<a class="rematch-tab tier-0" href="#first-fight">First Fight</a>
+<a class="rematch-tab tier-1" href="#rematch-1">Rematch 1</a>
+<a class="rematch-tab tier-2" href="#rematch-2">Rematch 2</a>
+<a class="rematch-tab tier-3" href="#rematch-3">Rematch 3</a>
+<a class="rematch-tab tier-4" href="#rematch-4">Rematch 4</a>
+    </nav>
 </div>
 <section class="card pokemon-hero-card trainer-hero-card">
   <div class="pokemon-hero trainer-hero">
@@ -218,9 +231,9 @@
 <p><strong>Battle Type:</strong> Doubles</p>    </div>
   </div>
 </section>
-  <section class="card species-section table-card">
-    <h2>Party</h2>
-    <div class="table-scroll">
+    <section id="first-fight" class="card species-section table-card party-panel tier-0">
+      <h2>Party</h2>
+      <div class="table-scroll">
   <table>
     <thead>
       <tr>
@@ -307,7 +320,454 @@
   </table>
 </div>
 
-  </section>
+    </section>
+    <section id="rematch-1" class="card species-section table-card party-panel tier-1">
+      <h2>Party</h2>
+      <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th><th>Level</th><th>Picture</th><th>Types</th><th>Ability</th><th>EVs</th><th>IVs</th><th>Held Item</th><th>Moves</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a href="../pokedex/abomasnow.html">Abomasnow</a></td>
+        <td>46</td>
+        <td><img src="../assets/game/graphics/pokemon/abomasnow/anim_front.png" alt="Abomasnow Level 46 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/snow-warning.html">Snow Warning</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">30 HP</span><br><span class="stat-pair">30 Atk</span><br><span class="stat-pair">30 Def</span><br><span class="stat-pair">30 SpA</span><br><span class="stat-pair">30 SpD</span><br><span class="stat-pair">30 Spe</span></td>
+        <td><a href="../itemdex/icy-rock.html"><img src="../assets/game/graphics/items/icons/icy_rock.png" alt="Icy Rock" class="item-icon">Icy Rock</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/aurora-veil.html">Aurora Veil</a></span><br><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/wood-hammer.html" class="stab">Wood Hammer</a></span><br><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/leech-seed.html">Leech Seed</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/blizzard.html" class="stab">Blizzard</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/beartic.html">Beartic</a></td>
+        <td>46</td>
+        <td><img src="../assets/game/graphics/pokemon/beartic/anim_front.png" alt="Beartic Level 46 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/slush-rush.html">Slush Rush</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">30 HP</span><br><span class="stat-pair">30 Atk</span><br><span class="stat-pair">30 Def</span><br><span class="stat-pair">30 SpA</span><br><span class="stat-pair">30 SpD</span><br><span class="stat-pair">30 Spe</span></td>
+        <td><a href="../itemdex/salac-berry.html"><img src="../assets/game/graphics/items/icons/salac_berry.png" alt="Salac Berry" class="item-icon">Salac Berry</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/belly-drum.html">Belly Drum</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/icicle-crash.html" class="stab">Icicle Crash</a></span><br><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/headlong-rush.html">Headlong Rush</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/ice-shard.html" class="stab">Ice Shard</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/darmanitan-galar.html">Darmanitan (Galarian)</a></td>
+        <td>48</td>
+        <td><img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="Darmanitan Level 48 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/gorilla-tactics.html">Gorilla Tactics</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/focus-sash.html"><img src="../assets/game/graphics/items/icons/focus_sash.png" alt="Focus Sash" class="item-icon">Focus Sash</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/ice-punch.html" class="stab">Ice Punch</a></span><br><span class="move-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/iron-head.html">Iron Head</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/close-combat.html">Close Combat</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/brick-break.html">Brick Break</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/avalugg.html">Avalugg</a></td>
+        <td>48</td>
+        <td><img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="Avalugg Level 48 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/own-tempo.html">Own Tempo</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">30 HP</span><br><span class="stat-pair">30 Atk</span><br><span class="stat-pair">30 Def</span><br><span class="stat-pair">30 SpA</span><br><span class="stat-pair">30 SpD</span><br><span class="stat-pair">30 Spe</span></td>
+        <td><a href="../itemdex/heavy-duty-boots.html"><img src="../assets/game/graphics/items/icons/heavy_duty_boots.png" alt="Heavy-Duty Boots" class="item-icon">Heavy-Duty Boots</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/body-press.html">Body Press</a></span><br><span class="move-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/iron-defense.html">Iron Defense</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/recover.html">Recover</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/rapid-spin.html">Rapid Spin</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/aurorus.html">Aurorus</a></td>
+        <td>51</td>
+        <td><img src="../assets/game/graphics/pokemon/aurorus/anim_front.png" alt="Aurorus Level 51 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/prism-armor.html">Prism Armor</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/assault-vest.html"><img src="../assets/game/graphics/items/icons/assault_vest.png" alt="Assault Vest" class="item-icon">Assault Vest</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/diamond-storm.html">Diamond Storm</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/freeze-dry.html" class="stab">Freeze-Dry</a></span><br><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/earth-power.html">Earth Power</a></span><br><span class="move-row"><img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/dragon-pulse.html" class="stab">Dragon Pulse</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/cryogonal.html">Cryogonal</a></td>
+        <td>46</td>
+        <td><img src="../assets/game/graphics/pokemon/cryogonal/anim_front.png" alt="Cryogonal Level 46 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/ice-scales.html">Ice Scales</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">30 HP</span><br><span class="stat-pair">30 Atk</span><br><span class="stat-pair">30 Def</span><br><span class="stat-pair">30 SpA</span><br><span class="stat-pair">30 SpD</span><br><span class="stat-pair">30 Spe</span></td>
+        <td><a href="../itemdex/rare-candy.html"><img src="../assets/game/graphics/items/icons/rare_candy.png" alt="Rare Candy" class="item-icon">Rare Candy</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/toxic.html">Toxic</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/glaciate.html" class="stab">Glaciate</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/recover.html">Recover</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/sheer-cold.html" class="stab">Sheer Cold</a></span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+    </section>
+    <section id="rematch-2" class="card species-section table-card party-panel tier-2">
+      <h2>Party</h2>
+      <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th><th>Level</th><th>Picture</th><th>Types</th><th>Ability</th><th>EVs</th><th>IVs</th><th>Held Item</th><th>Moves</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a href="../pokedex/abomasnow.html">Abomasnow</a></td>
+        <td>52</td>
+        <td><img src="../assets/game/graphics/pokemon/abomasnow/anim_front.png" alt="Abomasnow Level 52 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/snow-warning.html">Snow Warning</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">30 HP</span><br><span class="stat-pair">30 Atk</span><br><span class="stat-pair">30 Def</span><br><span class="stat-pair">30 SpA</span><br><span class="stat-pair">30 SpD</span><br><span class="stat-pair">30 Spe</span></td>
+        <td><a href="../itemdex/icy-rock.html"><img src="../assets/game/graphics/items/icons/icy_rock.png" alt="Icy Rock" class="item-icon">Icy Rock</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/aurora-veil.html">Aurora Veil</a></span><br><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/wood-hammer.html" class="stab">Wood Hammer</a></span><br><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/leech-seed.html">Leech Seed</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/blizzard.html" class="stab">Blizzard</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/beartic.html">Beartic</a></td>
+        <td>52</td>
+        <td><img src="../assets/game/graphics/pokemon/beartic/anim_front.png" alt="Beartic Level 52 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/slush-rush.html">Slush Rush</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">30 HP</span><br><span class="stat-pair">30 Atk</span><br><span class="stat-pair">30 Def</span><br><span class="stat-pair">30 SpA</span><br><span class="stat-pair">30 SpD</span><br><span class="stat-pair">30 Spe</span></td>
+        <td><a href="../itemdex/salac-berry.html"><img src="../assets/game/graphics/items/icons/salac_berry.png" alt="Salac Berry" class="item-icon">Salac Berry</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/belly-drum.html">Belly Drum</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/icicle-crash.html" class="stab">Icicle Crash</a></span><br><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/headlong-rush.html">Headlong Rush</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/ice-shard.html" class="stab">Ice Shard</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/darmanitan-galar.html">Darmanitan (Galarian)</a></td>
+        <td>53</td>
+        <td><img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="Darmanitan Level 53 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/gorilla-tactics.html">Gorilla Tactics</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/focus-sash.html"><img src="../assets/game/graphics/items/icons/focus_sash.png" alt="Focus Sash" class="item-icon">Focus Sash</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/ice-punch.html" class="stab">Ice Punch</a></span><br><span class="move-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/iron-head.html">Iron Head</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/close-combat.html">Close Combat</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/brick-break.html">Brick Break</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/avalugg.html">Avalugg</a></td>
+        <td>53</td>
+        <td><img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="Avalugg Level 53 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/own-tempo.html">Own Tempo</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">30 HP</span><br><span class="stat-pair">30 Atk</span><br><span class="stat-pair">30 Def</span><br><span class="stat-pair">30 SpA</span><br><span class="stat-pair">30 SpD</span><br><span class="stat-pair">30 Spe</span></td>
+        <td><a href="../itemdex/heavy-duty-boots.html"><img src="../assets/game/graphics/items/icons/heavy_duty_boots.png" alt="Heavy-Duty Boots" class="item-icon">Heavy-Duty Boots</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/body-press.html">Body Press</a></span><br><span class="move-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/iron-defense.html">Iron Defense</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/recover.html">Recover</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/rapid-spin.html">Rapid Spin</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/aurorus.html">Aurorus</a></td>
+        <td>56</td>
+        <td><img src="../assets/game/graphics/pokemon/aurorus/anim_front.png" alt="Aurorus Level 56 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/prism-armor.html">Prism Armor</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/assault-vest.html"><img src="../assets/game/graphics/items/icons/assault_vest.png" alt="Assault Vest" class="item-icon">Assault Vest</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/diamond-storm.html">Diamond Storm</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/freeze-dry.html" class="stab">Freeze-Dry</a></span><br><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/earth-power.html">Earth Power</a></span><br><span class="move-row"><img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/dragon-pulse.html" class="stab">Dragon Pulse</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/cryogonal.html">Cryogonal</a></td>
+        <td>52</td>
+        <td><img src="../assets/game/graphics/pokemon/cryogonal/anim_front.png" alt="Cryogonal Level 52 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/ice-scales.html">Ice Scales</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">30 HP</span><br><span class="stat-pair">30 Atk</span><br><span class="stat-pair">30 Def</span><br><span class="stat-pair">30 SpA</span><br><span class="stat-pair">30 SpD</span><br><span class="stat-pair">30 Spe</span></td>
+        <td><a href="../itemdex/sitrus-berry.html"><img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="Sitrus Berry" class="item-icon">Sitrus Berry</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/toxic.html">Toxic</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/glaciate.html" class="stab">Glaciate</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/recover.html">Recover</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/sheer-cold.html" class="stab">Sheer Cold</a></span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+    </section>
+    <section id="rematch-3" class="card species-section table-card party-panel tier-3">
+      <h2>Party</h2>
+      <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th><th>Level</th><th>Picture</th><th>Types</th><th>Ability</th><th>EVs</th><th>IVs</th><th>Held Item</th><th>Moves</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a href="../pokedex/abomasnow.html">Abomasnow</a></td>
+        <td>56</td>
+        <td><img src="../assets/game/graphics/pokemon/abomasnow/anim_front.png" alt="Abomasnow Level 56 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/snow-warning.html">Snow Warning</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">30 HP</span><br><span class="stat-pair">30 Atk</span><br><span class="stat-pair">30 Def</span><br><span class="stat-pair">30 SpA</span><br><span class="stat-pair">30 SpD</span><br><span class="stat-pair">30 Spe</span></td>
+        <td><a href="../itemdex/icy-rock.html"><img src="../assets/game/graphics/items/icons/icy_rock.png" alt="Icy Rock" class="item-icon">Icy Rock</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/aurora-veil.html">Aurora Veil</a></span><br><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/wood-hammer.html" class="stab">Wood Hammer</a></span><br><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/leech-seed.html">Leech Seed</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/blizzard.html" class="stab">Blizzard</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/beartic.html">Beartic</a></td>
+        <td>56</td>
+        <td><img src="../assets/game/graphics/pokemon/beartic/anim_front.png" alt="Beartic Level 56 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/slush-rush.html">Slush Rush</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">30 HP</span><br><span class="stat-pair">30 Atk</span><br><span class="stat-pair">30 Def</span><br><span class="stat-pair">30 SpA</span><br><span class="stat-pair">30 SpD</span><br><span class="stat-pair">30 Spe</span></td>
+        <td><a href="../itemdex/salac-berry.html"><img src="../assets/game/graphics/items/icons/salac_berry.png" alt="Salac Berry" class="item-icon">Salac Berry</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/belly-drum.html">Belly Drum</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/icicle-crash.html" class="stab">Icicle Crash</a></span><br><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/headlong-rush.html">Headlong Rush</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/ice-shard.html" class="stab">Ice Shard</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/darmanitan-galar.html">Darmanitan (Galarian)</a></td>
+        <td>58</td>
+        <td><img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="Darmanitan Level 58 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/gorilla-tactics.html">Gorilla Tactics</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/focus-sash.html"><img src="../assets/game/graphics/items/icons/focus_sash.png" alt="Focus Sash" class="item-icon">Focus Sash</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/ice-punch.html" class="stab">Ice Punch</a></span><br><span class="move-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/iron-head.html">Iron Head</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/close-combat.html">Close Combat</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/brick-break.html">Brick Break</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/avalugg.html">Avalugg</a></td>
+        <td>58</td>
+        <td><img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="Avalugg Level 58 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/own-tempo.html">Own Tempo</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">30 HP</span><br><span class="stat-pair">30 Atk</span><br><span class="stat-pair">30 Def</span><br><span class="stat-pair">30 SpA</span><br><span class="stat-pair">30 SpD</span><br><span class="stat-pair">30 Spe</span></td>
+        <td><a href="../itemdex/heavy-duty-boots.html"><img src="../assets/game/graphics/items/icons/heavy_duty_boots.png" alt="Heavy-Duty Boots" class="item-icon">Heavy-Duty Boots</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/body-press.html">Body Press</a></span><br><span class="move-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/iron-defense.html">Iron Defense</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/recover.html">Recover</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/rapid-spin.html">Rapid Spin</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/aurorus.html">Aurorus</a></td>
+        <td>61</td>
+        <td><img src="../assets/game/graphics/pokemon/aurorus/anim_front.png" alt="Aurorus Level 61 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/prism-armor.html">Prism Armor</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/assault-vest.html"><img src="../assets/game/graphics/items/icons/assault_vest.png" alt="Assault Vest" class="item-icon">Assault Vest</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/diamond-storm.html">Diamond Storm</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/freeze-dry.html" class="stab">Freeze-Dry</a></span><br><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/earth-power.html">Earth Power</a></span><br><span class="move-row"><img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/dragon-pulse.html" class="stab">Dragon Pulse</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/cryogonal.html">Cryogonal</a></td>
+        <td>56</td>
+        <td><img src="../assets/game/graphics/pokemon/cryogonal/anim_front.png" alt="Cryogonal Level 56 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/ice-scales.html">Ice Scales</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">30 HP</span><br><span class="stat-pair">30 Atk</span><br><span class="stat-pair">30 Def</span><br><span class="stat-pair">30 SpA</span><br><span class="stat-pair">30 SpD</span><br><span class="stat-pair">30 Spe</span></td>
+        <td><a href="../itemdex/sitrus-berry.html"><img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="Sitrus Berry" class="item-icon">Sitrus Berry</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/toxic.html">Toxic</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/glaciate.html" class="stab">Glaciate</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/recover.html">Recover</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/sheer-cold.html" class="stab">Sheer Cold</a></span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+    </section>
+    <section id="rematch-4" class="card species-section table-card party-panel tier-4">
+      <h2>Party</h2>
+      <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th><th>Level</th><th>Picture</th><th>Types</th><th>Ability</th><th>EVs</th><th>IVs</th><th>Held Item</th><th>Moves</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a href="../pokedex/abomasnow.html">Abomasnow</a></td>
+        <td>62</td>
+        <td><img src="../assets/game/graphics/pokemon/abomasnow/anim_front.png" alt="Abomasnow Level 62 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/snow-warning.html">Snow Warning</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">30 HP</span><br><span class="stat-pair">30 Atk</span><br><span class="stat-pair">30 Def</span><br><span class="stat-pair">30 SpA</span><br><span class="stat-pair">30 SpD</span><br><span class="stat-pair">30 Spe</span></td>
+        <td><a href="../itemdex/icy-rock.html"><img src="../assets/game/graphics/items/icons/icy_rock.png" alt="Icy Rock" class="item-icon">Icy Rock</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/aurora-veil.html">Aurora Veil</a></span><br><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/wood-hammer.html" class="stab">Wood Hammer</a></span><br><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/leech-seed.html">Leech Seed</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/blizzard.html" class="stab">Blizzard</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/beartic.html">Beartic</a></td>
+        <td>62</td>
+        <td><img src="../assets/game/graphics/pokemon/beartic/anim_front.png" alt="Beartic Level 62 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/slush-rush.html">Slush Rush</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">30 HP</span><br><span class="stat-pair">30 Atk</span><br><span class="stat-pair">30 Def</span><br><span class="stat-pair">30 SpA</span><br><span class="stat-pair">30 SpD</span><br><span class="stat-pair">30 Spe</span></td>
+        <td><a href="../itemdex/salac-berry.html"><img src="../assets/game/graphics/items/icons/salac_berry.png" alt="Salac Berry" class="item-icon">Salac Berry</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/belly-drum.html">Belly Drum</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/icicle-crash.html" class="stab">Icicle Crash</a></span><br><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/headlong-rush.html">Headlong Rush</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/ice-shard.html" class="stab">Ice Shard</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/darmanitan-galar.html">Darmanitan (Galarian)</a></td>
+        <td>63</td>
+        <td><img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="Darmanitan Level 63 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/gorilla-tactics.html">Gorilla Tactics</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/focus-sash.html"><img src="../assets/game/graphics/items/icons/focus_sash.png" alt="Focus Sash" class="item-icon">Focus Sash</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/ice-punch.html" class="stab">Ice Punch</a></span><br><span class="move-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/iron-head.html">Iron Head</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/close-combat.html">Close Combat</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/brick-break.html">Brick Break</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/avalugg.html">Avalugg</a></td>
+        <td>63</td>
+        <td><img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="Avalugg Level 63 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/own-tempo.html">Own Tempo</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">30 HP</span><br><span class="stat-pair">30 Atk</span><br><span class="stat-pair">30 Def</span><br><span class="stat-pair">30 SpA</span><br><span class="stat-pair">30 SpD</span><br><span class="stat-pair">30 Spe</span></td>
+        <td><a href="../itemdex/heavy-duty-boots.html"><img src="../assets/game/graphics/items/icons/heavy_duty_boots.png" alt="Heavy-Duty Boots" class="item-icon">Heavy-Duty Boots</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/body-press.html">Body Press</a></span><br><span class="move-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/iron-defense.html">Iron Defense</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/recover.html">Recover</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/rapid-spin.html">Rapid Spin</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/aurorus.html">Aurorus</a></td>
+        <td>66</td>
+        <td><img src="../assets/game/graphics/pokemon/aurorus/anim_front.png" alt="Aurorus Level 66 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/prism-armor.html">Prism Armor</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
+        <td><a href="../itemdex/assault-vest.html"><img src="../assets/game/graphics/items/icons/assault_vest.png" alt="Assault Vest" class="item-icon">Assault Vest</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/diamond-storm.html">Diamond Storm</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/freeze-dry.html" class="stab">Freeze-Dry</a></span><br><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/earth-power.html">Earth Power</a></span><br><span class="move-row"><img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/dragon-pulse.html" class="stab">Dragon Pulse</a></span></td>
+      </tr>
+      <tr>
+        <td><a href="../pokedex/cryogonal.html">Cryogonal</a></td>
+        <td>62</td>
+        <td><img src="../assets/game/graphics/pokemon/cryogonal/anim_front.png" alt="Cryogonal Level 62 sprite" class="trainer-mon-sprite"></td>
+        <td>
+            <div class="trainer-type-stack">
+              <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
+            </div>
+        </td>
+        <td><a href="../abilities/ice-scales.html">Ice Scales</a></td>
+        <td>—</td>
+        <td><span class="stat-pair">30 HP</span><br><span class="stat-pair">30 Atk</span><br><span class="stat-pair">30 Def</span><br><span class="stat-pair">30 SpA</span><br><span class="stat-pair">30 SpD</span><br><span class="stat-pair">30 Spe</span></td>
+        <td><a href="../itemdex/sitrus-berry.html"><img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="Sitrus Berry" class="item-icon">Sitrus Berry</a></td>
+        <td><span class="move-row"><img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/toxic.html">Toxic</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/glaciate.html" class="stab">Glaciate</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/recover.html">Recover</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/sheer-cold.html" class="stab">Sheer Cold</a></span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+    </section>
+  <script>
+    // Class-toggle (no URL fragment) so clicking a tab doesn't trigger the browser's scroll-to-anchor.
+    (function () {
+      function bindRematchTabs() {
+        var tabs = document.querySelectorAll('.rematch-tab');
+        var panels = document.querySelectorAll('.party-panel');
+        function tierOf(el) { var m = el.className.match(/tier-(\d+)/); return m ? m[1] : null; }
+        function activate(tier) {
+          tabs.forEach(function (t) { t.classList.toggle('is-active', tierOf(t) === tier); });
+          panels.forEach(function (p) { p.classList.toggle('is-active', tierOf(p) === tier); });
+        }
+        activate('0');
+        tabs.forEach(function (tab) {
+          tab.addEventListener('click', function (e) {
+            e.preventDefault();
+            var t = tierOf(tab);
+            if (t !== null) activate(t);
+          });
+        });
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindRematchTabs);
+      } else {
+        bindRematchTabs();
+      }
+    })();
+  </script>
   </main>
   <script>
     function obstagoonBindFilters() {

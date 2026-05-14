@@ -144,9 +144,15 @@
         const items = dropdown.querySelectorAll('.suggestion');
         if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(activeIdx + 1); }
         else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(activeIdx <= 0 ? items.length - 1 : activeIdx - 1); }
-        else if (e.key === 'Enter' && activeIdx >= 0) {
-          e.preventDefault();
-          acceptSuggestion(items[activeIdx]);
+        else if (e.key === 'Enter') {
+          // Priority: manually-arrowed selection > sole remaining suggestion > exact name match (post-normalize).
+          let idx = activeIdx;
+          if (idx < 0 && items.length === 1) idx = 0;
+          if (idx < 0) {
+            const q = obstagoonNormalize(input.value);
+            idx = Array.from(items).findIndex((b) => obstagoonNormalize(b.dataset.name) === q);
+          }
+          if (idx >= 0) { e.preventDefault(); acceptSuggestion(items[idx]); }
         }
         else if (e.key === 'Escape') { dropdown.hidden = true; activeIdx = -1; }
       });
@@ -245,6 +251,10 @@
       <li>Route 110</li>
       <li>Route 117</li>
       <li>Route 137</li>
+    </ul>
+    <h3 class="item-source-heading">Time Prize (18+ min):</h3>
+    <ul class="item-source-list">
+      <li>Trainer Hill</li>
     </ul>
 </section>
   </main>

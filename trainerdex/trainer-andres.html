@@ -144,9 +144,15 @@
         const items = dropdown.querySelectorAll('.suggestion');
         if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(activeIdx + 1); }
         else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(activeIdx <= 0 ? items.length - 1 : activeIdx - 1); }
-        else if (e.key === 'Enter' && activeIdx >= 0) {
-          e.preventDefault();
-          acceptSuggestion(items[activeIdx]);
+        else if (e.key === 'Enter') {
+          // Priority: manually-arrowed selection > sole remaining suggestion > exact name match (post-normalize).
+          let idx = activeIdx;
+          if (idx < 0 && items.length === 1) idx = 0;
+          if (idx < 0) {
+            const q = obstagoonNormalize(input.value);
+            idx = Array.from(items).findIndex((b) => obstagoonNormalize(b.dataset.name) === q);
+          }
+          if (idx >= 0) { e.preventDefault(); acceptSuggestion(items[idx]); }
         }
         else if (e.key === 'Escape') { dropdown.hidden = true; activeIdx = -1; }
       });
@@ -496,20 +502,22 @@
 
     </section>
   <script>
-    // Tabs use history.replace so Back skips the previous tier and returns to whatever brought you here (typically the trainer index).
+    // Class-toggle (no URL fragment) so clicking a tab doesn't trigger the browser's scroll-to-anchor.
     (function () {
       function bindRematchTabs() {
-        document.querySelectorAll('.rematch-tab').forEach(function (tab) {
+        var tabs = document.querySelectorAll('.rematch-tab');
+        var panels = document.querySelectorAll('.party-panel');
+        function tierOf(el) { var m = el.className.match(/tier-(\d+)/); return m ? m[1] : null; }
+        function activate(tier) {
+          tabs.forEach(function (t) { t.classList.toggle('is-active', tierOf(t) === tier); });
+          panels.forEach(function (p) { p.classList.toggle('is-active', tierOf(p) === tier); });
+        }
+        activate('0');
+        tabs.forEach(function (tab) {
           tab.addEventListener('click', function (e) {
             e.preventDefault();
-            var href = tab.getAttribute('href');
-            if (href === '#first-fight') {
-              // Hop through a clearly-sentinel fragment so :target detaches (CSS default shows tier 0), then strip the fragment from the URL.
-              location.replace('#__obstagoon_clear_target__');
-              history.replaceState(null, '', location.pathname + location.search);
-            } else {
-              location.replace(href);
-            }
+            var t = tierOf(tab);
+            if (t !== null) activate(t);
           });
         });
       }
