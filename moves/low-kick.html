@@ -126,8 +126,13 @@
         if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
         for (const [kind, list] of sources) {
-          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
         }
         if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
@@ -225,7 +230,7 @@
   <p><strong>Description:</strong> A kick that inflicts more damage on heavier foes.</p>
 </div>
 <section class="card">
-  <h2>Learned by <span class="muted small-text">15</span></h2>
+  <h2>Learned by <span class="muted small-text">18</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/bonsly.html">
 <img src="../assets/game/graphics/pokemon/bonsly/anim_front.png" alt="" class="sprite">  <span class="name">Bonsly</span>
@@ -233,12 +238,18 @@
 <img src="../assets/game/graphics/pokemon/buneary/anim_front.png" alt="" class="sprite">  <span class="name">Buneary</span>
 </a></li><li><a href="../pokedex/conkeldurr.html">
 <img src="../assets/game/graphics/pokemon/conkeldurr/anim_front.png" alt="" class="sprite">  <span class="name">Conkeldurr</span>
+</a></li><li><a href="../pokedex/cubone.html">
+<img src="../assets/game/graphics/pokemon/cubone/anim_front.png" alt="" class="sprite">  <span class="name">Cubone</span>
 </a></li><li><a href="../pokedex/gurdurr.html">
 <img src="../assets/game/graphics/pokemon/gurdurr/anim_front.png" alt="" class="sprite">  <span class="name">Gurdurr</span>
 </a></li><li><a href="../pokedex/lopunny.html">
 <img src="../assets/game/graphics/pokemon/lopunny/anim_front.png" alt="" class="sprite">  <span class="name">Lopunny</span>
 </a></li><li><a href="../pokedex/lucario.html">
 <img src="../assets/game/graphics/pokemon/lucario/anim_front.png" alt="" class="sprite">  <span class="name">Lucario</span>
+</a></li><li><a href="../pokedex/marowak.html">
+<img src="../assets/game/graphics/pokemon/marowak/anim_front.png" alt="" class="sprite">  <span class="name">Marowak</span>
+</a></li><li><a href="../pokedex/marowak-alola.html">
+<img src="../assets/game/graphics/pokemon/marowak/alola/front.png" alt="" class="sprite">  <span class="name">Marowak (Alolan)</span>
 </a></li><li><a href="../pokedex/mienfoo.html">
 <img src="../assets/game/graphics/pokemon/mienfoo/anim_front.png" alt="" class="sprite">  <span class="name">Mienfoo</span>
 </a></li><li><a href="../pokedex/mienshao.html">

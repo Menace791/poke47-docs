@@ -126,8 +126,13 @@
         if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
         for (const [kind, list] of sources) {
-          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
         }
         if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
@@ -466,7 +471,7 @@
 </section>
 
 <section class="card" style="margin-top: 1rem;">
-  <h2>Moves <span class="muted small-text" id="type-moves-count">55</span></h2>
+  <h2>Moves <span class="muted small-text" id="type-moves-count">56</span></h2>
   <div class="filter-bar pokedex-filter-bar">
     <label class="filter-label" for="type-moves-search">Search Moves</label>
     <input id="type-moves-search" class="filter-input" type="search" placeholder="Filter by move name" autocomplete="off">
@@ -654,6 +659,15 @@
         <td>—</td>
         <td>100</td>
         <td>10</td>
+      </tr>
+      <tr data-search-text="Forbidden Fang"
+          data-href="../moves/forbidden-fang.html">
+        <td><a href="../moves/forbidden-fang.html">Forbidden Fang</a></td>
+        <td><span class="type-badge type-dark">Dark</span></td>
+        <td>Physical <img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"></td>
+        <td>—</td>
+        <td>100</td>
+        <td>5</td>
       </tr>
       <tr data-search-text="Foul Play"
           data-href="../moves/foul-play.html">

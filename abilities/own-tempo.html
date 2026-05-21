@@ -126,8 +126,13 @@
         if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
         for (const [kind, list] of sources) {
-          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
         }
         if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
@@ -219,12 +224,14 @@
   <p>Prevents confusion.</p>
 </div>
 <section class="card">
-  <h2>Pokémon with this Ability <span class="muted small-text">8</span></h2>
+  <h2>Pokémon with this Ability <span class="muted small-text">10</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/avalugg.html">
 <img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="" class="sprite">  <span class="name">Avalugg</span>
 </a></li><li><a href="../pokedex/bergmite.html">
 <img src="../assets/game/graphics/pokemon/bergmite/anim_front.png" alt="" class="sprite">  <span class="name">Bergmite</span>
+</a></li><li><a href="../pokedex/bewear.html">
+<img src="../assets/game/graphics/pokemon/bewear/anim_front.png" alt="" class="sprite">  <span class="name">Bewear</span>
 </a></li><li><a href="../pokedex/espurr.html">
 <img src="../assets/game/graphics/pokemon/espurr/anim_front.png" alt="" class="sprite">  <span class="name">Espurr <span class="muted small-text">(HA)</span></span>
 </a></li><li><a href="../pokedex/glameow.html">
@@ -237,6 +244,8 @@
 <img src="../assets/game/graphics/pokemon/rockruff/anim_front.png" alt="" class="sprite">  <span class="name">Rockruff (Own Tempo)</span>
 </a></li><li><a href="../pokedex/smeargle.html">
 <img src="../assets/game/graphics/pokemon/smeargle/anim_front.png" alt="" class="sprite">  <span class="name">Smeargle</span>
+</a></li><li><a href="../pokedex/stufful.html">
+<img src="../assets/game/graphics/pokemon/stufful/anim_front.png" alt="" class="sprite">  <span class="name">Stufful</span>
 </a></li>  </ul>
 </section>
   </main>

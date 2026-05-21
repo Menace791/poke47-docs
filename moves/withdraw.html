@@ -126,8 +126,13 @@
         if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
         for (const [kind, list] of sources) {
-          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
         }
         if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
@@ -225,7 +230,7 @@
   <p><strong>Description:</strong> Withdraws the body into its hard shell to raise Defense.</p>
 </div>
 <section class="card">
-  <h2>Learned by <span class="muted small-text">16</span></h2>
+  <h2>Learned by <span class="muted small-text">19</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/accelgor.html">
 <img src="../assets/game/graphics/pokemon/accelgor/anim_front.png" alt="" class="sprite">  <span class="name">Accelgor</span>
@@ -241,10 +246,16 @@
 <img src="../assets/game/graphics/pokemon/clawitzer/anim_front.png" alt="" class="sprite">  <span class="name">Clawitzer</span>
 </a></li><li><a href="../pokedex/crustle.html">
 <img src="../assets/game/graphics/pokemon/crustle/anim_front.png" alt="" class="sprite">  <span class="name">Crustle</span>
+</a></li><li><a href="../pokedex/cubone.html">
+<img src="../assets/game/graphics/pokemon/cubone/anim_front.png" alt="" class="sprite">  <span class="name">Cubone</span>
 </a></li><li><a href="../pokedex/dwebble.html">
 <img src="../assets/game/graphics/pokemon/dwebble/anim_front.png" alt="" class="sprite">  <span class="name">Dwebble</span>
 </a></li><li><a href="../pokedex/mandibuzz.html">
 <img src="../assets/game/graphics/pokemon/mandibuzz/anim_front.png" alt="" class="sprite">  <span class="name">Mandibuzz</span>
+</a></li><li><a href="../pokedex/marowak.html">
+<img src="../assets/game/graphics/pokemon/marowak/anim_front.png" alt="" class="sprite">  <span class="name">Marowak</span>
+</a></li><li><a href="../pokedex/marowak-alola.html">
+<img src="../assets/game/graphics/pokemon/marowak/alola/front.png" alt="" class="sprite">  <span class="name">Marowak (Alolan)</span>
 </a></li><li><a href="../pokedex/shelmet.html">
 <img src="../assets/game/graphics/pokemon/shelmet/anim_front.png" alt="" class="sprite">  <span class="name">Shelmet</span>
 </a></li><li><a href="../pokedex/tapu-bulu.html">

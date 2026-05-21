@@ -126,8 +126,13 @@
         if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
         for (const [kind, list] of sources) {
-          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
         }
         if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
@@ -339,7 +344,7 @@ lacks in power, it makes up for in quantity.</p>
           <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM33</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/swords-dance.html">Swords Dance</a></span></span></li>
           <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM35</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/wish.html">Wish</a></span></span></li>
           <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_fighting.png" alt="Fighting TM" class="tm-icon">TM36</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/brick-break.html" class="stab">Brick Break</a></span></span></li>
-          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="tm-icon">TM37</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/puff-up.html">Bulk Up</a></span></span></li>
+          <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_fighting.png" alt="Fighting TM" class="tm-icon">TM37</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/bulk-up.html">Bulk Up</a></span></span></li>
           <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_fighting.png" alt="Fighting TM" class="tm-icon">TM38</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/coaching.html">Coaching</a></span></span></li>
           <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_fighting.png" alt="Fighting TM" class="tm-icon">TM39</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/drain-punch.html" class="stab">Drain Punch</a></span></span></li>
           <li><span class="move-source"><img src="../assets/game/graphics/items/icons/tm_fighting.png" alt="Fighting TM" class="tm-icon">TM40</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/focus-blast.html" class="stab">Focus Blast</a></span></span></li>

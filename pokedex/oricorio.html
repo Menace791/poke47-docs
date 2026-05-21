@@ -126,8 +126,13 @@
         if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
         for (const [kind, list] of sources) {
-          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
         }
         if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
@@ -230,7 +235,7 @@
     <h2>Profile</h2>
     <p><strong>Category:</strong> Dancing</p>
     <p><strong>Types:</strong> <span class="type-badge type-fire">Fire</span> <span class="type-badge type-flying">Flying</span></p>
-    <p><strong>Abilities:</strong> <a href="../abilities/dancer.html">Dancer</a>, <a href="../abilities/drought.html">Drought</a> <em class="muted">(Hidden)</em></p>
+    <p><strong>Abilities:</strong> <a href="../abilities/dancer.html">Dancer</a>, <a href="../abilities/parrot.html">Echo</a> <em class="muted">(Hidden)</em></p>
     <p><strong>Growth Rate:</strong> Medium Fast</p>
     <p><strong>Egg Groups:</strong> Flying</p>
 <p><strong>EV Yield:</strong> 2 Sp. Atk</p><p class="wild-items"><strong>Wild Held Items:</strong> <span><a href="../itemdex/red-nectar.html"><img src="../assets/game/graphics/items/icons/red_nectar.png" alt="Red Nectar" class="item-icon">Red Nectar</a> (5%)</span></p>  </section>

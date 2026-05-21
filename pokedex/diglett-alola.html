@@ -126,8 +126,13 @@
         if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
         for (const [kind, list] of sources) {
-          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
         }
         if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
@@ -244,30 +249,30 @@
         </tr>
         <tr>
           <td class="stat-label">Attack:</td>
-          <td class="stat-value">55</td>
-          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-atk" style="width: 21.6%;"></div></div></td>
+          <td class="stat-value">35</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-atk" style="width: 13.7%;"></div></div></td>
         </tr>
         <tr>
           <td class="stat-label">Defense:</td>
-          <td class="stat-value">30</td>
-          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-def" style="width: 11.8%;"></div></div></td>
+          <td class="stat-value">60</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-def" style="width: 23.5%;"></div></div></td>
         </tr>
         <tr>
           <td class="stat-label">Sp. Atk:</td>
-          <td class="stat-value">35</td>
-          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-spa" style="width: 13.7%;"></div></div></td>
+          <td class="stat-value">20</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-spa" style="width: 7.8%;"></div></div></td>
         </tr>
         <tr>
           <td class="stat-label">Sp. Def:</td>
-          <td class="stat-value">45</td>
-          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-spd" style="width: 17.6%;"></div></div></td>
+          <td class="stat-value">70</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-spd" style="width: 27.5%;"></div></div></td>
         </tr>
         <tr>
           <td class="stat-label">Speed:</td>
-          <td class="stat-value">90</td>
-          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-spe" style="width: 35.3%;"></div></div></td>
+          <td class="stat-value">110</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-spe" style="width: 43.1%;"></div></div></td>
         </tr>
-      <tr class="stat-total"><td class="stat-label"><strong>Total:</strong></td><td class="stat-value"><strong>265</strong></td><td></td></tr>
+      <tr class="stat-total"><td class="stat-label"><strong>Total:</strong></td><td class="stat-value"><strong>305</strong></td><td></td></tr>
     </table>
     <p class="stat-physical">
 0.2 m / 1.0 kg    </p>
@@ -303,17 +308,19 @@ mood and when communicating with others.</p>
     <h2>Level-Up Learnset</h2>
     <div class="table-scroll">
     <ul class="move-list">
-        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sand-attack.html">Sand Attack</a></span></span></li>
-        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/metal-claw.html" class="stab">Metal Claw</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/dig.html" class="stab">Dig</a></span></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/mud-slap.html" class="stab">Mud-Slap</a></span></span></li>
         <li><span class="move-source">Lv. 4</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/growl.html">Growl</a></span></span></li>
         <li><span class="move-source">Lv. 8</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/astonish.html">Astonish</a></span></span></li>
-        <li><span class="move-source">Lv. 12</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/mud-slap.html" class="stab">Mud-Slap</a></span></span></li>
-        <li><span class="move-source">Lv. 16</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/bulldoze.html" class="stab">Bulldoze</a></span></span></li>
-        <li><span class="move-source">Lv. 20</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/sucker-punch.html">Sucker Punch</a></span></span></li>
-        <li><span class="move-source">Lv. 24</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/iron-head.html" class="stab">Iron Head</a></span></span></li>
-        <li><span class="move-source">Lv. 28</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sandstorm.html">Sandstorm</a></span></span></li>
-        <li><span class="move-source">Lv. 32</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/dig.html" class="stab">Dig</a></span></span></li>
-        <li><span class="move-source">Lv. 36</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/earth-power.html" class="stab">Earth Power</a></span></span></li>
+        <li><span class="move-source">Lv. 12</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/rototiller.html">Rototiller</a></span></span></li>
+        <li><span class="move-source">Lv. 13</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/bulldoze.html" class="stab">Bulldoze</a></span></span></li>
+        <li><span class="move-source">Lv. 18</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/sucker-punch.html">Sucker Punch</a></span></span></li>
+        <li><span class="move-source">Lv. 22</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/magnitude.html" class="stab">Magnitude</a></span></span></li>
+        <li><span class="move-source">Lv. 25</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/iron-head.html" class="stab">Iron Head</a></span></span></li>
+        <li><span class="move-source">Lv. 28</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/earth-power.html" class="stab">Earth Power</a></span></span></li>
+        <li><span class="move-source">Lv. 31</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/extreme-speed.html">Extreme Speed</a></span></span></li>
+        <li><span class="move-source">Lv. 34</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/night-slash.html">Night Slash</a></span></span></li>
+        <li><span class="move-source">Lv. 36</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/rock-slide.html">Rock Slide</a></span></span></li>
         <li><span class="move-source">Lv. 40</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/earthquake.html" class="stab">Earthquake</a></span></span></li>
         <li><span class="move-source">Lv. 44</span><span class="move-target"><span class="move-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/fissure.html" class="stab">Fissure</a></span></span></li>
     </ul>

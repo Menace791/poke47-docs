@@ -126,8 +126,13 @@
         if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
         for (const [kind, list] of sources) {
-          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
         }
         if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
@@ -290,7 +295,7 @@
 <img src="../assets/game/graphics/items/icons/armor_fossil.png" alt="Armor Fossil" class="item-icon">        <span>Armor Fossil</span>
       </a>
     </li>
-    <li data-search-text="Assault Vest ITEM_ASSAULT_VEST Shop Battle Frontier - Exchange Service Corner Trainer Held Item Champion Wallace (Ever Grande City - Champion&#39;s Room) Elite Four Drake (Ever Grande City - Drake&#39;s Room) Elite Four Sidney (Ever Grande City - Sidney&#39;s Room) Leader Wattson (Mauville City - Gym) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F)">
+    <li data-search-text="Assault Vest ITEM_ASSAULT_VEST Shop Battle Frontier - Exchange Service Corner Trainer Held Item Leader Brawly (Dewford Town - Gym) Champion Wallace (Ever Grande City - Champion&#39;s Room) Elite Four Drake (Ever Grande City - Drake&#39;s Room) Elite Four Sidney (Ever Grande City - Sidney&#39;s Room) Leader Wattson (Mauville City - Gym) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F)">
       <a href="assault-vest.html">
 <img src="../assets/game/graphics/items/icons/assault_vest.png" alt="Assault Vest" class="item-icon">        <span>Assault Vest</span>
       </a>
@@ -445,12 +450,12 @@
 <img src="../assets/game/graphics/items/icons/charcoal.png" alt="Charcoal" class="item-icon">        <span>Charcoal</span>
       </a>
     </li>
-    <li data-search-text="Choice Band ITEM_CHOICE_BAND Shop Battle Frontier - Exchange Service Corner Trainer Held Item Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym)">
+    <li data-search-text="Choice Band ITEM_CHOICE_BAND Shop Battle Frontier - Exchange Service Corner Trainer Held Item Leader Brawly (Dewford Town - Gym) Leader Brawly (Dewford Town - Gym) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym)">
       <a href="choice-band.html">
 <img src="../assets/game/graphics/items/icons/choice_band.png" alt="Choice Band" class="item-icon">        <span>Choice Band</span>
       </a>
     </li>
-    <li data-search-text="Choice Scarf ITEM_CHOICE_SCARF NPC Littleroot Town - Brendan&#39;s House 1F Littleroot Town - Brendan&#39;s House 2F Littleroot Town - May&#39;s House 1F Littleroot Town - May&#39;s House 2F">
+    <li data-search-text="Choice Scarf ITEM_CHOICE_SCARF NPC Littleroot Town - Brendan&#39;s House 1F Littleroot Town - Brendan&#39;s House 2F Littleroot Town - May&#39;s House 1F Littleroot Town - May&#39;s House 2F Trainer Held Item Leader Brawly (Dewford Town - Gym) Leader Brawly (Dewford Town - Gym)">
       <a href="choice-scarf.html">
 <img src="../assets/game/graphics/items/icons/choice_scarf.png" alt="Choice Scarf" class="item-icon">        <span>Choice Scarf</span>
       </a>
@@ -915,7 +920,7 @@
 <img src="../assets/game/graphics/items/icons/miracle_seed.png" alt="Miracle Seed" class="item-icon">        <span>Miracle Seed</span>
       </a>
     </li>
-    <li data-search-text="Mirror Herb ITEM_MIRROR_HERB Overworld Route 137">
+    <li data-search-text="Mirror Herb ITEM_MIRROR_HERB Overworld Route 137 Trainer Held Item Leader Brawly (Dewford Town - Gym) Leader Brawly (Dewford Town - Gym) Leader Brawly (Dewford Town - Gym) Leader Brawly (Dewford Town - Gym)">
       <a href="mirror-herb.html">
 <img src="../assets/game/graphics/items/icons/mirror_herb.png" alt="Mirror Herb" class="item-icon">        <span>Mirror Herb</span>
       </a>
@@ -1190,12 +1195,12 @@
 <img src="../assets/game/graphics/items/icons/rock_gem.png" alt="Rock Gem" class="item-icon">        <span>Rock Gem</span>
       </a>
     </li>
-    <li data-search-text="Rocky Helmet ITEM_ROCKY_HELMET Overworld Route 135 - Map Trainer Held Item Elite Four Drake (Ever Grande City - Drake&#39;s Room)">
+    <li data-search-text="Rocky Helmet ITEM_ROCKY_HELMET Overworld Route 135 - Map Trainer Held Item Leader Brawly (Dewford Town - Gym) Leader Brawly (Dewford Town - Gym) Leader Brawly (Dewford Town - Gym) Leader Brawly (Dewford Town - Gym) Elite Four Drake (Ever Grande City - Drake&#39;s Room)">
       <a href="rocky-helmet.html">
 <img src="../assets/game/graphics/items/icons/rocky_helmet.png" alt="Rocky Helmet" class="item-icon">        <span>Rocky Helmet</span>
       </a>
     </li>
-    <li data-search-text="Room Service ITEM_ROOM_SERVICE Overworld Old House C2 Grand Prize (Unique, &lt;12 min) Trainer Hill">
+    <li data-search-text="Room Service ITEM_ROOM_SERVICE Overworld Old House C2 Grand Prize (Unique, &lt;12 min) Trainer Hill Trainer Held Item Leader Brawly (Dewford Town - Gym)">
       <a href="room-service.html">
 <img src="../assets/game/graphics/items/icons/room_service.png" alt="Room Service" class="item-icon">        <span>Room Service</span>
       </a>
@@ -2645,7 +2650,7 @@
 <img src="../assets/game/graphics/items/icons/shuca_berry.png" alt="Shuca Berry" class="item-icon">        <span>Shuca Berry</span>
       </a>
     </li>
-    <li data-search-text="Sitrus Berry ITEM_SITRUS_BERRY Berry Tree Route 118 Route 119 Route 123 Random Berry Gift Lilycove City Wild Held Items Audino Toucannon Trumbeak Trainer Held Item Leader Brawly (Dewford Town - Gym) Leader Brawly (Dewford Town - Gym) Leader Brawly (Dewford Town - Gym) Leader Brawly (Dewford Town - Gym) Champion Wallace (Ever Grande City - Champion&#39;s Room) Elite Four Juan (Ever Grande City - Juan&#39;s Room) Elite Four Phoebe (Ever Grande City - Phoebe&#39;s Room) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Norman (Petalburg City - Gym) Leader Norman (Petalburg City - Gym) Leader Norman (Petalburg City - Gym) Leader Norman (Petalburg City - Gym) Leader Norman (Petalburg City - Gym) Pokéfan Miguel (Route 103) Cooltrainer Carolina (Route 108) Pokéfan Isabel (Route 110) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F)">
+    <li data-search-text="Sitrus Berry ITEM_SITRUS_BERRY Berry Tree Route 118 Route 119 Route 123 Random Berry Gift Lilycove City Wild Held Items Audino Toucannon Trumbeak Trainer Held Item Champion Wallace (Ever Grande City - Champion&#39;s Room) Elite Four Juan (Ever Grande City - Juan&#39;s Room) Elite Four Phoebe (Ever Grande City - Phoebe&#39;s Room) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Winona (Fortree City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Wattson (Mauville City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Tate&amp;Liza (Mossdeep City - Gym) Leader Norman (Petalburg City - Gym) Leader Norman (Petalburg City - Gym) Leader Norman (Petalburg City - Gym) Leader Norman (Petalburg City - Gym) Leader Norman (Petalburg City - Gym) Pokéfan Miguel (Route 103) Cooltrainer Carolina (Route 108) Pokéfan Isabel (Route 110) Leader Roxanne (Rustboro City - Gym) Leader Roxanne (Rustboro City - Gym) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F) Leader Glacia (Sootopolis City - Gym 1F)">
       <a href="sitrus-berry.html">
 <img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="Sitrus Berry" class="item-icon">        <span>Sitrus Berry</span>
       </a>

@@ -126,8 +126,13 @@
         if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
         for (const [kind, list] of sources) {
-          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
         }
         if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
@@ -225,22 +230,14 @@
   <p><strong>Description:</strong> Attacks everything with a destructive sound wave.</p>
 </div>
 <section class="card">
-  <h2>Learned by <span class="muted small-text">15</span></h2>
+  <h2>Learned by <span class="muted small-text">11</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/chatot.html">
 <img src="../assets/game/graphics/pokemon/chatot/anim_front.png" alt="" class="sprite">  <span class="name">Chatot</span>
 </a></li><li><a href="../pokedex/exploud.html">
 <img src="../assets/game/graphics/pokemon/exploud/anim_front.png" alt="" class="sprite">  <span class="name">Exploud</span>
-</a></li><li><a href="../pokedex/heliolisk.html">
-<img src="../assets/game/graphics/pokemon/heliolisk/anim_front.png" alt="" class="sprite">  <span class="name">Heliolisk</span>
-</a></li><li><a href="../pokedex/helioptile.html">
-<img src="../assets/game/graphics/pokemon/helioptile/anim_front.png" alt="" class="sprite">  <span class="name">Helioptile</span>
 </a></li><li><a href="../pokedex/kommo-o.html">
 <img src="../assets/game/graphics/pokemon/kommo_o/anim_front.png" alt="" class="sprite">  <span class="name">Kommo-o</span>
-</a></li><li><a href="../pokedex/kricketot.html">
-<img src="../assets/game/graphics/pokemon/kricketot/anim_front.png" alt="" class="sprite">  <span class="name">Kricketot</span>
-</a></li><li><a href="../pokedex/kricketune.html">
-<img src="../assets/game/graphics/pokemon/kricketune/anim_front.png" alt="" class="sprite">  <span class="name">Kricketune</span>
 </a></li><li><a href="../pokedex/noibat.html">
 <img src="../assets/game/graphics/pokemon/noibat/anim_front.png" alt="" class="sprite">  <span class="name">Noibat</span>
 </a></li><li><a href="../pokedex/noivern.html">

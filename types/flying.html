@@ -126,8 +126,13 @@
         if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
         for (const [kind, list] of sources) {
-          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
         }
         if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
@@ -369,7 +374,7 @@
         <td><img src="../assets/game/graphics/pokemon/oricorio/front.png" alt="Oricorio front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;"></td>
         <td><a href="../pokedex/oricorio.html">Oricorio</a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-flying">Flying</span></td>
-        <td><a href="../abilities/dancer.html">Dancer</a>, <a href="../abilities/drought.html">Drought</a></td>
+        <td><a href="../abilities/dancer.html">Dancer</a>, <a href="../abilities/parrot.html">Echo</a></td>
       </tr>
       <tr data-search-text="150 Fletchling"
           data-href="../pokedex/fletchling.html">

@@ -126,8 +126,13 @@
         if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
         for (const [kind, list] of sources) {
-          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
         }
         if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
@@ -225,18 +230,12 @@
   <p><strong>Description:</strong> Charges power to boost the Electric move used next.</p>
 </div>
 <section class="card">
-  <h2>Learned by <span class="muted small-text">17</span></h2>
+  <h2>Learned by <span class="muted small-text">14</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/blitzle.html">
 <img src="../assets/game/graphics/pokemon/blitzle/anim_front.png" alt="" class="sprite">  <span class="name">Blitzle</span>
 </a></li><li><a href="../pokedex/charjabug.html">
 <img src="../assets/game/graphics/pokemon/charjabug/anim_front.png" alt="" class="sprite">  <span class="name">Charjabug</span>
-</a></li><li><a href="../pokedex/geodude-alola.html">
-<img src="../assets/game/graphics/pokemon/geodude/alola/front.png" alt="" class="sprite">  <span class="name">Geodude (Alolan)</span>
-</a></li><li><a href="../pokedex/golem-alola.html">
-<img src="../assets/game/graphics/pokemon/golem/alola/front.png" alt="" class="sprite">  <span class="name">Golem (Alolan)</span>
-</a></li><li><a href="../pokedex/graveler-alola.html">
-<img src="../assets/game/graphics/pokemon/graveler/alola/front.png" alt="" class="sprite">  <span class="name">Graveler (Alolan)</span>
 </a></li><li><a href="../pokedex/oricorio-pom-pom.html">
 <img src="../assets/game/graphics/pokemon/oricorio/pom_pom/front.png" alt="" class="sprite">  <span class="name">Oricorio (Pom-Pom Style)</span>
 </a></li><li><a href="../pokedex/pachirisu.html">

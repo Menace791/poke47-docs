@@ -126,8 +126,13 @@
         if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
         for (const [kind, list] of sources) {
-          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
         }
         if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
@@ -247,7 +252,7 @@
         <td>—</td>
         <td><span class="stat-pair">0 HP</span><br><span class="stat-pair">0 Atk</span><br><span class="stat-pair">0 Def</span><br><span class="stat-pair">0 SpA</span><br><span class="stat-pair">0 SpD</span><br><span class="stat-pair">0 Spe</span></td>
         <td>—</td>
-        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/puff-up.html">Bulk Up</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/pay-day.html" class="stab">Pay Day</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/headbutt.html" class="stab">Headbutt</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/thunderous-kick.html">Thunderous Kick</a></span><div class="muted small-text">Default level-up moveset</div></td>
+        <td><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/bulk-up.html">Bulk Up</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/pay-day.html" class="stab">Pay Day</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/headbutt.html" class="stab">Headbutt</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/thunderous-kick.html">Thunderous Kick</a></span><div class="muted small-text">Default level-up moveset</div></td>
       </tr>
       <tr>
         <td><a href="../pokedex/vullaby.html">Vullaby</a></td>

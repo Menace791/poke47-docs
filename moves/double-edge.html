@@ -126,8 +126,13 @@
         if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
         for (const [kind, list] of sources) {
-          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
         }
         if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
@@ -225,7 +230,7 @@
   <p><strong>Description:</strong> A life-risking tackle that also hurts the user.</p>
 </div>
 <section class="card">
-  <h2>Learned by <span class="muted small-text">74</span></h2>
+  <h2>Learned by <span class="muted small-text">70</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/abomasnow.html">
 <img src="../assets/game/graphics/pokemon/abomasnow/anim_front.png" alt="" class="sprite">  <span class="name">Abomasnow</span>
@@ -269,10 +274,6 @@
 <img src="../assets/game/graphics/pokemon/gabite/anim_front.png" alt="" class="sprite">  <span class="name">Gabite</span>
 </a></li><li><a href="../pokedex/garchomp.html">
 <img src="../assets/game/graphics/pokemon/garchomp/anim_front.png" alt="" class="sprite">  <span class="name">Garchomp</span>
-</a></li><li><a href="../pokedex/geodude.html">
-<img src="../assets/game/graphics/pokemon/geodude/anim_front.png" alt="" class="sprite">  <span class="name">Geodude</span>
-</a></li><li><a href="../pokedex/geodude-alola.html">
-<img src="../assets/game/graphics/pokemon/geodude/alola/front.png" alt="" class="sprite">  <span class="name">Geodude (Alolan)</span>
 </a></li><li><a href="../pokedex/gible.html">
 <img src="../assets/game/graphics/pokemon/gible/anim_front.png" alt="" class="sprite">  <span class="name">Gible</span>
 </a></li><li><a href="../pokedex/gogoat.html">
@@ -281,10 +282,6 @@
 <img src="../assets/game/graphics/pokemon/golem/anim_front.png" alt="" class="sprite">  <span class="name">Golem</span>
 </a></li><li><a href="../pokedex/golem-alola.html">
 <img src="../assets/game/graphics/pokemon/golem/alola/front.png" alt="" class="sprite">  <span class="name">Golem (Alolan)</span>
-</a></li><li><a href="../pokedex/graveler.html">
-<img src="../assets/game/graphics/pokemon/graveler/anim_front.png" alt="" class="sprite">  <span class="name">Graveler</span>
-</a></li><li><a href="../pokedex/graveler-alola.html">
-<img src="../assets/game/graphics/pokemon/graveler/alola/front.png" alt="" class="sprite">  <span class="name">Graveler (Alolan)</span>
 </a></li><li><a href="../pokedex/grotle.html">
 <img src="../assets/game/graphics/pokemon/grotle/anim_front.png" alt="" class="sprite">  <span class="name">Grotle</span>
 </a></li><li><a href="../pokedex/hoppip.html">

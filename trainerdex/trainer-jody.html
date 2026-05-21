@@ -126,8 +126,13 @@
         if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
         for (const [kind, list] of sources) {
-          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
         }
         if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
@@ -247,7 +252,7 @@
         <td>—</td>
         <td><span class="stat-pair">31 HP</span><br><span class="stat-pair">31 Atk</span><br><span class="stat-pair">31 Def</span><br><span class="stat-pair">31 SpA</span><br><span class="stat-pair">31 SpD</span><br><span class="stat-pair">31 Spe</span></td>
         <td>—</td>
-        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/bide.html" class="stab">Bide</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/flail.html" class="stab">Flail</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/puff-up.html">Bulk Up</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/endure.html">Endure</a></span></td>
+        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/bide.html" class="stab">Bide</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/flail.html" class="stab">Flail</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/bulk-up.html">Bulk Up</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/endure.html">Endure</a></span></td>
       </tr>
     </tbody>
   </table>

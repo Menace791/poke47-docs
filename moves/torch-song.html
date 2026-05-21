@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Klutz - Poké47</title>  <meta property="og:title" content="Poké47">
+  <title>Torch Song - Poké47</title>  <meta property="og:title" content="Poké47">
   <meta property="og:description" content="Expansion-native documentation for Poké47.">
   <meta property="og:image" content="https://menace791.github.io/poke47-docs/assets/og-image.gif">
   <meta property="og:type" content="website">
@@ -126,8 +126,13 @@
         if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
         for (const [kind, list] of sources) {
-          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
         }
         if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
@@ -213,18 +218,22 @@
     </div>
   </header>
   <main class="wrap">
-<h1>Klutz</h1>
-<p class="muted">ABILITY_KLUTZ</p>
+<h1>Torch Song</h1>
+<p class="muted">MOVE_TORCH_SONG</p>
 <div class="card">
-  <p>Can&#x27;t use hold items.</p>
+  <p><strong>Type:</strong> <span class="type-badge type-fire">Fire</span></p>
+  <p><strong>Power:</strong> 80</p>
+  <p><strong>Accuracy:</strong> 100</p>
+  <p><strong>PP:</strong> 10</p>
+  <p><strong>Category:</strong> Special <img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"></p>
+  <p><strong>Flags:</strong> Sound</p>
+  <p><strong>Description:</strong> Flames scorch the target. Boosts the user&#x27;s Sp. Atk.</p>
 </div>
 <section class="card">
-  <h2>Pokémon with this Ability <span class="muted small-text">2</span></h2>
+  <h2>Learned by <span class="muted small-text">1</span></h2>
   <ul class="cross-link-grid">
-<li><a href="../pokedex/bewear.html">
-<img src="../assets/game/graphics/pokemon/bewear/anim_front.png" alt="" class="sprite">  <span class="name">Bewear</span>
-</a></li><li><a href="../pokedex/stufful.html">
-<img src="../assets/game/graphics/pokemon/stufful/anim_front.png" alt="" class="sprite">  <span class="name">Stufful</span>
+<li><a href="../pokedex/kricketune.html">
+<img src="../assets/game/graphics/pokemon/kricketune/anim_front.png" alt="" class="sprite">  <span class="name">Kricketune</span>
 </a></li>  </ul>
 </section>
   </main>

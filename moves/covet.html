@@ -126,8 +126,13 @@
         if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
         for (const [kind, list] of sources) {
-          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
         }
         if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
@@ -225,7 +230,7 @@
   <p><strong>Description:</strong> Cutely begs to obtain an item held by the foe.</p>
 </div>
 <section class="card">
-  <h2>Learned by <span class="muted small-text">24</span></h2>
+  <h2>Learned by <span class="muted small-text">25</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/dedenne.html">
 <img src="../assets/game/graphics/pokemon/dedenne/anim_front.png" alt="" class="sprite">  <span class="name">Dedenne</span>
@@ -241,6 +246,8 @@
 <img src="../assets/game/graphics/pokemon/liepard/anim_front.png" alt="" class="sprite">  <span class="name">Liepard</span>
 </a></li><li><a href="../pokedex/lillipup.html">
 <img src="../assets/game/graphics/pokemon/lillipup/anim_front.png" alt="" class="sprite">  <span class="name">Lillipup</span>
+</a></li><li><a href="../pokedex/lopunny.html">
+<img src="../assets/game/graphics/pokemon/lopunny/anim_front.png" alt="" class="sprite">  <span class="name">Lopunny</span>
 </a></li><li><a href="../pokedex/meowstic-f.html">
 <img src="../assets/game/graphics/pokemon/meowstic/f/anim_front.png" alt="" class="sprite">  <span class="name">Meowstic (F)</span>
 </a></li><li><a href="../pokedex/meowstic.html">

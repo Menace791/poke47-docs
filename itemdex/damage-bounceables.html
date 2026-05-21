@@ -126,8 +126,13 @@
         if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
         const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
         const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
         for (const [kind, list] of sources) {
-          for (const v of list) if (obstagoonNormalize(v).includes(q) && !taken.has(`${kind}:${v}`)) matches.push({kind, name: v});
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
         }
         if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
         dropdown.innerHTML = matches.slice(0, 30).map((m) =>
@@ -223,7 +228,7 @@
   </div>
 </section>
 <section class="card">
-  <h2>Affected Moves <span class="muted small-text">89</span></h2>
+  <h2>Affected Moves <span class="muted small-text">88</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../moves/attract.html">
   <span class="name">Attract</span>
@@ -399,9 +404,7 @@
   <span class="name">Whirlwind</span>
 <span class="type-badge type-normal">Normal</span><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"></a></li><li><a href="../moves/will-o-wisp.html">
   <span class="name">Will-O-Wisp</span>
-<span class="type-badge type-fire">Fire</span><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"></a></li><li><a href="../moves/worry-seed.html">
-  <span class="name">Worry Seed</span>
-<span class="type-badge type-grass">Grass</span><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"></a></li><li><a href="../moves/yawn.html">
+<span class="type-badge type-fire">Fire</span><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"></a></li><li><a href="../moves/yawn.html">
   <span class="name">Yawn</span>
 <span class="type-badge type-normal">Normal</span><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"></a></li>  </ul>
 </section>
