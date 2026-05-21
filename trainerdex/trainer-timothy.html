@@ -382,7 +382,7 @@
 
     </section>
   <script>
-    // Class-toggle (no URL fragment) so clicking a tab doesn't trigger the browser's scroll-to-anchor.
+    // Class-toggle (not :target) so clicking a tab doesn't trigger the browser's scroll-to-anchor; replaceState keeps the hash in sync for refresh/back-forward.
     (function () {
       function bindRematchTabs() {
         var tabs = document.querySelectorAll('.rematch-tab');
@@ -392,14 +392,24 @@
           tabs.forEach(function (t) { t.classList.toggle('is-active', tierOf(t) === tier); });
           panels.forEach(function (p) { p.classList.toggle('is-active', tierOf(p) === tier); });
         }
-        activate('0');
+        function tierFromHash() {
+          var h = location.hash;
+          if (h === '#first-fight' || h === '') return '0';
+          var m = h.match(/^#rematch-(\d+)$/);
+          return m ? m[1] : '0';
+        }
+        activate(tierFromHash());
         tabs.forEach(function (tab) {
           tab.addEventListener('click', function (e) {
             e.preventDefault();
             var t = tierOf(tab);
-            if (t !== null) activate(t);
+            if (t === null) return;
+            var newUrl = t === '0' ? (location.pathname + location.search) : ('#rematch-' + t);
+            history.replaceState(null, '', newUrl);
+            activate(t);
           });
         });
+        window.addEventListener('hashchange', function () { activate(tierFromHash()); });
       }
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', bindRematchTabs);
