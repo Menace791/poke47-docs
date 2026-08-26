@@ -374,7 +374,7 @@ pitch-black darkness of soil.</p>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/route-113.html">Route 113</a></h3>
           <h4 class="encounter-method-name">Outbreak</h4>
-              <ul>
+              <ul class="">
 <li>Lv. 14 · 50%</li>    </ul>
 
     </div>
@@ -421,6 +421,25 @@ pitch-black darkness of soil.</p>
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -438,11 +457,12 @@ pitch-black darkness of soil.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

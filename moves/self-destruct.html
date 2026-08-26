@@ -233,29 +233,29 @@
   <h2>Learned by <span class="muted small-text">12</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/bonsly.html">
-<img src="../assets/game/graphics/pokemon/bonsly/anim_front.png" alt="" class="sprite">  <span class="name">Bonsly</span>
+<img src="../assets/game/graphics/pokemon/bonsly/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/bonsly/anim_front__hover.png">  <span class="name">Bonsly</span>
 </a></li><li><a href="../pokedex/ferroseed.html">
-<img src="../assets/game/graphics/pokemon/ferroseed/anim_front.png" alt="" class="sprite">  <span class="name">Ferroseed</span>
+<img src="../assets/game/graphics/pokemon/ferroseed/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/ferroseed/anim_front__hover.png">  <span class="name">Ferroseed</span>
 </a></li><li><a href="../pokedex/ferrothorn.html">
-<img src="../assets/game/graphics/pokemon/ferrothorn/anim_front.png" alt="" class="sprite">  <span class="name">Ferrothorn</span>
+<img src="../assets/game/graphics/pokemon/ferrothorn/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/ferrothorn/anim_front__hover.png">  <span class="name">Ferrothorn</span>
 </a></li><li><a href="../pokedex/garbodor.html">
-<img src="../assets/game/graphics/pokemon/garbodor/anim_front.png" alt="" class="sprite">  <span class="name">Garbodor</span>
+<img src="../assets/game/graphics/pokemon/garbodor/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/garbodor/anim_front__hover.png">  <span class="name">Garbodor</span>
 </a></li><li><a href="../pokedex/geodude.html">
-<img src="../assets/game/graphics/pokemon/geodude/anim_front.png" alt="" class="sprite">  <span class="name">Geodude</span>
+<img src="../assets/game/graphics/pokemon/geodude/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/geodude/anim_front__hover.png">  <span class="name">Geodude</span>
 </a></li><li><a href="../pokedex/geodude-alola.html">
-<img src="../assets/game/graphics/pokemon/geodude/alola/anim_front.png" alt="" class="sprite">  <span class="name">Geodude (Alolan)</span>
+<img src="../assets/game/graphics/pokemon/geodude/alola/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/geodude/alola/anim_front__hover.png">  <span class="name">Geodude (Alolan)</span>
 </a></li><li><a href="../pokedex/golem.html">
-<img src="../assets/game/graphics/pokemon/golem/anim_front.png" alt="" class="sprite">  <span class="name">Golem</span>
+<img src="../assets/game/graphics/pokemon/golem/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/golem/anim_front__hover.png">  <span class="name">Golem</span>
 </a></li><li><a href="../pokedex/golem-alola.html">
-<img src="../assets/game/graphics/pokemon/golem/alola/anim_front.png" alt="" class="sprite">  <span class="name">Golem (Alolan)</span>
+<img src="../assets/game/graphics/pokemon/golem/alola/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/golem/alola/anim_front__hover.png">  <span class="name">Golem (Alolan)</span>
 </a></li><li><a href="../pokedex/graveler.html">
-<img src="../assets/game/graphics/pokemon/graveler/anim_front.png" alt="" class="sprite">  <span class="name">Graveler</span>
+<img src="../assets/game/graphics/pokemon/graveler/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/graveler/anim_front__hover.png">  <span class="name">Graveler</span>
 </a></li><li><a href="../pokedex/graveler-alola.html">
-<img src="../assets/game/graphics/pokemon/graveler/alola/anim_front.png" alt="" class="sprite">  <span class="name">Graveler (Alolan)</span>
+<img src="../assets/game/graphics/pokemon/graveler/alola/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/graveler/alola/anim_front__hover.png">  <span class="name">Graveler (Alolan)</span>
 </a></li><li><a href="../pokedex/sudowoodo.html">
-<img src="../assets/game/graphics/pokemon/sudowoodo/anim_front.png" alt="" class="sprite">  <span class="name">Sudowoodo</span>
+<img src="../assets/game/graphics/pokemon/sudowoodo/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/sudowoodo/anim_front__hover.png">  <span class="name">Sudowoodo</span>
 </a></li><li><a href="../pokedex/trubbish.html">
-<img src="../assets/game/graphics/pokemon/trubbish/anim_front.png" alt="" class="sprite">  <span class="name">Trubbish</span>
+<img src="../assets/game/graphics/pokemon/trubbish/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/trubbish/anim_front__hover.png">  <span class="name">Trubbish</span>
 </a></li>  </ul>
 </section>
   </main>
@@ -300,6 +300,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -317,11 +336,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

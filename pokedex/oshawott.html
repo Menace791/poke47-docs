@@ -380,7 +380,7 @@ from the same element as its claws.</p>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/route-119.html">Route 119</a></h3>
           <h4 class="encounter-method-name">Water</h4>
-              <ul>
+              <ul class="">
 <li>Lv. 20-30 · 5%</li>    </ul>
 
     </div>
@@ -388,17 +388,17 @@ from the same element as its claws.</p>
       <h3 class="encounter-section-name"><a href="../encounters/gauntletne.html">Gauntlet Island</a></h3>
 <h4 class="encounter-floor-name">Northeast</h4>          <h5 class="encounter-method-name">Fishing</h5>
                 <h6>Good Rod</h6>
-      <ul>
+      <ul class="">
 <li>Lv. 13-15 · 20%</li>      </ul>
       <h6>Super Rod</h6>
-      <ul>
+      <ul class="">
 <li>Lv. 13-16 · 40%</li>      </ul>
 
     </div>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/gauntletse.html">Gauntlet Island</a></h3>
 <h4 class="encounter-floor-name">Southeast</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 10 · 4%</li>    </ul>
 
     </div>
@@ -445,6 +445,25 @@ from the same element as its claws.</p>
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -462,11 +481,12 @@ from the same element as its claws.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

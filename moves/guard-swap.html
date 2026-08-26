@@ -233,31 +233,31 @@
   <h2>Learned by <span class="muted small-text">13</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/accelgor.html">
-<img src="../assets/game/graphics/pokemon/accelgor/anim_front.png" alt="" class="sprite">  <span class="name">Accelgor</span>
+<img src="../assets/game/graphics/pokemon/accelgor/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/accelgor/anim_front__hover.png">  <span class="name">Accelgor</span>
 </a></li><li><a href="../pokedex/beheeyem.html">
-<img src="../assets/game/graphics/pokemon/beheeyem/anim_front.png" alt="" class="sprite">  <span class="name">Beheeyem</span>
+<img src="../assets/game/graphics/pokemon/beheeyem/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/beheeyem/anim_front__hover.png">  <span class="name">Beheeyem</span>
 </a></li><li><a href="../pokedex/carracosta.html">
-<img src="../assets/game/graphics/pokemon/carracosta/anim_front.png" alt="" class="sprite">  <span class="name">Carracosta</span>
+<img src="../assets/game/graphics/pokemon/carracosta/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/carracosta/anim_front__hover.png">  <span class="name">Carracosta</span>
 </a></li><li><a href="../pokedex/elgyem.html">
-<img src="../assets/game/graphics/pokemon/elgyem/anim_front.png" alt="" class="sprite">  <span class="name">Elgyem</span>
+<img src="../assets/game/graphics/pokemon/elgyem/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/elgyem/anim_front__hover.png">  <span class="name">Elgyem</span>
 </a></li><li><a href="../pokedex/farigiraf.html">
 <img src="../assets/game/graphics/pokemon/farigiraf/front.png" alt="" class="sprite">  <span class="name">Farigiraf</span>
 </a></li><li><a href="../pokedex/girafarig.html">
-<img src="../assets/game/graphics/pokemon/girafarig/anim_front.png" alt="" class="sprite">  <span class="name">Girafarig</span>
+<img src="../assets/game/graphics/pokemon/girafarig/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/girafarig/anim_front__hover.png">  <span class="name">Girafarig</span>
 </a></li><li><a href="../pokedex/inkay.html">
-<img src="../assets/game/graphics/pokemon/inkay/anim_front.png" alt="" class="sprite">  <span class="name">Inkay</span>
+<img src="../assets/game/graphics/pokemon/inkay/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/inkay/anim_front__hover.png">  <span class="name">Inkay</span>
 </a></li><li><a href="../pokedex/liepard.html">
-<img src="../assets/game/graphics/pokemon/liepard/anim_front.png" alt="" class="sprite">  <span class="name">Liepard</span>
+<img src="../assets/game/graphics/pokemon/liepard/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/liepard/anim_front__hover.png">  <span class="name">Liepard</span>
 </a></li><li><a href="../pokedex/malamar.html">
-<img src="../assets/game/graphics/pokemon/malamar/anim_front.png" alt="" class="sprite">  <span class="name">Malamar</span>
+<img src="../assets/game/graphics/pokemon/malamar/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/malamar/anim_front__hover.png">  <span class="name">Malamar</span>
 </a></li><li><a href="../pokedex/phione.html">
-<img src="../assets/game/graphics/pokemon/phione/anim_front.png" alt="" class="sprite">  <span class="name">Phione</span>
+<img src="../assets/game/graphics/pokemon/phione/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/phione/anim_front__hover.png">  <span class="name">Phione</span>
 </a></li><li><a href="../pokedex/purrloin.html">
-<img src="../assets/game/graphics/pokemon/purrloin/anim_front.png" alt="" class="sprite">  <span class="name">Purrloin</span>
+<img src="../assets/game/graphics/pokemon/purrloin/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/purrloin/anim_front__hover.png">  <span class="name">Purrloin</span>
 </a></li><li><a href="../pokedex/shelmet.html">
-<img src="../assets/game/graphics/pokemon/shelmet/anim_front.png" alt="" class="sprite">  <span class="name">Shelmet</span>
+<img src="../assets/game/graphics/pokemon/shelmet/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/shelmet/anim_front__hover.png">  <span class="name">Shelmet</span>
 </a></li><li><a href="../pokedex/tirtouga.html">
-<img src="../assets/game/graphics/pokemon/tirtouga/anim_front.png" alt="" class="sprite">  <span class="name">Tirtouga</span>
+<img src="../assets/game/graphics/pokemon/tirtouga/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/tirtouga/anim_front__hover.png">  <span class="name">Tirtouga</span>
 </a></li>  </ul>
 </section>
   </main>
@@ -302,6 +302,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -319,11 +338,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

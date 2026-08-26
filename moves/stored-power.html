@@ -233,29 +233,29 @@
   <h2>Learned by <span class="muted small-text">12</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/cresselia.html">
-<img src="../assets/game/graphics/pokemon/cresselia/anim_front.png" alt="" class="sprite">  <span class="name">Cresselia</span>
+<img src="../assets/game/graphics/pokemon/cresselia/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/cresselia/anim_front__hover.png">  <span class="name">Cresselia</span>
 </a></li><li><a href="../pokedex/darmanitan.html">
-<img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="" class="sprite">  <span class="name">Darmanitan</span>
+<img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__hover.png">  <span class="name">Darmanitan</span>
 </a></li><li><a href="../pokedex/darmanitan-galar.html">
 <img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="" class="sprite">  <span class="name">Darmanitan (Galarian)</span>
 </a></li><li><a href="../pokedex/darumaka.html">
-<img src="../assets/game/graphics/pokemon/darumaka/anim_front.png" alt="" class="sprite">  <span class="name">Darumaka</span>
+<img src="../assets/game/graphics/pokemon/darumaka/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/darumaka/anim_front__hover.png">  <span class="name">Darumaka</span>
 </a></li><li><a href="../pokedex/darumaka-galar.html">
 <img src="../assets/game/graphics/pokemon/darumaka/galar/front.png" alt="" class="sprite">  <span class="name">Darumaka (Galarian)</span>
 </a></li><li><a href="../pokedex/elgyem.html">
-<img src="../assets/game/graphics/pokemon/elgyem/anim_front.png" alt="" class="sprite">  <span class="name">Elgyem</span>
+<img src="../assets/game/graphics/pokemon/elgyem/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/elgyem/anim_front__hover.png">  <span class="name">Elgyem</span>
 </a></li><li><a href="../pokedex/lucario.html">
-<img src="../assets/game/graphics/pokemon/lucario/anim_front.png" alt="" class="sprite">  <span class="name">Lucario</span>
+<img src="../assets/game/graphics/pokemon/lucario/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/lucario/anim_front__hover.png">  <span class="name">Lucario</span>
 </a></li><li><a href="../pokedex/oranguru.html">
-<img src="../assets/game/graphics/pokemon/oranguru/anim_front.png" alt="" class="sprite">  <span class="name">Oranguru</span>
+<img src="../assets/game/graphics/pokemon/oranguru/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/oranguru/anim_front__hover.png">  <span class="name">Oranguru</span>
 </a></li><li><a href="../pokedex/sigilyph.html">
-<img src="../assets/game/graphics/pokemon/sigilyph/anim_front.png" alt="" class="sprite">  <span class="name">Sigilyph</span>
+<img src="../assets/game/graphics/pokemon/sigilyph/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/sigilyph/anim_front__hover.png">  <span class="name">Sigilyph</span>
 </a></li><li><a href="../pokedex/swoobat.html">
-<img src="../assets/game/graphics/pokemon/swoobat/anim_front.png" alt="" class="sprite">  <span class="name">Swoobat</span>
+<img src="../assets/game/graphics/pokemon/swoobat/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/swoobat/anim_front__hover.png">  <span class="name">Swoobat</span>
 </a></li><li><a href="../pokedex/watchog.html">
-<img src="../assets/game/graphics/pokemon/watchog/anim_front.png" alt="" class="sprite">  <span class="name">Watchog</span>
+<img src="../assets/game/graphics/pokemon/watchog/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/watchog/anim_front__hover.png">  <span class="name">Watchog</span>
 </a></li><li><a href="../pokedex/woobat.html">
-<img src="../assets/game/graphics/pokemon/woobat/anim_front.png" alt="" class="sprite">  <span class="name">Woobat</span>
+<img src="../assets/game/graphics/pokemon/woobat/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/woobat/anim_front__hover.png">  <span class="name">Woobat</span>
 </a></li>  </ul>
 </section>
   </main>
@@ -300,6 +300,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -317,11 +336,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

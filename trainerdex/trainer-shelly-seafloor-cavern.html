@@ -239,10 +239,10 @@
       </tr>
     </thead>
     <tbody>
-      <tr>
+      <tr data-href="../pokedex/liepard.html">
         <td><a href="../pokedex/liepard.html">Liepard</a></td>
         <td>37</td>
-        <td><img src="../assets/game/graphics/pokemon/liepard/anim_front.png" alt="Liepard Level 37 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/liepard/anim_front.png" alt="Liepard Level 37 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/liepard/anim_front__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon"></div>
@@ -254,7 +254,7 @@
         <td>—</td>
         <td><span class="move-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/switcheroo.html">Switcheroo</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/slash.html">Slash</a></span><br><span class="move-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/false-surrender.html" class="stab">False Surrender</a></span><br><span class="move-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/assurance.html" class="stab">Assurance</a></span><div class="muted small-text">Default level-up moveset</div></td>
       </tr>
-      <tr>
+      <tr data-href="../pokedex/basculegion.html">
         <td><a href="../pokedex/basculegion.html">Basculegion (M)</a></td>
         <td>37</td>
         <td><img src="../assets/game/graphics/pokemon/basculegion/front.png" alt="Basculegion Level 37 sprite" class="trainer-mon-sprite"></td>
@@ -316,6 +316,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -333,11 +352,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

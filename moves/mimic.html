@@ -233,21 +233,21 @@
   <h2>Learned by <span class="muted small-text">8</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/bonsly.html">
-<img src="../assets/game/graphics/pokemon/bonsly/anim_front.png" alt="" class="sprite">  <span class="name">Bonsly</span>
+<img src="../assets/game/graphics/pokemon/bonsly/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/bonsly/anim_front__hover.png">  <span class="name">Bonsly</span>
 </a></li><li><a href="../pokedex/chatot.html">
-<img src="../assets/game/graphics/pokemon/chatot/anim_front.png" alt="" class="sprite">  <span class="name">Chatot</span>
+<img src="../assets/game/graphics/pokemon/chatot/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/chatot/anim_front__hover.png">  <span class="name">Chatot</span>
 </a></li><li><a href="../pokedex/furfrou.html">
-<img src="../assets/game/graphics/pokemon/furfrou/anim_front.png" alt="" class="sprite">  <span class="name">Furfrou</span>
+<img src="../assets/game/graphics/pokemon/furfrou/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/furfrou/anim_front__hover.png">  <span class="name">Furfrou</span>
 </a></li><li><a href="../pokedex/golett.html">
-<img src="../assets/game/graphics/pokemon/golett/anim_front.png" alt="" class="sprite">  <span class="name">Golett</span>
+<img src="../assets/game/graphics/pokemon/golett/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/golett/anim_front__hover.png">  <span class="name">Golett</span>
 </a></li><li><a href="../pokedex/golurk.html">
-<img src="../assets/game/graphics/pokemon/golurk/anim_front.png" alt="" class="sprite">  <span class="name">Golurk</span>
+<img src="../assets/game/graphics/pokemon/golurk/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/golurk/anim_front__hover.png">  <span class="name">Golurk</span>
 </a></li><li><a href="../pokedex/mimikyu.html">
-<img src="../assets/game/graphics/pokemon/mimikyu/anim_front.png" alt="" class="sprite">  <span class="name">Mimikyu</span>
+<img src="../assets/game/graphics/pokemon/mimikyu/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/mimikyu/anim_front__hover.png">  <span class="name">Mimikyu</span>
 </a></li><li><a href="../pokedex/pyukumuku.html">
-<img src="../assets/game/graphics/pokemon/pyukumuku/anim_front.png" alt="" class="sprite">  <span class="name">Pyukumuku</span>
+<img src="../assets/game/graphics/pokemon/pyukumuku/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/pyukumuku/anim_front__hover.png">  <span class="name">Pyukumuku</span>
 </a></li><li><a href="../pokedex/sudowoodo.html">
-<img src="../assets/game/graphics/pokemon/sudowoodo/anim_front.png" alt="" class="sprite">  <span class="name">Sudowoodo</span>
+<img src="../assets/game/graphics/pokemon/sudowoodo/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/sudowoodo/anim_front__hover.png">  <span class="name">Sudowoodo</span>
 </a></li>  </ul>
 </section>
   </main>
@@ -292,6 +292,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -309,11 +328,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

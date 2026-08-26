@@ -222,22 +222,22 @@
 <h1>Rustboro City</h1>
 <section class="card encounter-block">
 <h2>Devon Corp 2F</h2>    <h3>Gift Pokémon</h3>
-        <ul>
-<li>    <a href="../pokedex/cranidos.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/cranidos/anim_front.png" alt="Cranidos" class="encounter-sprite"><span>Cranidos</span>
-    </a> Lv. 33</li><li>    <a href="../pokedex/shieldon.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/shieldon/anim_front.png" alt="Shieldon" class="encounter-sprite"><span>Shieldon</span>
-    </a> Lv. 33</li><li>    <a href="../pokedex/tirtouga.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/tirtouga/anim_front.png" alt="Tirtouga" class="encounter-sprite"><span>Tirtouga</span>
-    </a> Lv. 33</li><li>    <a href="../pokedex/archen.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/archen/anim_front.png" alt="Archen" class="encounter-sprite"><span>Archen</span>
-    </a> Lv. 33</li><li>    <a href="../pokedex/tyrunt.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/tyrunt/anim_front.png" alt="Tyrunt" class="encounter-sprite"><span>Tyrunt</span>
-    </a> Lv. 20</li><li>    <a href="../pokedex/amaura.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/amaura/anim_front.png" alt="Amaura" class="encounter-sprite"><span>Amaura</span>
-    </a> Lv. 20</li>    </ul>
+        <ul class="encounter-cards">
+<li><a href="../pokedex/cranidos.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/cranidos/anim_front.png" alt="Cranidos" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/cranidos/anim_front__hover.png"><span class="encounter-info"><span class="name">Cranidos</span><span class="encounter-meta">Lv. 33</span></span>
+    </a></li><li><a href="../pokedex/shieldon.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/shieldon/anim_front.png" alt="Shieldon" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/shieldon/anim_front__hover.png"><span class="encounter-info"><span class="name">Shieldon</span><span class="encounter-meta">Lv. 33</span></span>
+    </a></li><li><a href="../pokedex/tirtouga.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/tirtouga/anim_front.png" alt="Tirtouga" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/tirtouga/anim_front__hover.png"><span class="encounter-info"><span class="name">Tirtouga</span><span class="encounter-meta">Lv. 33</span></span>
+    </a></li><li><a href="../pokedex/archen.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/archen/anim_front.png" alt="Archen" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/archen/anim_front__hover.png"><span class="encounter-info"><span class="name">Archen</span><span class="encounter-meta">Lv. 33</span></span>
+    </a></li><li><a href="../pokedex/tyrunt.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/tyrunt/anim_front.png" alt="Tyrunt" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/tyrunt/anim_front__hover.png"><span class="encounter-info"><span class="name">Tyrunt</span><span class="encounter-meta">Lv. 20</span></span>
+    </a></li><li><a href="../pokedex/amaura.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/amaura/anim_front.png" alt="Amaura" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/amaura/anim_front__hover.png"><span class="encounter-info"><span class="name">Amaura</span><span class="encounter-meta">Lv. 20</span></span>
+    </a></li>    </ul>
 
 </section>
 <section class="card encounter-block">
 <h2>House 1</h2>    <h3>In-Game Trade</h3>
-        <ul>
-<li>    <a href="../pokedex/goomy.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/goomy/anim_front.png" alt="Goomy" class="encounter-sprite"><span>Goomy</span>
-    </a>(for <a href="../pokedex/flabebe.html" class="encounter-entry">
-      <span>Flabébé (Red Flower)</span><img src="../assets/game/graphics/pokemon/flabebe/anim_front.png" alt="Flabebe Red" class="encounter-sprite"></a>)</li>    </ul>
+        <ul class="encounter-cards">
+<li><a href="../pokedex/goomy.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/goomy/anim_front.png" alt="Goomy" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/goomy/anim_front__hover.png"><span class="encounter-info"><span class="name">Goomy</span><span class="encounter-meta"></span></span>
+    </a><span class="encounter-for">for</span><a href="../pokedex/flabebe.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/flabebe/anim_front.png" alt="Flabébé (Red Flower)" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/flabebe/anim_front__hover.png"><span class="encounter-info"><span class="name">Flabébé (Red Flower)</span></span>
+    </a></li>    </ul>
 
 </section>
   </main>
@@ -282,6 +282,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -299,11 +318,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

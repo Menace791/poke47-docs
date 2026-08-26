@@ -399,57 +399,57 @@
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/route-136.html">Route 136</a></h3>
           <h4 class="encounter-method-name">Rock Smash</h4>
-              <ul>
+              <ul class="">
 <li>Lv. 22 · 10%</li>    </ul>
 
     </div>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/meteor-falls.html">Meteor Falls</a></h3>
 <h4 class="encounter-floor-name">1F 1R</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 15-17 · 30%</li>    </ul>
 
           <h5 class="encounter-method-name">Water</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 5-35 · 10%</li>    </ul>
 
 <h4 class="encounter-floor-name">1F 2R</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 35 · 30%</li>    </ul>
 
           <h5 class="encounter-method-name">Water</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 5-35 · 10%</li>    </ul>
 
 <h4 class="encounter-floor-name">B1F 1R</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 35 · 30%</li>    </ul>
 
           <h5 class="encounter-method-name">Water</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 5-35 · 10%</li>    </ul>
 
 <h4 class="encounter-floor-name">B1F 2R</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 35 · 20%</li>    </ul>
 
           <h5 class="encounter-method-name">Water</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 5-35 · 10%</li>    </ul>
 
 <h4 class="encounter-floor-name">Steven&#39;s Cave</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 45 · 30%</li>    </ul>
 
     </div>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/gauntletse.html">Gauntlet Island</a></h3>
 <h4 class="encounter-floor-name">Gauntlet Southeast Cave</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 13-14 · 20%</li>    </ul>
 
 <h4 class="encounter-floor-name">Gauntlet Southeast Cave 1F</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 13-14 · 10%</li>    </ul>
 
     </div>
@@ -496,6 +496,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -513,11 +532,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

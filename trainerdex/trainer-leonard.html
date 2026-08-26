@@ -239,10 +239,10 @@
       </tr>
     </thead>
     <tbody>
-      <tr>
+      <tr data-href="../pokedex/crabominable.html">
         <td><a href="../pokedex/crabominable.html">Crabominable</a></td>
         <td>43</td>
-        <td><img src="../assets/game/graphics/pokemon/crabominable/anim_front.png" alt="Crabominable Level 43 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/crabominable/anim_front.png" alt="Crabominable Level 43 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/crabominable/anim_front__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"> <img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -254,10 +254,10 @@
         <td>—</td>
         <td><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/avalanche.html" class="stab">Avalanche</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/reversal.html" class="stab">Reversal</a></span><br><span class="move-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/ice-hammer.html" class="stab">Ice Hammer</a></span><br><span class="move-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/iron-defense.html">Iron Defense</a></span><div class="muted small-text">Default level-up moveset</div></td>
       </tr>
-      <tr>
+      <tr data-href="../pokedex/dhelmise.html">
         <td><a href="../pokedex/dhelmise.html">Dhelmise</a></td>
         <td>43</td>
-        <td><img src="../assets/game/graphics/pokemon/dhelmise/anim_front.png" alt="Dhelmise Level 43 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/dhelmise/anim_front.png" alt="Dhelmise Level 43 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/dhelmise/anim_front__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon"> <img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"></div>
@@ -269,10 +269,10 @@
         <td>—</td>
         <td><span class="move-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/anchor-shot.html">Anchor Shot</a></span><br><span class="move-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/shadow-ball.html" class="stab">Shadow Ball</a></span><br><span class="move-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/brine.html">Brine</a></span><br><span class="move-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/phantom-force.html" class="stab">Phantom Force</a></span><div class="muted small-text">Default level-up moveset</div></td>
       </tr>
-      <tr>
+      <tr data-href="../pokedex/seismitoad.html">
         <td><a href="../pokedex/seismitoad.html">Seismitoad</a></td>
         <td>43</td>
-        <td><img src="../assets/game/graphics/pokemon/seismitoad/anim_front.png" alt="Seismitoad Level 43 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/seismitoad/anim_front.png" alt="Seismitoad Level 43 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/seismitoad/anim_front__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"> <img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon"></div>
@@ -331,6 +331,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -348,11 +367,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

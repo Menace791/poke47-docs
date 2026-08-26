@@ -246,10 +246,10 @@
       </tr>
     </thead>
     <tbody>
-      <tr>
+      <tr data-href="../pokedex/tynamo.html">
         <td><a href="../pokedex/tynamo.html">Tynamo</a></td>
         <td>16</td>
-        <td><img src="../assets/game/graphics/pokemon/tynamo/anim_front.png" alt="Tynamo Level 16 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/tynamo/anim_front.png" alt="Tynamo Level 16 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/tynamo/anim_front__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -276,10 +276,10 @@
       </tr>
     </thead>
     <tbody>
-      <tr>
+      <tr data-href="../pokedex/tynamo.html">
         <td><a href="../pokedex/tynamo.html">Tynamo</a></td>
         <td>30</td>
-        <td><img src="../assets/game/graphics/pokemon/tynamo/anim_front.png" alt="Tynamo Level 30 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/tynamo/anim_front.png" alt="Tynamo Level 30 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/tynamo/anim_front__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -306,10 +306,10 @@
       </tr>
     </thead>
     <tbody>
-      <tr>
+      <tr data-href="../pokedex/eelektrik.html">
         <td><a href="../pokedex/eelektrik.html">Eelektrik</a></td>
         <td>33</td>
-        <td><img src="../assets/game/graphics/pokemon/eelektrik/anim_front.png" alt="Eelektrik Level 33 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/eelektrik/anim_front.png" alt="Eelektrik Level 33 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/eelektrik/anim_front__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -336,10 +336,10 @@
       </tr>
     </thead>
     <tbody>
-      <tr>
+      <tr data-href="../pokedex/eelektrik.html">
         <td><a href="../pokedex/eelektrik.html">Eelektrik</a></td>
         <td>36</td>
-        <td><img src="../assets/game/graphics/pokemon/eelektrik/anim_front.png" alt="Eelektrik Level 36 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/eelektrik/anim_front.png" alt="Eelektrik Level 36 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/eelektrik/anim_front__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -366,10 +366,10 @@
       </tr>
     </thead>
     <tbody>
-      <tr>
+      <tr data-href="../pokedex/eelektross.html">
         <td><a href="../pokedex/eelektross.html">Eelektross</a></td>
         <td>39</td>
-        <td><img src="../assets/game/graphics/pokemon/eelektross/anim_front.png" alt="Eelektross Level 39 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/eelektross/anim_front.png" alt="Eelektross Level 39 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/eelektross/anim_front__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -465,6 +465,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -482,11 +501,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

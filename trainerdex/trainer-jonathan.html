@@ -239,10 +239,10 @@
       </tr>
     </thead>
     <tbody>
-      <tr>
+      <tr data-href="../pokedex/oricorio-sensu.html">
         <td><a href="../pokedex/oricorio-sensu.html">Oricorio (Sensu Style)</a></td>
         <td>33</td>
-        <td><img src="../assets/game/graphics/pokemon/oricorio/sensu/anim_front.png" alt="Oricorio Level 33 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/oricorio/sensu/anim_front.png" alt="Oricorio Level 33 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/oricorio/sensu/anim_front__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -254,10 +254,10 @@
         <td>—</td>
         <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/double-slap.html">Double Slap</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/teeter-dance.html">Teeter Dance</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/revelation-dance.html">Revelation Dance</a></span><br><span class="move-row"><img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/roost.html">Roost</a></span><div class="muted small-text">Default level-up moveset</div></td>
       </tr>
-      <tr>
+      <tr data-href="../pokedex/mudsdale.html">
         <td><a href="../pokedex/mudsdale.html">Mudsdale</a></td>
         <td>33</td>
-        <td><img src="../assets/game/graphics/pokemon/mudsdale/anim_front.png" alt="Mudsdale Level 33 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/mudsdale/anim_front.png" alt="Mudsdale Level 33 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/mudsdale/anim_front__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon"></div>
@@ -316,6 +316,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -333,11 +352,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

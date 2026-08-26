@@ -233,11 +233,11 @@
   <h2>Learned by <span class="muted small-text">3</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/gourgeist.html">
-<img src="../assets/game/graphics/pokemon/gourgeist/anim_front.png" alt="" class="sprite">  <span class="name">Gourgeist</span>
+<img src="../assets/game/graphics/pokemon/gourgeist/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/gourgeist/anim_front__hover.png">  <span class="name">Gourgeist</span>
 </a></li><li><a href="../pokedex/pumpkaboo.html">
-<img src="../assets/game/graphics/pokemon/pumpkaboo/anim_front.png" alt="" class="sprite">  <span class="name">Pumpkaboo</span>
+<img src="../assets/game/graphics/pokemon/pumpkaboo/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/pumpkaboo/anim_front__hover.png">  <span class="name">Pumpkaboo</span>
 </a></li><li><a href="../pokedex/slurpuff.html">
-<img src="../assets/game/graphics/pokemon/slurpuff/anim_front.png" alt="" class="sprite">  <span class="name">Slurpuff</span>
+<img src="../assets/game/graphics/pokemon/slurpuff/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/slurpuff/anim_front__hover.png">  <span class="name">Slurpuff</span>
 </a></li>  </ul>
 </section>
   </main>
@@ -282,6 +282,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -299,11 +318,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

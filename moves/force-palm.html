@@ -233,27 +233,27 @@
   <h2>Learned by <span class="muted small-text">11</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/bewear.html">
-<img src="../assets/game/graphics/pokemon/bewear/anim_front.png" alt="" class="sprite">  <span class="name">Bewear</span>
+<img src="../assets/game/graphics/pokemon/bewear/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/bewear/anim_front__hover.png">  <span class="name">Bewear</span>
 </a></li><li><a href="../pokedex/conkeldurr.html">
-<img src="../assets/game/graphics/pokemon/conkeldurr/anim_front.png" alt="" class="sprite">  <span class="name">Conkeldurr</span>
+<img src="../assets/game/graphics/pokemon/conkeldurr/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/conkeldurr/anim_front__hover.png">  <span class="name">Conkeldurr</span>
 </a></li><li><a href="../pokedex/gurdurr.html">
-<img src="../assets/game/graphics/pokemon/gurdurr/anim_front.png" alt="" class="sprite">  <span class="name">Gurdurr</span>
+<img src="../assets/game/graphics/pokemon/gurdurr/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/gurdurr/anim_front__hover.png">  <span class="name">Gurdurr</span>
 </a></li><li><a href="../pokedex/lucario.html">
-<img src="../assets/game/graphics/pokemon/lucario/anim_front.png" alt="" class="sprite">  <span class="name">Lucario</span>
+<img src="../assets/game/graphics/pokemon/lucario/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/lucario/anim_front__hover.png">  <span class="name">Lucario</span>
 </a></li><li><a href="../pokedex/marshadow.html">
-<img src="../assets/game/graphics/pokemon/marshadow/anim_front.png" alt="" class="sprite">  <span class="name">Marshadow</span>
+<img src="../assets/game/graphics/pokemon/marshadow/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/marshadow/anim_front__hover.png">  <span class="name">Marshadow</span>
 </a></li><li><a href="../pokedex/mienfoo.html">
-<img src="../assets/game/graphics/pokemon/mienfoo/anim_front.png" alt="" class="sprite">  <span class="name">Mienfoo</span>
+<img src="../assets/game/graphics/pokemon/mienfoo/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/mienfoo/anim_front__hover.png">  <span class="name">Mienfoo</span>
 </a></li><li><a href="../pokedex/mienshao.html">
-<img src="../assets/game/graphics/pokemon/mienshao/anim_front.png" alt="" class="sprite">  <span class="name">Mienshao</span>
+<img src="../assets/game/graphics/pokemon/mienshao/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/mienshao/anim_front__hover.png">  <span class="name">Mienshao</span>
 </a></li><li><a href="../pokedex/passimian.html">
-<img src="../assets/game/graphics/pokemon/passimian/anim_front.png" alt="" class="sprite">  <span class="name">Passimian</span>
+<img src="../assets/game/graphics/pokemon/passimian/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/passimian/anim_front__hover.png">  <span class="name">Passimian</span>
 </a></li><li><a href="../pokedex/riolu.html">
-<img src="../assets/game/graphics/pokemon/riolu/anim_front.png" alt="" class="sprite">  <span class="name">Riolu</span>
+<img src="../assets/game/graphics/pokemon/riolu/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/riolu/anim_front__hover.png">  <span class="name">Riolu</span>
 </a></li><li><a href="../pokedex/stufful.html">
-<img src="../assets/game/graphics/pokemon/stufful/anim_front.png" alt="" class="sprite">  <span class="name">Stufful</span>
+<img src="../assets/game/graphics/pokemon/stufful/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/stufful/anim_front__hover.png">  <span class="name">Stufful</span>
 </a></li><li><a href="../pokedex/timburr.html">
-<img src="../assets/game/graphics/pokemon/timburr/anim_front.png" alt="" class="sprite">  <span class="name">Timburr</span>
+<img src="../assets/game/graphics/pokemon/timburr/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/timburr/anim_front__hover.png">  <span class="name">Timburr</span>
 </a></li>  </ul>
 </section>
   </main>
@@ -298,6 +298,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -315,11 +334,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

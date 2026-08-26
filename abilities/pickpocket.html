@@ -227,11 +227,11 @@
   <h2>Pokémon with this Ability <span class="muted small-text">3</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/barbaracle.html">
-<img src="../assets/game/graphics/pokemon/barbaracle/anim_front.png" alt="" class="sprite">  <span class="name">Barbaracle <span class="muted small-text">(HA)</span></span>
+<img src="../assets/game/graphics/pokemon/barbaracle/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/barbaracle/anim_front__hover.png">  <span class="name">Barbaracle <span class="muted small-text">(HA)</span></span>
 </a></li><li><a href="../pokedex/binacle.html">
-<img src="../assets/game/graphics/pokemon/binacle/anim_front.png" alt="" class="sprite">  <span class="name">Binacle <span class="muted small-text">(HA)</span></span>
+<img src="../assets/game/graphics/pokemon/binacle/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/binacle/anim_front__hover.png">  <span class="name">Binacle <span class="muted small-text">(HA)</span></span>
 </a></li><li><a href="../pokedex/persian.html">
-<img src="../assets/game/graphics/pokemon/persian/anim_front.png" alt="" class="sprite">  <span class="name">Persian</span>
+<img src="../assets/game/graphics/pokemon/persian/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/persian/anim_front__hover.png">  <span class="name">Persian</span>
 </a></li>  </ul>
 </section>
   </main>
@@ -276,6 +276,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -293,11 +312,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

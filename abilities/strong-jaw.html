@@ -229,23 +229,23 @@
 <li><a href="../pokedex/avalugg-hisui.html">
 <img src="../assets/game/graphics/pokemon/avalugg/hisui/front.png" alt="" class="sprite">  <span class="name">Avalugg (Hisuian)</span>
 </a></li><li><a href="../pokedex/bruxish.html">
-<img src="../assets/game/graphics/pokemon/bruxish/anim_front.png" alt="" class="sprite">  <span class="name">Bruxish</span>
+<img src="../assets/game/graphics/pokemon/bruxish/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/bruxish/anim_front__hover.png">  <span class="name">Bruxish</span>
 </a></li><li><a href="../pokedex/carnivine.html">
-<img src="../assets/game/graphics/pokemon/carnivine/anim_front.png" alt="" class="sprite">  <span class="name">Carnivine</span>
+<img src="../assets/game/graphics/pokemon/carnivine/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/carnivine/anim_front__hover.png">  <span class="name">Carnivine</span>
 </a></li><li><a href="../pokedex/deino.html">
-<img src="../assets/game/graphics/pokemon/deino/anim_front.png" alt="" class="sprite">  <span class="name">Deino <span class="muted small-text">(HA)</span></span>
+<img src="../assets/game/graphics/pokemon/deino/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/deino/anim_front__hover.png">  <span class="name">Deino <span class="muted small-text">(HA)</span></span>
 </a></li><li><a href="../pokedex/gumshoos.html">
-<img src="../assets/game/graphics/pokemon/gumshoos/anim_front.png" alt="" class="sprite">  <span class="name">Gumshoos</span>
+<img src="../assets/game/graphics/pokemon/gumshoos/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/gumshoos/anim_front__hover.png">  <span class="name">Gumshoos</span>
 </a></li><li><a href="../pokedex/hydreigon.html">
-<img src="../assets/game/graphics/pokemon/hydreigon/anim_front.png" alt="" class="sprite">  <span class="name">Hydreigon <span class="muted small-text">(HA)</span></span>
+<img src="../assets/game/graphics/pokemon/hydreigon/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/hydreigon/anim_front__hover.png">  <span class="name">Hydreigon <span class="muted small-text">(HA)</span></span>
 </a></li><li><a href="../pokedex/tyrantrum.html">
-<img src="../assets/game/graphics/pokemon/tyrantrum/anim_front.png" alt="" class="sprite">  <span class="name">Tyrantrum</span>
+<img src="../assets/game/graphics/pokemon/tyrantrum/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/tyrantrum/anim_front__hover.png">  <span class="name">Tyrantrum</span>
 </a></li><li><a href="../pokedex/tyrunt.html">
-<img src="../assets/game/graphics/pokemon/tyrunt/anim_front.png" alt="" class="sprite">  <span class="name">Tyrunt</span>
+<img src="../assets/game/graphics/pokemon/tyrunt/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/tyrunt/anim_front__hover.png">  <span class="name">Tyrunt</span>
 </a></li><li><a href="../pokedex/yungoos.html">
-<img src="../assets/game/graphics/pokemon/yungoos/anim_front.png" alt="" class="sprite">  <span class="name">Yungoos</span>
+<img src="../assets/game/graphics/pokemon/yungoos/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/yungoos/anim_front__hover.png">  <span class="name">Yungoos</span>
 </a></li><li><a href="../pokedex/zweilous.html">
-<img src="../assets/game/graphics/pokemon/zweilous/anim_front.png" alt="" class="sprite">  <span class="name">Zweilous <span class="muted small-text">(HA)</span></span>
+<img src="../assets/game/graphics/pokemon/zweilous/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/zweilous/anim_front__hover.png">  <span class="name">Zweilous <span class="muted small-text">(HA)</span></span>
 </a></li>  </ul>
 </section>
 <section class="card">
@@ -315,6 +315,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -332,11 +351,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

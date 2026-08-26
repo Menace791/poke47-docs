@@ -239,10 +239,10 @@
       </tr>
     </thead>
     <tbody>
-      <tr>
+      <tr data-href="../pokedex/buizel.html">
         <td><a href="../pokedex/buizel.html">Buizel</a></td>
         <td>29</td>
-        <td><img src="../assets/game/graphics/pokemon/buizel/anim_front.png" alt="Buizel Level 29 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/buizel/anim_front.png" alt="Buizel Level 29 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/buizel/anim_front__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
@@ -254,10 +254,10 @@
         <td>—</td>
         <td><span class="move-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/bite.html">Bite</a></span><br><span class="move-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/aqua-jet.html" class="stab">Aqua Jet</a></span><br><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/agility.html">Agility</a></span><br><span class="move-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/dive.html" class="stab">Dive</a></span><div class="muted small-text">Default level-up moveset</div></td>
       </tr>
-      <tr>
+      <tr data-href="../pokedex/litleo.html">
         <td><a href="../pokedex/litleo.html">Litleo</a></td>
         <td>29</td>
-        <td><img src="../assets/game/graphics/pokemon/litleo/anim_front.png" alt="Litleo Level 29 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/litleo/anim_front.png" alt="Litleo Level 29 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/litleo/anim_front__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -269,10 +269,10 @@
         <td>—</td>
         <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/quick-attack.html" class="stab">Quick Attack</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/fire-fang.html" class="stab">Fire Fang</a></span><br><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/flame-charge.html" class="stab">Flame Charge</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/work-up.html">Work Up</a></span><div class="muted small-text">Default level-up moveset</div></td>
       </tr>
-      <tr>
+      <tr data-href="../pokedex/grotle.html">
         <td><a href="../pokedex/grotle.html">Grotle</a></td>
         <td>31</td>
-        <td><img src="../assets/game/graphics/pokemon/grotle/anim_front.png" alt="Grotle Level 31 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/grotle/anim_front.png" alt="Grotle Level 31 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/grotle/anim_front__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"></div>
@@ -331,6 +331,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -348,11 +367,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

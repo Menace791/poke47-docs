@@ -377,25 +377,25 @@ force to derail a train.</p>
       <h3 class="encounter-section-name"><a href="../encounters/mauville-game-corner.html">Mauville Game Corner</a></h3>
           <h4 class="encounter-method-name">Gacha</h4>
                 <h5>Master Gacha</h5>
-      <ul>
+      <ul class="">
 <li>Lv. 15-30 · 6%</li>      </ul>
 
     </div>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/safari-zone.html">Safari Zone</a></h3>
 <h4 class="encounter-floor-name">South</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 25-29 · 15%</li>    </ul>
 
 <h4 class="encounter-floor-name">Southwest</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 25-29 · 15%</li>    </ul>
 
     </div>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/gauntletnw.html">Gauntlet Island</a></h3>
 <h4 class="encounter-floor-name">Northwest</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 19 · 10%</li>    </ul>
 
     </div>
@@ -442,6 +442,25 @@ force to derail a train.</p>
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -459,11 +478,12 @@ force to derail a train.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

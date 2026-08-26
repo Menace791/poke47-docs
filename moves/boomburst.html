@@ -233,27 +233,27 @@
   <h2>Learned by <span class="muted small-text">11</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/chatot.html">
-<img src="../assets/game/graphics/pokemon/chatot/anim_front.png" alt="" class="sprite">  <span class="name">Chatot</span>
+<img src="../assets/game/graphics/pokemon/chatot/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/chatot/anim_front__hover.png">  <span class="name">Chatot</span>
 </a></li><li><a href="../pokedex/exploud.html">
-<img src="../assets/game/graphics/pokemon/exploud/anim_front.png" alt="" class="sprite">  <span class="name">Exploud</span>
+<img src="../assets/game/graphics/pokemon/exploud/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/exploud/anim_front__hover.png">  <span class="name">Exploud</span>
 </a></li><li><a href="../pokedex/kommo-o.html">
-<img src="../assets/game/graphics/pokemon/kommo_o/anim_front.png" alt="" class="sprite">  <span class="name">Kommo-o</span>
+<img src="../assets/game/graphics/pokemon/kommo_o/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/kommo_o/anim_front__hover.png">  <span class="name">Kommo-o</span>
 </a></li><li><a href="../pokedex/noibat.html">
-<img src="../assets/game/graphics/pokemon/noibat/anim_front.png" alt="" class="sprite">  <span class="name">Noibat</span>
+<img src="../assets/game/graphics/pokemon/noibat/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/noibat/anim_front__hover.png">  <span class="name">Noibat</span>
 </a></li><li><a href="../pokedex/noivern.html">
-<img src="../assets/game/graphics/pokemon/noivern/anim_front.png" alt="" class="sprite">  <span class="name">Noivern</span>
+<img src="../assets/game/graphics/pokemon/noivern/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/noivern/anim_front__hover.png">  <span class="name">Noivern</span>
 </a></li><li><a href="../pokedex/palpitoad.html">
-<img src="../assets/game/graphics/pokemon/palpitoad/anim_front.png" alt="" class="sprite">  <span class="name">Palpitoad</span>
+<img src="../assets/game/graphics/pokemon/palpitoad/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/palpitoad/anim_front__hover.png">  <span class="name">Palpitoad</span>
 </a></li><li><a href="../pokedex/pikipek.html">
-<img src="../assets/game/graphics/pokemon/pikipek/anim_front.png" alt="" class="sprite">  <span class="name">Pikipek</span>
+<img src="../assets/game/graphics/pokemon/pikipek/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/pikipek/anim_front__hover.png">  <span class="name">Pikipek</span>
 </a></li><li><a href="../pokedex/seismitoad.html">
-<img src="../assets/game/graphics/pokemon/seismitoad/anim_front.png" alt="" class="sprite">  <span class="name">Seismitoad</span>
+<img src="../assets/game/graphics/pokemon/seismitoad/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/seismitoad/anim_front__hover.png">  <span class="name">Seismitoad</span>
 </a></li><li><a href="../pokedex/toucannon.html">
-<img src="../assets/game/graphics/pokemon/toucannon/anim_front.png" alt="" class="sprite">  <span class="name">Toucannon</span>
+<img src="../assets/game/graphics/pokemon/toucannon/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/toucannon/anim_front__hover.png">  <span class="name">Toucannon</span>
 </a></li><li><a href="../pokedex/trumbeak.html">
-<img src="../assets/game/graphics/pokemon/trumbeak/anim_front.png" alt="" class="sprite">  <span class="name">Trumbeak</span>
+<img src="../assets/game/graphics/pokemon/trumbeak/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/trumbeak/anim_front__hover.png">  <span class="name">Trumbeak</span>
 </a></li><li><a href="../pokedex/tympole.html">
-<img src="../assets/game/graphics/pokemon/tympole/anim_front.png" alt="" class="sprite">  <span class="name">Tympole</span>
+<img src="../assets/game/graphics/pokemon/tympole/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/tympole/anim_front__hover.png">  <span class="name">Tympole</span>
 </a></li>  </ul>
 </section>
   </main>
@@ -298,6 +298,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -315,11 +334,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

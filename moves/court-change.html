@@ -233,13 +233,13 @@
   <h2>Learned by <span class="muted small-text">5</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/inkay.html">
-<img src="../assets/game/graphics/pokemon/inkay/anim_front.png" alt="" class="sprite">  <span class="name">Inkay</span>
+<img src="../assets/game/graphics/pokemon/inkay/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/inkay/anim_front__hover.png">  <span class="name">Inkay</span>
 </a></li><li><a href="../pokedex/malamar.html">
-<img src="../assets/game/graphics/pokemon/malamar/anim_front.png" alt="" class="sprite">  <span class="name">Malamar</span>
+<img src="../assets/game/graphics/pokemon/malamar/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/malamar/anim_front__hover.png">  <span class="name">Malamar</span>
 </a></li><li><a href="../pokedex/passimian.html">
-<img src="../assets/game/graphics/pokemon/passimian/anim_front.png" alt="" class="sprite">  <span class="name">Passimian</span>
+<img src="../assets/game/graphics/pokemon/passimian/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/passimian/anim_front__hover.png">  <span class="name">Passimian</span>
 </a></li><li><a href="../pokedex/stunfisk.html">
-<img src="../assets/game/graphics/pokemon/stunfisk/anim_front.png" alt="" class="sprite">  <span class="name">Stunfisk</span>
+<img src="../assets/game/graphics/pokemon/stunfisk/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/stunfisk/anim_front__hover.png">  <span class="name">Stunfisk</span>
 </a></li><li><a href="../pokedex/stunfisk-galar.html">
 <img src="../assets/game/graphics/pokemon/stunfisk/galar/front.png" alt="" class="sprite">  <span class="name">Stunfisk (Galarian)</span>
 </a></li>  </ul>
@@ -286,6 +286,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -303,11 +322,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

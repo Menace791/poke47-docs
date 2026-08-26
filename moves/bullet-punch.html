@@ -233,25 +233,25 @@
   <h2>Learned by <span class="muted small-text">10</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/croagunk.html">
-<img src="../assets/game/graphics/pokemon/croagunk/anim_front.png" alt="" class="sprite">  <span class="name">Croagunk</span>
+<img src="../assets/game/graphics/pokemon/croagunk/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/croagunk/anim_front__hover.png">  <span class="name">Croagunk</span>
 </a></li><li><a href="../pokedex/infernape.html">
-<img src="../assets/game/graphics/pokemon/infernape/anim_front.png" alt="" class="sprite">  <span class="name">Infernape</span>
+<img src="../assets/game/graphics/pokemon/infernape/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/infernape/anim_front__hover.png">  <span class="name">Infernape</span>
 </a></li><li><a href="../pokedex/lucario.html">
-<img src="../assets/game/graphics/pokemon/lucario/anim_front.png" alt="" class="sprite">  <span class="name">Lucario</span>
+<img src="../assets/game/graphics/pokemon/lucario/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/lucario/anim_front__hover.png">  <span class="name">Lucario</span>
 </a></li><li><a href="../pokedex/pangoro.html">
-<img src="../assets/game/graphics/pokemon/pangoro/anim_front.png" alt="" class="sprite">  <span class="name">Pangoro</span>
+<img src="../assets/game/graphics/pokemon/pangoro/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/pangoro/anim_front__hover.png">  <span class="name">Pangoro</span>
 </a></li><li><a href="../pokedex/passimian.html">
-<img src="../assets/game/graphics/pokemon/passimian/anim_front.png" alt="" class="sprite">  <span class="name">Passimian</span>
+<img src="../assets/game/graphics/pokemon/passimian/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/passimian/anim_front__hover.png">  <span class="name">Passimian</span>
 </a></li><li><a href="../pokedex/riolu.html">
-<img src="../assets/game/graphics/pokemon/riolu/anim_front.png" alt="" class="sprite">  <span class="name">Riolu</span>
+<img src="../assets/game/graphics/pokemon/riolu/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/riolu/anim_front__hover.png">  <span class="name">Riolu</span>
 </a></li><li><a href="../pokedex/scizor.html">
-<img src="../assets/game/graphics/pokemon/scizor/anim_front.png" alt="" class="sprite">  <span class="name">Scizor</span>
+<img src="../assets/game/graphics/pokemon/scizor/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/scizor/anim_front__hover.png">  <span class="name">Scizor</span>
 </a></li><li><a href="../pokedex/scrafty.html">
-<img src="../assets/game/graphics/pokemon/scrafty/anim_front.png" alt="" class="sprite">  <span class="name">Scrafty</span>
+<img src="../assets/game/graphics/pokemon/scrafty/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/scrafty/anim_front__hover.png">  <span class="name">Scrafty</span>
 </a></li><li><a href="../pokedex/scraggy.html">
-<img src="../assets/game/graphics/pokemon/scraggy/anim_front.png" alt="" class="sprite">  <span class="name">Scraggy</span>
+<img src="../assets/game/graphics/pokemon/scraggy/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/scraggy/anim_front__hover.png">  <span class="name">Scraggy</span>
 </a></li><li><a href="../pokedex/toxicroak.html">
-<img src="../assets/game/graphics/pokemon/toxicroak/anim_front.png" alt="" class="sprite">  <span class="name">Toxicroak</span>
+<img src="../assets/game/graphics/pokemon/toxicroak/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/toxicroak/anim_front__hover.png">  <span class="name">Toxicroak</span>
 </a></li>  </ul>
 </section>
   </main>
@@ -296,6 +296,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -313,11 +332,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

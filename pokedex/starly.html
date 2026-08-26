@@ -375,28 +375,28 @@ Their singing is noisy and annoying.</p>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/route-137.html">Route 137</a></h3>
           <h4 class="encounter-method-name">Land</h4>
-              <ul>
+              <ul class="">
 <li>Lv. 12-14 · 9%</li>    </ul>
 
     </div>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/route-104.html">Route 104</a></h3>
           <h4 class="encounter-method-name">Land</h4>
-              <ul>
+              <ul class="">
 <li>Lv. 5 · 10%</li>    </ul>
 
     </div>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/petalburg-woods.html">Petalburg Woods</a></h3>
           <h4 class="encounter-method-name">Land</h4>
-              <ul>
+              <ul class="">
 <li>Lv. 6 · 10%</li>    </ul>
 
     </div>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/dew-beach.html">Dew Beach</a></h3>
           <h4 class="encounter-method-name">Land</h4>
-              <ul>
+              <ul class="">
 <li>Lv. 8-10 · 18%</li>    </ul>
 
     </div>
@@ -404,28 +404,28 @@ Their singing is noisy and annoying.</p>
       <h3 class="encounter-section-name"><a href="../encounters/mauville-game-corner.html">Mauville Game Corner</a></h3>
           <h4 class="encounter-method-name">Gacha</h4>
                 <h5>Basic Gacha</h5>
-      <ul>
+      <ul class="">
 <li>Lv. 15-30 · 6.2%</li>      </ul>
 
     </div>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/route-115.html">Route 115</a></h3>
           <h4 class="encounter-method-name">Land</h4>
-              <ul>
+              <ul class="">
 <li>Lv. 25 · 10%</li>    </ul>
 
     </div>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/route-118.html">Route 118</a></h3>
           <h4 class="encounter-method-name">Land</h4>
-              <ul>
+              <ul class="">
 <li>Lv. 26 · 14%</li>    </ul>
 
     </div>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/gauntletse.html">Gauntlet Island</a></h3>
 <h4 class="encounter-floor-name">Southeast</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 10 · 10%</li>    </ul>
 
     </div>
@@ -472,6 +472,25 @@ Their singing is noisy and annoying.</p>
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -489,11 +508,12 @@ Their singing is noisy and annoying.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

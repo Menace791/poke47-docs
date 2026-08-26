@@ -222,18 +222,18 @@
 <h1>Cave Of Origin</h1>
 <section class="card encounter-block">
 <h2>Entrance</h2>    <h3>Land</h3>
-        <ul>
-<li>    <a href="../pokedex/noibat.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/noibat/anim_front.png" alt="Noibat" class="encounter-sprite"><span>Noibat</span>
-    </a> Lv. 28-36 Rate: 100%</li>    </ul>
+        <ul class="encounter-cards">
+<li><a href="../pokedex/noibat.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/noibat/anim_front.png" alt="Noibat" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/noibat/anim_front__hover.png"><span class="encounter-info"><span class="name">Noibat</span><span class="encounter-meta">Lv. 28-36 · 100%</span></span>
+    </a></li>    </ul>
 
 </section>
 <section class="card encounter-block">
 <h2>1F</h2>    <h3>Land</h3>
-        <ul>
-<li>    <a href="../pokedex/noibat.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/noibat/anim_front.png" alt="Noibat" class="encounter-sprite"><span>Noibat</span>
-    </a> Lv. 30-36 Rate: 65%</li><li>    <a href="../pokedex/pawniard.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/pawniard/anim_front.png" alt="Pawniard" class="encounter-sprite"><span>Pawniard</span>
-    </a> Lv. 28-33 Rate: 30%</li><li>    <a href="../pokedex/carbink.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/carbink/anim_front.png" alt="Carbink" class="encounter-sprite"><span>Carbink</span>
-    </a> Lv. 35 Rate: 5%</li>    </ul>
+        <ul class="encounter-cards">
+<li><a href="../pokedex/noibat.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/noibat/anim_front.png" alt="Noibat" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/noibat/anim_front__hover.png"><span class="encounter-info"><span class="name">Noibat</span><span class="encounter-meta">Lv. 30-36 · 65%</span></span>
+    </a></li><li><a href="../pokedex/pawniard.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/pawniard/anim_front.png" alt="Pawniard" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/pawniard/anim_front__hover.png"><span class="encounter-info"><span class="name">Pawniard</span><span class="encounter-meta">Lv. 28-33 · 30%</span></span>
+    </a></li><li><a href="../pokedex/carbink.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/carbink/anim_front.png" alt="Carbink" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/carbink/anim_front__hover.png"><span class="encounter-info"><span class="name">Carbink</span><span class="encounter-meta">Lv. 35 · 5%</span></span>
+    </a></li>    </ul>
 
 </section>
   </main>
@@ -278,6 +278,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -295,11 +314,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

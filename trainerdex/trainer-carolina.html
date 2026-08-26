@@ -239,10 +239,10 @@
       </tr>
     </thead>
     <tbody>
-      <tr>
+      <tr data-href="../pokedex/zebstrika.html">
         <td><a href="../pokedex/zebstrika.html">Zebstrika</a></td>
         <td>24</td>
-        <td><img src="../assets/game/graphics/pokemon/zebstrika/anim_front.png" alt="Zebstrika Level 24 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/zebstrika/anim_front.png" alt="Zebstrika Level 24 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/zebstrika/anim_front__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -254,10 +254,10 @@
         <td>—</td>
         <td><span class="move-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/flame-charge.html">Flame Charge</a></span><br><span class="move-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/thunder-wave.html">Thunder Wave</a></span><br><span class="move-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/electric-terrain.html">Electric Terrain</a></span><br><span class="move-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/spark.html" class="stab">Spark</a></span><div class="muted small-text">Default level-up moveset</div></td>
       </tr>
-      <tr>
+      <tr data-href="../pokedex/ribombee.html">
         <td><a href="../pokedex/ribombee.html">Ribombee</a></td>
         <td>24</td>
-        <td><img src="../assets/game/graphics/pokemon/ribombee/anim_front.png" alt="Ribombee Level 24 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/ribombee/anim_front.png" alt="Ribombee Level 24 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/ribombee/anim_front__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"> <img src="../assets/generated/types/fairy.svg" alt="Fairy type" class="type-icon"></div>
@@ -269,10 +269,10 @@
         <td><a href="../itemdex/sitrus-berry.html"><img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="Sitrus Berry" class="item-icon">Sitrus Berry</a></td>
         <td><span class="move-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/silver-wind.html" class="stab">Silver Wind</a></span><br><span class="move-row"><img src="../assets/generated/types/fairy.svg" alt="Fairy type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/draining-kiss.html" class="stab">Draining Kiss</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/natural-gift.html">Natural Gift</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sweet-scent.html">Sweet Scent</a></span><div class="muted small-text">Default level-up moveset</div></td>
       </tr>
-      <tr>
+      <tr data-href="../pokedex/helioptile.html">
         <td><a href="../pokedex/helioptile.html">Helioptile</a></td>
         <td>24</td>
-        <td><img src="../assets/game/graphics/pokemon/helioptile/anim_front.png" alt="Helioptile Level 24 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/helioptile/anim_front.png" alt="Helioptile Level 24 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/helioptile/anim_front__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"> <img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -331,6 +331,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -348,11 +367,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

@@ -391,44 +391,44 @@ of its body.</p>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/granite-cave.html">Granite Cave</a></h3>
 <h4 class="encounter-floor-name">B2F</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 11 · 5%</li>    </ul>
 
           <h5 class="encounter-method-name">Rock Smash</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 10-20 · 34%</li>    </ul>
 
 <h4 class="encounter-floor-name">Steven&#39;s Room</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 10 · 10%</li>    </ul>
 
     </div>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/rusturf-tunnel.html">Rusturf Tunnel</a></h3>
           <h4 class="encounter-method-name">Land</h4>
-              <ul>
+              <ul class="">
 <li>Lv. 8 · 4%</li>    </ul>
 
     </div>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/cave-of-origin.html">Cave Of Origin</a></h3>
 <h4 class="encounter-floor-name">1F</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 35 · 5%</li>    </ul>
 
     </div>
     <div class="encounter-block">
       <h3 class="encounter-section-name"><a href="../encounters/gauntletse.html">Gauntlet Island</a></h3>
 <h4 class="encounter-floor-name">Gauntlet Southeast Cave</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 13 · 5%</li>    </ul>
 
 <h4 class="encounter-floor-name">Gauntlet Southeast Cave 1F</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 13-14 · 7%</li>    </ul>
 
 <h4 class="encounter-floor-name">Gauntlet Southeast Cave 2F</h4>          <h5 class="encounter-method-name">Land</h5>
-              <ul>
+              <ul class="">
 <li>Lv. 13-14 · 7%</li>    </ul>
 
     </div>
@@ -475,6 +475,25 @@ of its body.</p>
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -492,11 +511,12 @@ of its body.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

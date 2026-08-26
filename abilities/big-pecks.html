@@ -227,17 +227,17 @@
   <h2>Pokémon with this Ability <span class="muted small-text">6</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/fletchling.html">
-<img src="../assets/game/graphics/pokemon/fletchling/anim_front.png" alt="" class="sprite">  <span class="name">Fletchling</span>
+<img src="../assets/game/graphics/pokemon/fletchling/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/fletchling/anim_front__hover.png">  <span class="name">Fletchling</span>
 </a></li><li><a href="../pokedex/mandibuzz.html">
-<img src="../assets/game/graphics/pokemon/mandibuzz/anim_front.png" alt="" class="sprite">  <span class="name">Mandibuzz</span>
+<img src="../assets/game/graphics/pokemon/mandibuzz/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/mandibuzz/anim_front__hover.png">  <span class="name">Mandibuzz</span>
 </a></li><li><a href="../pokedex/pidove.html">
-<img src="../assets/game/graphics/pokemon/pidove/anim_front.png" alt="" class="sprite">  <span class="name">Pidove</span>
+<img src="../assets/game/graphics/pokemon/pidove/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/pidove/anim_front__hover.png">  <span class="name">Pidove</span>
 </a></li><li><a href="../pokedex/rowlet.html">
-<img src="../assets/game/graphics/pokemon/rowlet/anim_front.png" alt="" class="sprite">  <span class="name">Rowlet</span>
+<img src="../assets/game/graphics/pokemon/rowlet/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/rowlet/anim_front__hover.png">  <span class="name">Rowlet</span>
 </a></li><li><a href="../pokedex/tranquill.html">
-<img src="../assets/game/graphics/pokemon/tranquill/anim_front.png" alt="" class="sprite">  <span class="name">Tranquill</span>
+<img src="../assets/game/graphics/pokemon/tranquill/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/tranquill/anim_front__hover.png">  <span class="name">Tranquill</span>
 </a></li><li><a href="../pokedex/vullaby.html">
-<img src="../assets/game/graphics/pokemon/vullaby/anim_front.png" alt="" class="sprite">  <span class="name">Vullaby</span>
+<img src="../assets/game/graphics/pokemon/vullaby/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/vullaby/anim_front__hover.png">  <span class="name">Vullaby</span>
 </a></li>  </ul>
 </section>
   </main>
@@ -282,6 +282,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -299,11 +318,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>

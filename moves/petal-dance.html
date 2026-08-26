@@ -233,19 +233,19 @@
   <h2>Learned by <span class="muted small-text">7</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/comfey.html">
-<img src="../assets/game/graphics/pokemon/comfey/anim_front.png" alt="" class="sprite">  <span class="name">Comfey</span>
+<img src="../assets/game/graphics/pokemon/comfey/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/comfey/anim_front__hover.png">  <span class="name">Comfey</span>
 </a></li><li><a href="../pokedex/flabebe.html">
-<img src="../assets/game/graphics/pokemon/flabebe/anim_front.png" alt="" class="sprite">  <span class="name">Flabébé</span>
+<img src="../assets/game/graphics/pokemon/flabebe/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/flabebe/anim_front__hover.png">  <span class="name">Flabébé</span>
 </a></li><li><a href="../pokedex/floette.html">
-<img src="../assets/game/graphics/pokemon/floette/anim_front.png" alt="" class="sprite">  <span class="name">Floette</span>
+<img src="../assets/game/graphics/pokemon/floette/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/floette/anim_front__hover.png">  <span class="name">Floette</span>
 </a></li><li><a href="../pokedex/florges.html">
-<img src="../assets/game/graphics/pokemon/florges/anim_front.png" alt="" class="sprite">  <span class="name">Florges</span>
+<img src="../assets/game/graphics/pokemon/florges/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/florges/anim_front__hover.png">  <span class="name">Florges</span>
 </a></li><li><a href="../pokedex/lilligant.html">
-<img src="../assets/game/graphics/pokemon/lilligant/anim_front.png" alt="" class="sprite">  <span class="name">Lilligant</span>
+<img src="../assets/game/graphics/pokemon/lilligant/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/lilligant/anim_front__hover.png">  <span class="name">Lilligant</span>
 </a></li><li><a href="../pokedex/roselia.html">
-<img src="../assets/game/graphics/pokemon/roselia/anim_front.png" alt="" class="sprite">  <span class="name">Roselia</span>
+<img src="../assets/game/graphics/pokemon/roselia/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/roselia/anim_front__hover.png">  <span class="name">Roselia</span>
 </a></li><li><a href="../pokedex/roserade.html">
-<img src="../assets/game/graphics/pokemon/roserade/anim_front.png" alt="" class="sprite">  <span class="name">Roserade</span>
+<img src="../assets/game/graphics/pokemon/roserade/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/roserade/anim_front__hover.png">  <span class="name">Roserade</span>
 </a></li>  </ul>
 </section>
   </main>
@@ -290,6 +290,25 @@
         });
       });
     }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, tr, li, .sprite-card, figure') : null);
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
+        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+    }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
       const partners = new Map();
@@ -307,11 +326,12 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
     }
   </script>
 </body>
