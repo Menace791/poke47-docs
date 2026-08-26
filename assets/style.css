@@ -1,7 +1,8 @@
 :root { color-scheme: light dark; }
 body { font-family: Arial, sans-serif; margin: 0; background: #111827; color: #f3f4f6; }
 a { color: #93c5fd; text-decoration: none; }
-a:hover { text-decoration: underline; }
+/* Faux-bold via text-stroke thickens glyphs crisply (no blur) without changing width, so hovering never reflows/wraps text; color brighten covers already-bold links. */
+a:hover { color: #bfdbfe; -webkit-text-stroke: 0.6px currentColor; }
 .wrap { max-width: 1100px; margin: 0 auto; padding: 1.25rem; }
 .site-header { background: #1f2937; border-bottom: 1px solid #374151; }
 .site-header .wrap { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
@@ -281,6 +282,16 @@ a.item-card:hover { background: #374151; text-decoration: none; }
 .card[data-href]:hover { background: #2a3441; }
 /* Don't highlight the section when hovering one of its own form boxes — that box highlights instead. */
 .card[data-href]:has(.form-list .form-entry:hover) { background: #1f2937; }
+/* Touch devices can't hover, so mirror the highlight onto :active for press feedback. */
+@media (hover: none) {
+  tr[data-href]:active, li[data-href]:active, td[data-href]:active, .card[data-href]:active { background: #2a3441; }
+  .link-grid > li > a:active,
+  .cross-link-grid > li > a:active,
+  .encounter-cards a.encounter-entry:active,
+  .form-list a.form-entry:active,
+  a.species-inline-link:active,
+  a.item-card:active { background: #374151; }
+}
 
 
 /* Generated from TYPE_ICON_COLORS */

@@ -529,11 +529,13 @@ match for it.</p>
     function obstagoonBindSpriteHover() {
       // Delegated on body so it covers every page's sprite lists and survives re-renders.
       const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, li, .sprite-card, figure, section[data-href]') : null);
+      const restore = (img) => { if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; delete img.dataset.base; } };
       const swap = (scope, toHover) => {
         const img = scope && scope.querySelector('img[data-hover]');
         if (!img) return;
-        if (toHover) { img.dataset.base = img.src; img.onerror = () => { img.src = img.dataset.base; }; img.src = img.dataset.hover; }
-        else if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; }
+        // Guard against re-capturing the hover frame as the base on a repeat mouseover (touch fires with null relatedTarget).
+        if (toHover) { if (!img.dataset.base) { img.dataset.base = img.src; img.onerror = () => restore(img); img.src = img.dataset.hover; } }
+        else restore(img);
       };
       // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
       document.body.addEventListener('mouseover', (e) => {
@@ -544,6 +546,13 @@ match for it.</p>
         const scope = scopeOf(e.target);
         if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
       });
+      // Touch has no hover, so swap the sprite while a card is pressed and restore on release.
+      document.body.addEventListener('touchstart', (e) => { const scope = scopeOf(e.target); if (scope) swap(scope, true); }, {passive: true});
+      const endTouch = (e) => { const scope = scopeOf(e.target); if (scope) swap(scope, false); };
+      document.body.addEventListener('touchend', endTouch, {passive: true});
+      document.body.addEventListener('touchcancel', endTouch, {passive: true});
+      // A tap on mobile swaps without a matching mouseout, so restore every sprite when the page shows (incl. bfcache back-nav).
+      window.addEventListener('pageshow', () => document.querySelectorAll('img[data-hover]').forEach(restore));
     }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
