@@ -232,7 +232,7 @@
   <section class="card species-section table-card">
     <h2>Party</h2>
     <div class="table-scroll">
-  <table>
+  <table class="sortable-table">
     <thead>
       <tr>
         <th>Name</th><th>Level</th><th>Picture</th><th>Types</th><th>Ability</th><th>EVs</th><th>IVs</th><th>Held Item</th><th>Moves</th>
@@ -252,7 +252,7 @@
         <td>—</td>
         <td><span class="stat-pair">0 HP</span><br><span class="stat-pair">0 Atk</span><br><span class="stat-pair">0 Def</span><br><span class="stat-pair">0 SpA</span><br><span class="stat-pair">0 SpD</span><br><span class="stat-pair">0 Spe</span></td>
         <td>—</td>
-        <td><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/flash.html">Flash</a></span><br><span class="move-row"><img src="../assets/generated/types/fairy.svg" alt="Fairy type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/moonlight.html">Moonlight</a></span><br><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/mega-drain.html" class="stab">Mega Drain</a></span><br><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/sleep-powder.html">Sleep Powder</a></span><div class="muted small-text">Default level-up moveset</div></td>
+        <td><div class="move-card-col"><a href="../moves/flash.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Flash</span></a><a href="../moves/moonlight.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Moonlight</span></a><a href="../moves/mega-drain.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Mega Drain</span></a><a href="../moves/sleep-powder.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Sleep Powder</span></a></div><div class="muted small-text">Default level-up moveset</div></td>
       </tr>
       <tr data-href="../pokedex/roselia.html">
         <td><a href="../pokedex/roselia.html">Roselia</a></td>
@@ -267,7 +267,7 @@
         <td>—</td>
         <td><span class="stat-pair">0 HP</span><br><span class="stat-pair">0 Atk</span><br><span class="stat-pair">0 Def</span><br><span class="stat-pair">0 SpA</span><br><span class="stat-pair">0 SpD</span><br><span class="stat-pair">0 Spe</span></td>
         <td>—</td>
-        <td><span class="move-row"><img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/poison-sting.html" class="stab">Poison Sting</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/swift.html">Swift</a></span><br><span class="move-row"><img src="../assets/generated/types/fairy.svg" alt="Fairy type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/floral-healing.html">Floral Healing</a></span><br><span class="move-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/leech-seed.html">Leech Seed</a></span><div class="muted small-text">Default level-up moveset</div></td>
+        <td><div class="move-card-col"><a href="../moves/poison-sting.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Poison Sting</span></a><a href="../moves/swift.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Swift</span></a><a href="../moves/floral-healing.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Floral Healing</span></a><a href="../moves/leech-seed.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Leech Seed</span></a></div><div class="muted small-text">Default level-up moveset</div></td>
       </tr>
     </tbody>
   </table>
@@ -309,7 +309,7 @@
     }
     function obstagoonBindRowLinks() {
       // data-href rows act as buttons; nested <a>/<button> keep their own click semantics.
-      document.querySelectorAll('tr[data-href], li[data-href], td[data-href], section[data-href]').forEach((row) => {
+      document.querySelectorAll('tr[data-href], li[data-href], td[data-href], section[data-href], .card[data-href]').forEach((row) => {
         row.addEventListener('click', (e) => {
           if (e.target.closest('a, button')) return;
           window.location = row.getAttribute('data-href');
@@ -323,9 +323,12 @@
       const swap = (scope, toHover) => {
         const img = scope && scope.querySelector('img[data-hover]');
         if (!img) return;
-        // Guard against re-capturing the hover frame as the base on a repeat mouseover (touch fires with null relatedTarget).
-        if (toHover) { if (!img.dataset.base) { img.dataset.base = img.src; img.onerror = () => restore(img); img.src = img.dataset.hover; } }
-        else restore(img);
+        if (!toHover) return restore(img);
+        // Skip if already swapped, so a repeat mouseover (touch fires with null relatedTarget) can't capture the hover frame as the base.
+        if (img.dataset.base) return;
+        img.dataset.base = img.src;
+        img.onerror = () => restore(img);
+        img.src = img.dataset.hover;
       };
       // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
       document.body.addEventListener('mouseover', (e) => {

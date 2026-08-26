@@ -232,7 +232,7 @@
   <section class="card species-section table-card">
     <h2>Party</h2>
     <div class="table-scroll">
-  <table>
+  <table class="sortable-table">
     <thead>
       <tr>
         <th>Name</th><th>Level</th><th>Picture</th><th>Types</th><th>Ability</th><th>EVs</th><th>IVs</th><th>Held Item</th><th>Moves</th>
@@ -252,7 +252,7 @@
         <td>—</td>
         <td><span class="stat-pair">0 HP</span><br><span class="stat-pair">0 Atk</span><br><span class="stat-pair">0 Def</span><br><span class="stat-pair">0 SpA</span><br><span class="stat-pair">0 SpD</span><br><span class="stat-pair">0 Spe</span></td>
         <td>—</td>
-        <td><span class="move-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/psycho-shift.html">Psycho Shift</a></span><br><span class="move-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/phantom-force.html" class="stab">Phantom Force</a></span><br><span class="move-row"><img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><a href="../moves/hurricane.html" class="stab">Hurricane</a></span><br><span class="move-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/explosion.html">Explosion</a></span><div class="muted small-text">Default level-up moveset</div></td>
+        <td><div class="move-card-col"><a href="../moves/psycho-shift.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Psycho Shift</span></a><a href="../moves/phantom-force.html" class="move-card type-ghost"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Phantom Force</span></a><a href="../moves/hurricane.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Hurricane</span></a><a href="../moves/explosion.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Explosion</span></a></div><div class="muted small-text">Default level-up moveset</div></td>
       </tr>
       <tr data-href="../pokedex/trevenant.html">
         <td><a href="../pokedex/trevenant.html">Trevenant</a></td>
@@ -267,7 +267,7 @@
         <td>—</td>
         <td><span class="stat-pair">0 HP</span><br><span class="stat-pair">0 Atk</span><br><span class="stat-pair">0 Def</span><br><span class="stat-pair">0 SpA</span><br><span class="stat-pair">0 SpD</span><br><span class="stat-pair">0 Spe</span></td>
         <td>—</td>
-        <td><span class="move-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><a href="../moves/confuse-ray.html">Confuse Ray</a></span><br><span class="move-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/sucker-punch.html">Sucker Punch</a></span><br><span class="move-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/circle-throw.html">Circle Throw</a></span><br><span class="move-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon-sm"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><a href="../moves/phantom-force.html" class="stab">Phantom Force</a></span><div class="muted small-text">Default level-up moveset</div></td>
+        <td><div class="move-card-col"><a href="../moves/confuse-ray.html" class="move-card type-ghost"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Confuse Ray</span></a><a href="../moves/sucker-punch.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Sucker Punch</span></a><a href="../moves/circle-throw.html" class="move-card type-fighting"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Circle Throw</span></a><a href="../moves/phantom-force.html" class="move-card type-ghost"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Phantom Force</span></a></div><div class="muted small-text">Default level-up moveset</div></td>
       </tr>
     </tbody>
   </table>
@@ -309,7 +309,7 @@
     }
     function obstagoonBindRowLinks() {
       // data-href rows act as buttons; nested <a>/<button> keep their own click semantics.
-      document.querySelectorAll('tr[data-href], li[data-href], td[data-href], section[data-href]').forEach((row) => {
+      document.querySelectorAll('tr[data-href], li[data-href], td[data-href], section[data-href], .card[data-href]').forEach((row) => {
         row.addEventListener('click', (e) => {
           if (e.target.closest('a, button')) return;
           window.location = row.getAttribute('data-href');
@@ -323,9 +323,12 @@
       const swap = (scope, toHover) => {
         const img = scope && scope.querySelector('img[data-hover]');
         if (!img) return;
-        // Guard against re-capturing the hover frame as the base on a repeat mouseover (touch fires with null relatedTarget).
-        if (toHover) { if (!img.dataset.base) { img.dataset.base = img.src; img.onerror = () => restore(img); img.src = img.dataset.hover; } }
-        else restore(img);
+        if (!toHover) return restore(img);
+        // Skip if already swapped, so a repeat mouseover (touch fires with null relatedTarget) can't capture the hover frame as the base.
+        if (img.dataset.base) return;
+        img.dataset.base = img.src;
+        img.onerror = () => restore(img);
+        img.src = img.dataset.hover;
       };
       // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
       document.body.addEventListener('mouseover', (e) => {

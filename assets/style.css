@@ -1,8 +1,8 @@
 :root { color-scheme: light dark; }
 body { font-family: Arial, sans-serif; margin: 0; background: #111827; color: #f3f4f6; }
-a { color: #93c5fd; text-decoration: none; }
-/* Faux-bold via text-stroke thickens glyphs crisply (no blur) without changing width, so hovering never reflows/wraps text; color brighten covers already-bold links. */
-a:hover { color: #bfdbfe; -webkit-text-stroke: 0.6px currentColor; }
+/* inline-block lets transform:scale apply to prose links (it has no effect on inline elements); scale grows them on hover without reflow. */
+a { color: #93c5fd; text-decoration: none; display: inline-block; transition: transform 0.12s ease, color 0.12s ease; }
+a:hover { color: #bfdbfe; transform: scale(1.06); }
 .wrap { max-width: 1100px; margin: 0 auto; padding: 1.25rem; }
 .site-header { background: #1f2937; border-bottom: 1px solid #374151; }
 .site-header .wrap { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
@@ -28,10 +28,12 @@ a:hover { color: #bfdbfe; -webkit-text-stroke: 0.6px currentColor; }
 .region-map { position: relative; display: block; width: 100%; max-width: 760px; margin: 0 auto 1.25rem; }
 .region-map img { display: block; width: 100%; height: auto; image-rendering: pixelated; border-radius: 8px; }
 .region-map a { position: absolute; display: block; box-sizing: border-box; }
-.region-map a:hover, .region-map a:focus, .region-map a.linked-hover { outline: 2px solid #93c5fd; background: rgba(147, 197, 253, 0.18); }
+/* Scale on linked-hover too so the map box pops when its list tile is hovered, mirroring the tile's own pop. */
+.region-map a:hover, .region-map a:focus, .region-map a.linked-hover { outline: 2px solid #93c5fd; background: rgba(147, 197, 253, 0.18); transform: scale(1.06); }
 .region-map a::after { content: attr(aria-label); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 4px; padding: 2px 6px; font-size: 0.8rem; font-weight: 600; color: #f9fafb; background: rgba(17, 24, 39, 0.9); border-radius: 4px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 80ms; }
 .region-map a:hover::after, .region-map a:focus::after, .region-map a.linked-hover::after { opacity: 1; }
-.link-grid > li > a.linked-hover { background: #374151; }
+/* Scale here too so a card mirrors its map-hotspot partner's pop (JS toggles .linked-hover between the pair). */
+.link-grid > li > a.linked-hover { background: #374151; transform: scale(1.06); }
 .link-grid > li > a.has-map {
   background-color: #1f2937;
   background-image: linear-gradient(rgba(31, 41, 55, 0.62), rgba(31, 41, 55, 0.62)), var(--map-bg);
@@ -51,9 +53,22 @@ a:hover { color: #bfdbfe; -webkit-text-stroke: 0.6px currentColor; }
 }
 .muted { color: #9ca3af; }
 table { width: 100%; border-collapse: collapse; background: #1f2937; border-radius: 14px; overflow: hidden; }
-tr[data-href], li[data-href], td[data-href] { cursor: pointer; }
-tr[data-href]:hover, li[data-href]:hover, td[data-href]:hover { background: #2a3441; }
+tr[data-href], li[data-href], td[data-href] { cursor: pointer; transition: transform 0.12s ease, background 0.12s ease; }
+/* A wide row needs a bigger factor than a compact chip for the sideways growth to register (a small % of a ~1080px row is only a few px). */
+tr[data-href]:hover, li[data-href]:hover, td[data-href]:hover { background: #2a3441; transform: scale(1.02); }
 th, td { padding: 0.75rem; border-bottom: 1px solid #374151; text-align: left; }
+/* Sortable index tables drop overflow:hidden so hovered rows can grow sideways too; separate collapse lets the corner cells re-round (cell radii are ignored under collapse) and lets tr transforms render. */
+.sortable-table { border-collapse: separate; border-spacing: 0; overflow: visible; }
+.sortable-table thead th:first-child { border-top-left-radius: 14px; }
+.sortable-table thead th:last-child { border-top-right-radius: 14px; }
+.sortable-table tbody tr:last-child td:first-child { border-bottom-left-radius: 14px; }
+.sortable-table tbody tr:last-child td:last-child { border-bottom-right-radius: 14px; }
+.sortable-table tbody tr:last-child td { border-bottom: none; }
+/* Round the hovered row into a pill so its expanded ends aren't square; the highlight moves onto the cells because a rounded cell corner would otherwise just reveal the tr's own square background behind it. */
+.sortable-table tbody tr[data-href]:hover { background: transparent; }
+.sortable-table tbody tr[data-href]:hover td { background: #2a3441; }
+.sortable-table tbody tr[data-href]:hover td:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+.sortable-table tbody tr[data-href]:hover td:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
 ul { line-height: 1.6; }
 @media (max-width: 800px) { .stats-grid, .grid.two { grid-template-columns: 1fr; } }
 @media (max-width: 600px) { .wrap { padding: 0.75rem; } }
@@ -143,11 +158,12 @@ ul { line-height: 1.6; }
   border-radius: 4px;
   padding: 0;
   cursor: pointer; box-sizing: border-box;
-  transition: border-color 80ms, background-color 80ms;
+  transition: border-color 80ms, background-color 80ms, transform 0.12s ease;
 }
 .itemdex-bag-hotspot:hover, .itemdex-bag-hotspot:focus {
   border-color: #f9fafb;
   background: rgba(249, 250, 251, 0.28);
+  transform: scale(1.06);
 }
 .itemdex-bag-hotspot::after {
   content: attr(aria-label);
@@ -212,13 +228,29 @@ ul { line-height: 1.6; }
 .litter-picker-table th, .litter-picker-table td { padding: 2px 8px; text-align: left; }
 .move-cat-icon { width: 24px; height: 24px; image-rendering: pixelated; vertical-align: middle; }
 .stab { font-weight: 700; }
+/* Move card: category icon + name on a subtle type tint (canonical color mixed into the dark base), always with light text. */
+.move-card { display: inline-flex; align-items: center; gap: 6px; padding: 0.25rem 0.5rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.14); vertical-align: middle; }
+.move-card .move-cat-icon { width: 18px; height: 18px; }
+/* a./span. beats the appended .type-<slug> rules so the tint and light text hold for every type. */
+a.move-card, span.move-card { background: color-mix(in srgb, var(--type-color, #374151) 75%, #18212e); color: #f9fafb; }
+a.move-card:hover { background: color-mix(in srgb, var(--type-color, #374151) 90%, #18212e); }
+/* Scale renders the card bigger without reflow (transforms don't affect layout), so it grows on hover without shifting neighbors or wrapping the line. */
+a.move-card, a.item-card, a.species-inline-link, .encounter-cards a.encounter-entry, .form-list a.form-entry { transition: transform 0.12s ease, background 0.12s ease; }
+a.move-card:hover, a.item-card:hover, a.species-inline-link:hover, .encounter-cards a.encounter-entry:hover, .form-list a.form-entry:hover { transform: scale(1.06); }
+/* Orange/yellow darken toward brown at the shared mix, so Fire and Electric need a brighter one to stay recognizable. */
+.move-card.type-fire, .move-card.type-electric { background: color-mix(in srgb, var(--type-color) 92%, #18212e); }
+a.move-card.type-fire:hover, a.move-card.type-electric:hover { background: var(--type-color); }
+/* Dark text reads better than white on the bright yellow; bump weight so it optically matches the white-on-dark cards. */
+.move-card.type-electric { color: #17202a; font-weight: 500; }
+.move-card-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.move-card-col { display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem; }
 /* 2-column grid (source | move); source column auto-sizes per section so rows align within it. */
 .move-list { display: grid; grid-template-columns: max-content auto; align-items: center; column-gap: 0.5rem; row-gap: 0.2rem; padding-left: 0; }
 .move-list li { display: contents; }
 .move-list .move-source { display: flex; align-items: center; gap: 0.35rem; width: 100%; }
 .move-list .move-source::after { content: '—'; margin-left: auto; padding-left: 0.4rem; color: #9ca3af; }
-.move-row { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; }
-.table-scroll { overflow-x: auto; }
+/* Horizontal padding gives hovered rows room to grow sideways into (overflow clips at the padding box, not the content box) while still scrolling on narrow screens. */
+.table-scroll { overflow-x: auto; padding: 4px 16px; }
 /* Pin move-list grids to natural width inside .table-scroll so narrow viewports scroll instead of wrapping move names. */
 .table-scroll .move-list { min-width: max-content; }
 .table-scroll .move-list .move-target { white-space: nowrap; }
@@ -278,10 +310,10 @@ a.item-card:hover { background: #374151; text-decoration: none; }
 .form-list li { padding: 0; }
 .form-list .form-entry { padding: 0.4rem 0.6rem; background: #18212e; border: 1px solid #374151; border-radius: 10px; color: #93c5fd; }
 .form-list a.form-entry:hover { background: #374151; text-decoration: none; }
-.card[data-href] { cursor: pointer; }
-.card[data-href]:hover { background: #2a3441; }
+.card[data-href] { cursor: pointer; transition: transform 0.12s ease, background 0.12s ease; }
+.card[data-href]:hover { background: #2a3441; transform: scale(1.012); }
 /* Don't highlight the section when hovering one of its own form boxes — that box highlights instead. */
-.card[data-href]:has(.form-list .form-entry:hover) { background: #1f2937; }
+.card[data-href]:has(.form-list .form-entry:hover) { background: #1f2937; transform: none; }
 /* Touch devices can't hover, so mirror the highlight onto :active for press feedback. */
 @media (hover: none) {
   tr[data-href]:active, li[data-href]:active, td[data-href]:active, .card[data-href]:active { background: #2a3441; }
@@ -295,23 +327,23 @@ a.item-card:hover { background: #374151; text-decoration: none; }
 
 
 /* Generated from TYPE_ICON_COLORS */
-.type-normal { background: #8f8a81; }
-.type-fire { background: #e76f51; }
-.type-water { background: #4d90fe; }
-.type-electric { background: #f4c430; color: #111827; }
-.type-grass { background: #43aa57; }
-.type-ice { background: #58c4dd; color: #111827; }
-.type-fighting { background: #c65b3d; }
-.type-poison { background: #9c6ade; }
-.type-ground { background: #c59b55; color: #111827; }
-.type-flying { background: #7c8cff; }
-.type-psychic { background: #ff5d8f; }
-.type-bug { background: #93b125; color: #111827; }
-.type-rock { background: #b49b55; }
-.type-ghost { background: #6f62b5; }
-.type-dragon { background: #5a64ea; }
-.type-dark { background: #705848; }
-.type-steel { background: #8aa1b1; color: #111827; }
-.type-fairy { background: #e98ad7; color: #111827; }
-.type-stellar { background: #8b5cf6; }
-.type-unknown { background: #6b7280; }
+.type-normal { background: #a8a878; --type-color: #a8a878; }
+.type-fire { background: #f08030; --type-color: #f08030; }
+.type-water { background: #6890f0; --type-color: #6890f0; }
+.type-electric { background: #f8d030; --type-color: #f8d030; color: #111827; }
+.type-grass { background: #78c850; --type-color: #78c850; }
+.type-ice { background: #98d8d8; --type-color: #98d8d8; color: #111827; }
+.type-fighting { background: #c03028; --type-color: #c03028; }
+.type-poison { background: #a040a0; --type-color: #a040a0; }
+.type-ground { background: #e0c068; --type-color: #e0c068; color: #111827; }
+.type-flying { background: #a890f0; --type-color: #a890f0; }
+.type-psychic { background: #f85888; --type-color: #f85888; }
+.type-bug { background: #a8b820; --type-color: #a8b820; color: #111827; }
+.type-rock { background: #b8a038; --type-color: #b8a038; }
+.type-ghost { background: #705898; --type-color: #705898; }
+.type-dragon { background: #7038f8; --type-color: #7038f8; }
+.type-dark { background: #705848; --type-color: #705848; }
+.type-steel { background: #b8b8d0; --type-color: #b8b8d0; color: #111827; }
+.type-fairy { background: #ee99ac; --type-color: #ee99ac; color: #111827; }
+.type-stellar { background: #8b5cf6; --type-color: #8b5cf6; }
+.type-unknown { background: #68a090; --type-color: #68a090; }
