@@ -289,7 +289,7 @@ being. They inhabit mountainous regions.</p>
   <div class="card">
     <h2>Evolutions</h2>
     <ul>
-        <li>  <a href="skiddo.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/skiddo/anim_front.png" alt="Skiddo" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/skiddo/anim_front__hover.png"><span>Skiddo</span>
+        <li>  <a href="skiddo.html" class="species-inline-link mon-card type-grass"><img src="../assets/game/graphics/pokemon/skiddo/anim_front.png" alt="Skiddo" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/skiddo/anim_front__hover.png"><span>Skiddo</span>
   </a>
  → Level up: 32</li>
     </ul>
@@ -316,13 +316,13 @@ being. They inhabit mountainous regions.</p>
         <li><span class="move-source">Lv. 12</span><span class="move-target"><a href="../moves/trailblaze.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Trailblaze</span></a></span></li>
         <li><span class="move-source">Lv. 16</span><span class="move-target"><a href="../moves/bulldoze.html" class="move-card type-ground"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Bulldoze</span></a></span></li>
         <li><span class="move-source">Lv. 18</span><span class="move-target"><a href="../moves/take-down.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Take Down</span></a></span></li>
-        <li><span class="move-source">Lv. 21</span><span class="move-target"><a href="../moves/leech-seed.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Leech Seed</span></a></span></li>
+        <li><span class="move-source">Lv. 21</span><span class="move-target"><a href="../moves/endure.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Endure</span></a></span></li>
         <li><span class="move-source">Lv. 24</span><span class="move-target"><a href="../moves/grassy-glide.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Grassy Glide</span></a></span></li>
         <li><span class="move-source">Lv. 27</span><span class="move-target"><a href="../moves/rototiller.html" class="move-card type-ground"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Rototiller</span></a></span></li>
         <li><span class="move-source">Lv. 30</span><span class="move-target"><a href="../moves/double-kick.html" class="move-card type-fighting"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Double Kick</span></a></span></li>
         <li><span class="move-source">Lv. 34</span><span class="move-target"><a href="../moves/horn-leech.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Horn Leech</span></a></span></li>
         <li><span class="move-source">Lv. 38</span><span class="move-target"><a href="../moves/double-edge.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Double-Edge</span></a></span></li>
-        <li><span class="move-source">Lv. 42</span><span class="move-target"><a href="../moves/endure.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Endure</span></a></span></li>
+        <li><span class="move-source">Lv. 42</span><span class="move-target"><a href="../moves/leech-seed.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Leech Seed</span></a></span></li>
         <li><span class="move-source">Lv. 46</span><span class="move-target"><a href="../moves/steel-roller.html" class="move-card type-steel"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Steel Roller</span></a></span></li>
         <li><span class="move-source">Lv. 50</span><span class="move-target"><a href="../moves/wood-hammer.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Wood Hammer</span></a></span></li>
         <li><span class="move-source">Lv. 54</span><span class="move-target"><a href="../moves/terrain-pulse.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Terrain Pulse</span></a></span></li>
@@ -440,7 +440,8 @@ being. They inhabit mountainous regions.</p>
     }
     function obstagoonBindSpriteHover() {
       // Delegated on body so it covers every page's sprite lists and survives re-renders.
-      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, li, .sprite-card, figure, section[data-href]') : null);
+      // Scope to the card itself, not a bare li: an evolution li holds the card plus the arrow/method text, and li-scope would swap the sprite from anywhere in the row. Cross-link cards (no card class) scope to their own <a>.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, .cross-link-grid > li > a, .sprite-card, figure, section[data-href]') : null);
       const restore = (img) => { if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; delete img.dataset.base; } };
       const swap = (scope, toHover) => {
         const img = scope && scope.querySelector('img[data-hover]');

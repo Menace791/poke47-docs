@@ -289,7 +289,7 @@ of drowning people.</p>
   <div class="card">
     <h2>Evolutions</h2>
     <ul>
-        <li>  <a href="buizel.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/buizel/anim_front.png" alt="Buizel" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/buizel/anim_front__hover.png"><span>Buizel</span>
+        <li>  <a href="buizel.html" class="species-inline-link mon-card type-water"><img src="../assets/game/graphics/pokemon/buizel/anim_front.png" alt="Buizel" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/buizel/anim_front__hover.png"><span>Buizel</span>
   </a>
  → Level up: 26</li>
     </ul>
@@ -315,12 +315,12 @@ of drowning people.</p>
         <li><span class="move-source">Lv. 6</span><span class="move-target"><a href="../moves/water-gun.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Water Gun</span></a></span></li>
         <li><span class="move-source">Lv. 8</span><span class="move-target"><a href="../moves/life-dew.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Life Dew</span></a></span></li>
         <li><span class="move-source">Lv. 11</span><span class="move-target"><a href="../moves/swift.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Swift</span></a></span></li>
-        <li><span class="move-source">Lv. 15</span><span class="move-target"><a href="../moves/bite.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Bite</span></a></span></li>
-        <li><span class="move-source">Lv. 19</span><span class="move-target"><a href="../moves/aqua-jet.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Aqua Jet</span></a></span></li>
+        <li><span class="move-source">Lv. 15</span><span class="move-target"><a href="../moves/aqua-jet.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Aqua Jet</span></a></span></li>
+        <li><span class="move-source">Lv. 19</span><span class="move-target"><a href="../moves/bite.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Bite</span></a></span></li>
         <li><span class="move-source">Lv. 24</span><span class="move-target"><a href="../moves/agility.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Agility</span></a></span></li>
         <li><span class="move-source">Lv. 28</span><span class="move-target"><a href="../moves/dive.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Dive</span></a></span></li>
-        <li><span class="move-source">Lv. 34</span><span class="move-target"><a href="../moves/tail-slap.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Tail Slap</span></a></span></li>
-        <li><span class="move-source">Lv. 38</span><span class="move-target"><a href="../moves/jet-punch.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Jet Punch</span></a></span></li>
+        <li><span class="move-source">Lv. 33</span><span class="move-target"><a href="../moves/jet-punch.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Jet Punch</span></a></span></li>
+        <li><span class="move-source">Lv. 38</span><span class="move-target"><a href="../moves/tail-slap.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Tail Slap</span></a></span></li>
         <li><span class="move-source">Lv. 42</span><span class="move-target"><a href="../moves/hydro-pump.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Hydro Pump</span></a></span></li>
         <li><span class="move-source">Lv. 46</span><span class="move-target"><a href="../moves/baton-pass.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Baton Pass</span></a></span></li>
         <li><span class="move-source">Lv. 49</span><span class="move-target"><a href="../moves/aqua-tail.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Aqua Tail</span></a></span></li>
@@ -440,7 +440,8 @@ of drowning people.</p>
     }
     function obstagoonBindSpriteHover() {
       // Delegated on body so it covers every page's sprite lists and survives re-renders.
-      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, li, .sprite-card, figure, section[data-href]') : null);
+      // Scope to the card itself, not a bare li: an evolution li holds the card plus the arrow/method text, and li-scope would swap the sprite from anywhere in the row. Cross-link cards (no card class) scope to their own <a>.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, .cross-link-grid > li > a, .sprite-card, figure, section[data-href]') : null);
       const restore = (img) => { if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; delete img.dataset.base; } };
       const swap = (scope, toHover) => {
         const img = scope && scope.querySelector('img[data-hover]');

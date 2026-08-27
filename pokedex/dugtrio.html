@@ -289,7 +289,7 @@ endlessly through the ground.</p>
   <div class="card">
     <h2>Evolutions</h2>
     <ul>
-        <li>  <a href="diglett.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/diglett/anim_front.png" alt="Diglett" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/diglett/anim_front__hover.png"><span>Diglett</span>
+        <li>  <a href="diglett.html" class="species-inline-link mon-card type-ground"><img src="../assets/game/graphics/pokemon/diglett/anim_front.png" alt="Diglett" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/diglett/anim_front__hover.png"><span>Diglett</span>
   </a>
  → Level up: 26</li>
     </ul>
@@ -297,7 +297,7 @@ endlessly through the ground.</p>
   <div class="card">
     <h2>Forms</h2>
     <ul class="form-list">
-        <li><a href="dugtrio-alola.html" class="form-entry"><img src="../assets/game/graphics/pokemon/dugtrio/alola/anim_front.png" alt="Dugtrio (Alolan)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/dugtrio/alola/anim_front__hover.png"><span>Dugtrio (Alolan)</span>
+        <li><a href="dugtrio-alola.html" class="form-entry mon-card type-ground type2-steel mon-dual"><img src="../assets/game/graphics/pokemon/dugtrio/alola/anim_front.png" alt="Dugtrio (Alolan)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/dugtrio/alola/anim_front__hover.png"><span>Dugtrio (Alolan)</span>
         </a></li>
     </ul>
   </div>
@@ -423,7 +423,8 @@ endlessly through the ground.</p>
     }
     function obstagoonBindSpriteHover() {
       // Delegated on body so it covers every page's sprite lists and survives re-renders.
-      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, li, .sprite-card, figure, section[data-href]') : null);
+      // Scope to the card itself, not a bare li: an evolution li holds the card plus the arrow/method text, and li-scope would swap the sprite from anywhere in the row. Cross-link cards (no card class) scope to their own <a>.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, .cross-link-grid > li > a, .sprite-card, figure, section[data-href]') : null);
       const restore = (img) => { if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; delete img.dataset.base; } };
       const swap = (scope, toHover) => {
         const img = scope && scope.querySelector('img[data-hover]');

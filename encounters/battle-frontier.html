@@ -223,15 +223,15 @@
 <section class="card encounter-block">
 <h2>Lounge 6</h2>    <h3>In-Game Trade</h3>
         <ul class="encounter-cards">
-<li><a href="../pokedex/meowth-galar.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/meowth/galar/front.png" alt="Meowth (Galarian)" class="encounter-sprite"><span class="encounter-info"><span class="name">Meowth (Galarian)</span><span class="encounter-meta"></span></span>
-    </a><span class="encounter-for">for</span><a href="../pokedex/pikachu.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/pikachu/anim_front.png" alt="Pikachu" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/pikachu/anim_front__hover.png"><span class="encounter-info"><span class="name">Pikachu</span></span>
+<li><a href="../pokedex/meowth-galar.html" class="encounter-entry mon-card type-steel"><img src="../assets/game/graphics/pokemon/meowth/galar/front.png" alt="Meowth (Galarian)" class="encounter-sprite"><span class="encounter-info"><span class="name">Meowth (Galarian)</span><span class="encounter-meta"></span></span>
+    </a><span class="encounter-for">for</span><a href="../pokedex/pikachu.html" class="encounter-entry mon-card type-electric"><img src="../assets/game/graphics/pokemon/pikachu/anim_front.png" alt="Pikachu" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/pikachu/anim_front__hover.png"><span class="encounter-info"><span class="name">Pikachu</span></span>
     </a></li>    </ul>
 
 </section>
 <section class="card encounter-block">
 <h2>Outside East</h2>    <h3>Static Encounter</h3>
         <ul class="encounter-cards">
-<li><a href="../pokedex/sudowoodo.html" class="encounter-entry"><img src="../assets/game/graphics/pokemon/sudowoodo/anim_front.png" alt="Sudowoodo" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/sudowoodo/anim_front__hover.png"><span class="encounter-info"><span class="name">Sudowoodo</span><span class="encounter-meta">Lv. 40</span></span>
+<li><a href="../pokedex/sudowoodo.html" class="encounter-entry mon-card type-rock"><img src="../assets/game/graphics/pokemon/sudowoodo/anim_front.png" alt="Sudowoodo" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/sudowoodo/anim_front__hover.png"><span class="encounter-info"><span class="name">Sudowoodo</span><span class="encounter-meta">Lv. 40</span></span>
     </a></li>    </ul>
 
 </section>
@@ -279,7 +279,8 @@
     }
     function obstagoonBindSpriteHover() {
       // Delegated on body so it covers every page's sprite lists and survives re-renders.
-      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, li, .sprite-card, figure, section[data-href]') : null);
+      // Scope to the card itself, not a bare li: an evolution li holds the card plus the arrow/method text, and li-scope would swap the sprite from anywhere in the row. Cross-link cards (no card class) scope to their own <a>.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, .cross-link-grid > li > a, .sprite-card, figure, section[data-href]') : null);
       const restore = (img) => { if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; delete img.dataset.base; } };
       const swap = (scope, toHover) => {
         const img = scope && scope.querySelector('img[data-hover]');

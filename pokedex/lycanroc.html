@@ -289,7 +289,7 @@ its mane.</p>
   <div class="card">
     <h2>Evolutions</h2>
     <ul>
-        <li>  <a href="rockruff.html" class="species-inline-link"><img src="../assets/game/graphics/pokemon/rockruff/anim_front.png" alt="Rockruff" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/rockruff/anim_front__hover.png"><span>Rockruff</span>
+        <li>  <a href="rockruff.html" class="species-inline-link mon-card type-rock"><img src="../assets/game/graphics/pokemon/rockruff/anim_front.png" alt="Rockruff" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/rockruff/anim_front__hover.png"><span>Rockruff</span>
   </a>
  → Level up: 25 (Day)</li>
     </ul>
@@ -297,9 +297,9 @@ its mane.</p>
   <div class="card">
     <h2>Forms</h2>
     <ul class="form-list">
-        <li><a href="lycanroc-midnight.html" class="form-entry"><img src="../assets/game/graphics/pokemon/lycanroc/midnight/anim_front.png" alt="Lycanroc (Midnight)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/lycanroc/midnight/anim_front__hover.png"><span>Lycanroc (Midnight)</span>
+        <li><a href="lycanroc-midnight.html" class="form-entry mon-card type-rock"><img src="../assets/game/graphics/pokemon/lycanroc/midnight/anim_front.png" alt="Lycanroc (Midnight)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/lycanroc/midnight/anim_front__hover.png"><span>Lycanroc (Midnight)</span>
         </a></li>
-        <li><a href="lycanroc-dusk.html" class="form-entry"><img src="../assets/game/graphics/pokemon/lycanroc/dusk/anim_front.png" alt="Lycanroc (Dusk)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/lycanroc/dusk/anim_front__hover.png"><span>Lycanroc (Dusk)</span>
+        <li><a href="lycanroc-dusk.html" class="form-entry mon-card type-rock"><img src="../assets/game/graphics/pokemon/lycanroc/dusk/anim_front.png" alt="Lycanroc (Dusk)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/lycanroc/dusk/anim_front__hover.png"><span>Lycanroc (Dusk)</span>
         </a></li>
     </ul>
   </div>
@@ -440,7 +440,8 @@ its mane.</p>
     }
     function obstagoonBindSpriteHover() {
       // Delegated on body so it covers every page's sprite lists and survives re-renders.
-      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, li, .sprite-card, figure, section[data-href]') : null);
+      // Scope to the card itself, not a bare li: an evolution li holds the card plus the arrow/method text, and li-scope would swap the sprite from anywhere in the row. Cross-link cards (no card class) scope to their own <a>.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, .cross-link-grid > li > a, .sprite-card, figure, section[data-href]') : null);
       const restore = (img) => { if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; delete img.dataset.base; } };
       const swap = (scope, toHover) => {
         const img = scope && scope.querySelector('img[data-hover]');

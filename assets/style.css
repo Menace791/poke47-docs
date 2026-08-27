@@ -22,8 +22,11 @@ a:hover { color: #bfdbfe; transform: scale(1.08); }
 /* Each card sizes to its own content so short names don't stretch and long names don't wrap. */
 .cross-link-grid { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.35rem; }
 /* :not(.move-card) so styled move cards inside a cross-link grid keep their own type tint instead of the plain card background. */
-.cross-link-grid > li > a:not(.move-card) { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background: #18212e; border: 1px solid #374151; border-radius: 8px; color: #93c5fd; white-space: nowrap; }
-.cross-link-grid > li > a:not(.move-card):hover, .cross-link-grid > li > a:not(.move-card):focus { background: #374151; text-decoration: none; transform: scale(1.06); }
+.cross-link-grid > li > a:not(.move-card) { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; border: 1px solid #374151; border-radius: 8px; white-space: nowrap; }
+/* Plain background only for non-mon cards (abilities/items); .mon-card species cards carry their own type tint. */
+.cross-link-grid > li > a:not(.move-card):not(.mon-card) { background: #18212e; color: #93c5fd; }
+.cross-link-grid > li > a:not(.move-card):hover, .cross-link-grid > li > a:not(.move-card):focus { text-decoration: none; transform: scale(1.06); }
+.cross-link-grid > li > a:not(.move-card):not(.mon-card):hover, .cross-link-grid > li > a:not(.move-card):not(.mon-card):focus { background: #374151; }
 .cross-link-grid .sprite { width: 36px; height: 36px; image-rendering: pixelated; flex-shrink: 0; }
 .cross-link-grid .type-badge { font-size: 0.72rem; padding: 0.1rem 0.45rem; flex-shrink: 0; }
 .cross-link-grid .move-cat-icon { width: 18px; height: 18px; flex-shrink: 0; }
@@ -56,7 +59,7 @@ a:hover { color: #bfdbfe; transform: scale(1.08); }
 .muted { color: #9ca3af; }
 table { width: 100%; border-collapse: collapse; background: #1f2937; border-radius: 14px; overflow: hidden; }
 tr[data-href], li[data-href], td[data-href] { cursor: pointer; transition: transform 0.12s ease, background 0.12s ease; }
-/* A wide row needs a bigger factor than a compact chip for the sideways growth to register (a small % of a ~1080px row is only a few px). */
+/* Wide rows use a smaller factor than the chips: even 2% of a ~1080px row is a visible few px, and a larger scale would spill the row past the table edges. */
 tr[data-href]:hover, li[data-href]:hover, td[data-href]:hover { background: #2a3441; transform: scale(1.02); }
 th, td { padding: 0.75rem; border-bottom: 1px solid #374151; text-align: left; }
 /* Sortable index tables drop overflow:hidden so hovered rows can grow sideways too; separate collapse lets the corner cells re-round (cell radii are ignored under collapse) and lets tr transforms render. */
@@ -202,7 +205,6 @@ ul { line-height: 1.6; }
 .item-source-heading:first-of-type { margin-top: 0.5rem; }
 .item-source-list { padding-left: 1.75rem; margin: 0 0 0.75rem; }
 .item-source-list li { padding: 0.1rem 0; }
-/* Shop cost — muted so it reads as a secondary detail next to the source/location. */
 .item-price { color: #9ca3af; font-variant-numeric: tabular-nums; font-size: 0.92em; }
 .item-source-heading .item-price { font-weight: 400; }
 .trainer-page-pic { max-width: 160px; height: auto; image-rendering: pixelated; }
@@ -224,7 +226,9 @@ ul { line-height: 1.6; }
 .pickup-table th, .pickup-table td { border: 1px solid rgba(148, 163, 184, 0.4); padding: 4px 6px; text-align: center; }
 .pickup-table thead th { background: rgba(148, 163, 184, 0.18); }
 .pickup-table tbody th { text-align: left; font-weight: 600; }
-.pickup-table .item-icon { margin: 0; }
+.pickup-table .item-icon { margin: 0; transition: transform 0.12s ease; }
+.pickup-table td:has(a):hover .item-icon { transform: scale(1.3); }
+.pickup-table a:hover { transform: none; }
 .pickup-table td:has(a):hover { background: #2a3441; cursor: pointer; }
 .pickup-table a { position: relative; display: inline-block; }
 .pickup-table a[aria-label]::after { content: attr(aria-label); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 4px; padding: 2px 6px; font-size: 0.8rem; font-weight: 600; color: #f9fafb; background: rgba(17, 24, 39, 0.9); border-radius: 4px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 80ms; z-index: 1; }
@@ -235,20 +239,25 @@ ul { line-height: 1.6; }
 .stab { font-weight: 700; }
 /* Move text is already bold, so STAB is marked by a light inset ring — drawn inside so it doesn't grow the box or overlap neighbors in the stacked list. */
 .move-card:has(.stab) { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85); }
-/* Move card: category icon + name on a subtle type tint (canonical color mixed into the dark base), always with light text. */
 .move-card { display: inline-flex; align-items: center; gap: 6px; padding: 0.25rem 0.5rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.14); vertical-align: middle; }
 .move-card .move-cat-icon { width: 18px; height: 18px; }
 /* a./span. beats the appended .type-<slug> rules so the tint and light text hold for every type. */
-a.move-card, span.move-card { background: color-mix(in srgb, var(--type-color, #374151) 75%, #18212e); color: #f9fafb; font-weight: 700; }
-a.move-card:hover { background: color-mix(in srgb, var(--type-color, #374151) 90%, #18212e); }
-/* Scale renders the card bigger without reflow (transforms don't affect layout), so it grows on hover without shifting neighbors or wrapping the line. */
+a.move-card, span.move-card, a.mon-card { background: color-mix(in srgb, var(--type-color, #374151) 75%, #18212e); color: #f9fafb; font-weight: 700; }
+a.move-card:hover, a.mon-card:hover { background: color-mix(in srgb, var(--type-color, #374151) 90%, #18212e); }
+a.mon-card .muted { color: rgba(255, 255, 255, 0.8); }
+a.mon-card.mon-dual { --tint-1: color-mix(in srgb, var(--type-color) 75%, #18212e); --tint-2: color-mix(in srgb, var(--type-color-2) 75%, #18212e); background: linear-gradient(100deg, var(--tint-1) 0 53%, var(--tint-2) 53% 100%); }
+a.mon-card.mon-dual:hover { --tint-1: color-mix(in srgb, var(--type-color) 90%, #18212e); --tint-2: color-mix(in srgb, var(--type-color-2) 90%, #18212e); }
+a.mon-card.mon-dual.type-fire, a.mon-card.mon-dual.type-electric { --tint-1: color-mix(in srgb, var(--type-color) 92%, #18212e); }
+a.mon-card.mon-dual.type2-fire, a.mon-card.mon-dual.type2-electric { --tint-2: color-mix(in srgb, var(--type-color-2) 92%, #18212e); }
+a.mon-card.mon-dual.type-fire:hover, a.mon-card.mon-dual.type-electric:hover { --tint-1: var(--type-color); }
+a.mon-card.mon-dual.type2-fire:hover, a.mon-card.mon-dual.type2-electric:hover { --tint-2: var(--type-color-2); }
 a.move-card, a.item-card, a.species-inline-link, .encounter-cards a.encounter-entry, .form-list a.form-entry { transition: transform 0.12s ease, background 0.12s ease; }
 a.move-card:hover, a.item-card:hover, a.species-inline-link:hover, .encounter-cards a.encounter-entry:hover, .form-list a.form-entry:hover { transform: scale(1.06); }
-/* Orange/yellow darken toward brown at the shared mix, so Fire and Electric need a brighter one to stay recognizable. */
-.move-card.type-fire, .move-card.type-electric { background: color-mix(in srgb, var(--type-color) 92%, #18212e); }
-a.move-card.type-fire:hover, a.move-card.type-electric:hover { background: var(--type-color); }
-/* White stays uniform with the other cards; a dark halo keeps it legible on the bright yellow without looking thin. */
-.move-card.type-electric { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7); }
+/* Fire/Electric go muddy brown at the shared mix, so they use a brighter one. */
+.move-card.type-fire, .move-card.type-electric, a.mon-card.type-fire:not(.mon-dual), a.mon-card.type-electric:not(.mon-dual) { background: color-mix(in srgb, var(--type-color) 92%, #18212e); }
+a.move-card.type-fire:hover, a.move-card.type-electric:hover, a.mon-card.type-fire:not(.mon-dual):hover, a.mon-card.type-electric:not(.mon-dual):hover { background: var(--type-color); }
+/* White on the bright yellow needs a dark halo to stay legible. */
+.move-card.type-electric, a.mon-card.type-electric { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7); }
 .move-card-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .move-card-col { display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem; }
 /* 2-column grid (source | move); source column auto-sizes per section so rows align within it. */
@@ -296,9 +305,10 @@ a.move-card.type-fire:hover, a.move-card.type-electric:hover { background: var(-
 .form-sprite { width: 48px; height: 48px; image-rendering: pixelated; }
 .form-sprite-base { width: 72px; height: 72px; image-rendering: pixelated; }
 .encounter-entry { display: inline-flex; align-items: center; gap: 0.5rem; }
+/* Tinted encounter cards keep the card shape even inline (e.g. the "For X" trade reference), not just inside .encounter-cards. */
+a.encounter-entry.mon-card { padding: 0.4rem 0.6rem; border: 1px solid #374151; border-radius: 10px; vertical-align: middle; }
 .encounter-sprite { width: 56px; height: 56px; image-rendering: pixelated; }
-.species-inline-link { display: inline-flex; align-items: center; gap: 0.4rem; vertical-align: middle; padding: 0.4rem 0.6rem; background: #18212e; border: 1px solid #374151; border-radius: 10px; color: #93c5fd; }
-a.species-inline-link:hover { background: #374151; text-decoration: none; }
+.species-inline-link { display: inline-flex; align-items: center; gap: 0.4rem; vertical-align: middle; padding: 0.4rem 0.6rem; border: 1px solid #374151; border-radius: 10px; }
 .item-card { display: inline-flex; align-items: center; vertical-align: middle; gap: 0.35rem; padding: 0.3rem 0.5rem; background: #18212e; border: 1px solid #374151; border-radius: 10px; color: #93c5fd; }
 a.item-card:hover { background: #374151; text-decoration: none; }
 .species-inline-sprite { width: 56px; height: 56px; image-rendering: pixelated; }
@@ -308,15 +318,15 @@ a.item-card:hover { background: #374151; text-decoration: none; }
 #encounter-list li, .encounter-block li { display: flex; align-items: center; gap: 0.5rem; padding: 0.15rem 0; }
 .encounter-cards { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.35rem 0; }
 .encounter-cards li { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0; }
-.encounter-cards .encounter-entry { padding: 0.4rem 0.6rem; background: #18212e; border: 1px solid #374151; border-radius: 10px; color: #93c5fd; }
-.encounter-cards a.encounter-entry:hover { background: #374151; text-decoration: none; }
+.encounter-cards .encounter-entry { padding: 0.4rem 0.6rem; border: 1px solid #374151; border-radius: 10px; }
+/* Only the non-mon fallback span gets the plain background; the .mon-card link carries its type tint. */
+.encounter-cards .encounter-entry:not(.mon-card) { background: #18212e; color: #93c5fd; }
 .encounter-info { display: inline-flex; flex-direction: column; align-items: flex-start; line-height: 1.2; }
-.encounter-meta { color: #9ca3af; font-size: 0.8rem; }
+.encounter-meta { color: rgba(255, 255, 255, 0.8); font-size: 0.8rem; }
 .encounter-for { color: #9ca3af; }
 .form-list { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .form-list li { padding: 0; }
-.form-list .form-entry { padding: 0.4rem 0.6rem; background: #18212e; border: 1px solid #374151; border-radius: 10px; color: #93c5fd; }
-.form-list a.form-entry:hover { background: #374151; text-decoration: none; }
+.form-list .form-entry { padding: 0.4rem 0.6rem; border: 1px solid #374151; border-radius: 10px; }
 .card[data-href] { cursor: pointer; transition: transform 0.12s ease, background 0.12s ease; }
 .card[data-href]:hover { background: #2a3441; transform: scale(1.012); }
 /* Don't highlight the section when hovering one of its own form boxes — that box highlights instead. */
@@ -335,22 +345,42 @@ a.item-card:hover { background: #374151; text-decoration: none; }
 
 /* Generated from TYPE_ICON_COLORS */
 .type-normal { background: #a8a878; --type-color: #a8a878; }
+.type2-normal { --type-color-2: #a8a878; }
 .type-fire { background: #f08030; --type-color: #f08030; }
+.type2-fire { --type-color-2: #f08030; }
 .type-water { background: #6890f0; --type-color: #6890f0; }
+.type2-water { --type-color-2: #6890f0; }
 .type-electric { background: #f8d030; --type-color: #f8d030; color: #111827; }
+.type2-electric { --type-color-2: #f8d030; }
 .type-grass { background: #78c850; --type-color: #78c850; }
+.type2-grass { --type-color-2: #78c850; }
 .type-ice { background: #98d8d8; --type-color: #98d8d8; color: #111827; }
+.type2-ice { --type-color-2: #98d8d8; }
 .type-fighting { background: #c03028; --type-color: #c03028; }
+.type2-fighting { --type-color-2: #c03028; }
 .type-poison { background: #a040a0; --type-color: #a040a0; }
+.type2-poison { --type-color-2: #a040a0; }
 .type-ground { background: #e0c068; --type-color: #e0c068; color: #111827; }
+.type2-ground { --type-color-2: #e0c068; }
 .type-flying { background: #a890f0; --type-color: #a890f0; }
+.type2-flying { --type-color-2: #a890f0; }
 .type-psychic { background: #f85888; --type-color: #f85888; }
+.type2-psychic { --type-color-2: #f85888; }
 .type-bug { background: #a8b820; --type-color: #a8b820; color: #111827; }
+.type2-bug { --type-color-2: #a8b820; }
 .type-rock { background: #b8a038; --type-color: #b8a038; }
+.type2-rock { --type-color-2: #b8a038; }
 .type-ghost { background: #705898; --type-color: #705898; }
+.type2-ghost { --type-color-2: #705898; }
 .type-dragon { background: #7038f8; --type-color: #7038f8; }
+.type2-dragon { --type-color-2: #7038f8; }
 .type-dark { background: #705848; --type-color: #705848; }
+.type2-dark { --type-color-2: #705848; }
 .type-steel { background: #b8b8d0; --type-color: #b8b8d0; color: #111827; }
+.type2-steel { --type-color-2: #b8b8d0; }
 .type-fairy { background: #ee99ac; --type-color: #ee99ac; color: #111827; }
+.type2-fairy { --type-color-2: #ee99ac; }
 .type-stellar { background: #8b5cf6; --type-color: #8b5cf6; }
+.type2-stellar { --type-color-2: #8b5cf6; }
 .type-unknown { background: #68a090; --type-color: #68a090; }
+.type2-unknown { --type-color-2: #68a090; }
