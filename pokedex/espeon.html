@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Espeon - Poke47</title>  <meta property="og:title" content="Poke47">
+  <meta property="og:description" content="Expansion-native documentation for Poke47.">
+  <meta property="og:image" content="https://menace791.github.io/poke47-docs/assets/og-image.gif">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">  <link rel="stylesheet" href="../assets/style.css">
+  <script>
+    // Casefold + diacritic-strip + non-alphanumeric strip so "basculinwhitestriped" matches "Basculin (White-Striped)".
+    window.obstagoonNormalize = (s) => (s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+    // Per-tab index state restored on back/forward + reload, not on fresh nav-link clicks.
+    window.obstagoonShouldRestoreState = () => {
+      const nav = performance.getEntriesByType('navigation')[0];
+      return !!(nav && (nav.type === 'back_forward' || nav.type === 'reload'));
+    };
+    window.obstagoonLoadState = (key) => {
+      if (!obstagoonShouldRestoreState()) return {};
+      try { return JSON.parse(sessionStorage.getItem('obstagoon:' + key) || '{}'); }
+      catch (e) { return {}; }
+    };
+    window.obstagoonSaveState = (key, state) => {
+      // Private browsing / quota-exceeded throws; degrade silently.
+      try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
+      catch (e) {}
+    };
+    // Shared search+chips+sort binding for index pages; opts carry the per-page ids and source lists.
+    window.obstagoonBindIndexPage = (opts) => {
+      const input = document.getElementById(opts.inputId);
+      const dropdown = document.getElementById(opts.dropdownId);
+      const chipsBox = document.getElementById(opts.chipsBoxId);
+      const empty = opts.emptyId ? document.getElementById(opts.emptyId) : null;
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      const rows = Array.from(document.querySelectorAll(opts.rowsSelector));
+      const haystackByKind = opts.haystackByKind || {};
+      const sources = opts.sources || [];
+      const defaultKind = opts.defaultKind || null;
+      const saved = obstagoonLoadState(opts.stateKey);
+      const chips = (Array.isArray(saved.chips) ? saved.chips : [])
+        .map((c) => c.kind ? c : {kind: defaultKind || 'Pokémon', name: c.name});
+      if (saved.search) input.value = saved.search;
+      let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
+      let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
+      const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const persist = () => obstagoonSaveState(opts.stateKey, {
+        search: input.value, chips,
+        ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
+      });
+
+      const formCellTargets = ['spriteHtml', 'nameHtml', 'typesHtml', 'abilitiesHtml'];
+      const formMatchesChips = (form) => chips.every((c) => {
+        const list = form[haystackByKind[c.kind]];
+        return Array.isArray(list) && list.includes(c.name);
+      });
+      const applyFilters = () => {
+        const q = obstagoonNormalize(input.value);
+        let visible = 0;
+        rows.forEach((el) => {
+          const text = obstagoonNormalize(el.dataset.searchText || '');
+          let show = !q || text.includes(q);
+          let target = null;
+          if (show && chips.length) {
+            if (el.dataset.forms) {
+              const forms = JSON.parse(el.dataset.forms);
+              target = formMatchesChips(forms[0]) ? forms[0] : forms.find(formMatchesChips) || null;
+              show = !!target;
+            } else {
+              for (const c of chips) {
+                const haystack = el.dataset[haystackByKind[c.kind]];
+                if (!haystack || !haystack.includes(`|${c.name}|`)) { show = false; break; }
+              }
+            }
+          }
+          el.classList.toggle('filter-hidden', !show);
+          if (show) visible += 1;
+          if (show && el.dataset.forms) applyFormSwap(el, target);
+        });
+        if (empty) empty.style.display = visible === 0 ? '' : 'none';
+        if (countEl) countEl.textContent = visible;
+        persist();
+      };
+      const applyFormSwap = (el, target) => {
+        const forms = JSON.parse(el.dataset.forms);
+        if (!target) target = forms[0];
+        if (el._activeFormSlug === target.slug) return;
+        if (el._activeFormSlug === undefined) {
+          const cells = el.querySelectorAll('td');
+          el._origCells = [cells[1].innerHTML, cells[2].innerHTML, cells[3].innerHTML, cells[4].innerHTML];
+          el._origHref = el.dataset.href;
+        }
+        const cells = el.querySelectorAll('td');
+        if (target === forms[0]) {
+          [cells[1].innerHTML, cells[2].innerHTML, cells[3].innerHTML, cells[4].innerHTML] = el._origCells;
+          el.dataset.href = el._origHref;
+        } else {
+          formCellTargets.forEach((key, i) => { cells[i + 1].innerHTML = target[key]; });
+          el.dataset.href = target.slug + '.html';
+        }
+        el._activeFormSlug = target.slug;
+      };
+      const renderChips = () => {
+        chipsBox.innerHTML = chips.map((c, i) =>
+          `<span class="filter-chip"><span class="chip-kind">${c.kind}</span> ${esc(c.name)}<button type="button" class="chip-remove" data-idx="${i}" aria-label="Remove">×</button></span>`
+        ).join('');
+        chipsBox.querySelectorAll('.chip-remove').forEach((btn) => btn.addEventListener('click', () => {
+          chips.splice(parseInt(btn.dataset.idx, 10), 1); renderChips(); applyFilters();
+        }));
+      };
+      let activeIdx = -1;
+      const setActiveIdx = (i) => {
+        const items = dropdown.querySelectorAll('.suggestion');
+        if (!items.length) return;
+        activeIdx = (i + items.length) % items.length;
+        items.forEach((b, j) => b.classList.toggle('is-active', j === activeIdx));
+        items[activeIdx].scrollIntoView({block: 'nearest'});
+      };
+      const acceptSuggestion = (btn) => {
+        chips.push({kind: btn.dataset.kind, name: btn.dataset.name});
+        input.value = ''; dropdown.hidden = true; activeIdx = -1; renderChips(); applyFilters();
+      };
+      const renderSuggestions = () => {
+        const q = obstagoonNormalize(input.value);
+        if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
+        const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
+        const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
+        for (const [kind, list] of sources) {
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
+        }
+        if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
+        dropdown.innerHTML = matches.slice(0, 30).map((m) =>
+          `<button type="button" class="suggestion" data-kind="${m.kind}" data-name="${esc(m.name)}"><span class="suggestion-kind">${m.kind}</span> ${esc(m.name)}</button>`
+        ).join('');
+        dropdown.hidden = false;
+        activeIdx = -1;
+        dropdown.querySelectorAll('.suggestion').forEach((btn) => btn.addEventListener('click', () => acceptSuggestion(btn)));
+      };
+      input.addEventListener('input', () => { renderSuggestions(); applyFilters(); });
+      input.addEventListener('focus', renderSuggestions);
+      input.addEventListener('keydown', (e) => {
+        if (dropdown.hidden) return;
+        const items = dropdown.querySelectorAll('.suggestion');
+        if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(activeIdx + 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(activeIdx <= 0 ? items.length - 1 : activeIdx - 1); }
+        else if (e.key === 'Enter') {
+          // Priority: manually-arrowed selection > sole remaining suggestion > exact name match (post-normalize).
+          let idx = activeIdx;
+          if (idx < 0 && items.length === 1) idx = 0;
+          if (idx < 0) {
+            const q = obstagoonNormalize(input.value);
+            idx = Array.from(items).findIndex((b) => obstagoonNormalize(b.dataset.name) === q);
+          }
+          if (idx >= 0) { e.preventDefault(); acceptSuggestion(items[idx]); }
+        }
+        else if (e.key === 'Escape') { dropdown.hidden = true; activeIdx = -1; }
+      });
+      document.addEventListener('click', (e) => { if (!dropdown.contains(e.target) && e.target !== input) dropdown.hidden = true; });
+      renderChips();
+      applyFilters();
+
+      if (opts.tableSelector) {
+        const tbody = document.querySelector(opts.tableSelector + ' tbody');
+        const headers = Array.from(document.querySelectorAll(opts.tableSelector + ' thead th'));
+        const original = Array.from(tbody.querySelectorAll('tr'));
+        const cellValue = (tr, i, kind) => {
+          const text = tr.cells[i].textContent.trim();
+          if (kind === 'number') { const n = parseFloat(text); return isNaN(n) ? -Infinity : n; }
+          return text.toLowerCase();
+        };
+        const applySort = () => {
+          headers.forEach((h, j) => {
+            h.classList.toggle('sort-asc', activeDir === 'asc' && j === activeCol);
+            h.classList.toggle('sort-desc', activeDir === 'desc' && j === activeCol);
+          });
+          if (!activeDir) { original.forEach((tr) => tbody.appendChild(tr)); return; }
+          const kind = headers[activeCol]?.dataset.sort || 'text';
+          const sign = activeDir === 'asc' ? 1 : -1;
+          [...original].sort((a, b) => {
+            const av = cellValue(a, activeCol, kind), bv = cellValue(b, activeCol, kind);
+            return av < bv ? -sign : av > bv ? sign : 0;
+          }).forEach((tr) => tbody.appendChild(tr));
+        };
+        headers.forEach((th, i) => {
+          if (!th.dataset.sort) return;
+          th.classList.add('sortable');
+          th.addEventListener('click', () => {
+            activeDir = i !== activeCol ? 'asc' : activeDir === 'asc' ? 'desc' : activeDir === 'desc' ? '' : 'asc';
+            activeCol = activeDir ? i : -1;
+            applySort();
+            persist();
+          });
+        });
+        applySort();
+      }
+    };
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../index.html">Poke47</a>
+      <nav>
+        <a href="../pokedex/index.html">Pokédex</a>
+        <a href="../moves/index.html">Moves</a>
+        <a href="../abilities/index.html">Abilities</a>
+        <a href="../forms/index.html">Forms</a>
+        <a href="../encounters/index.html">Encounters</a>
+        <a href="../itemdex/index.html">Itemdex</a>
+        <a href="../trainerdex/index.html">Trainers</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+<h1>Espeon</h1>
+<section class="card pokemon-hero-card">
+  <div class="pokemon-hero">
+    <div class="pokemon-hero-sprites">
+      <img src="../assets/game/graphics/pokemon/espeon/anim_front.png" alt="Espeon front sprite" class="pokemon-hero-sprite">
+<img src="../assets/game/graphics/pokemon/espeon/anim_front__shiny.png" alt="Espeon shiny front sprite" class="pokemon-hero-sprite">    </div>
+    <div>
+      <p class="muted">National Dex #196</p>
+      <p><strong>Espeon</strong></p>
+    </div>
+  </div>
+</section>
+<div class="grid two">
+  <section class="card">
+    <h2>Profile</h2>
+    <p><strong>Category:</strong> Sun</p>
+    <p><strong>Types:</strong> <span class="type-badge type-psychic">Psychic</span></p>
+    <p><strong>Abilities:</strong> <a href="../abilities/magic-guard.html">Magic Guard</a>, <a href="../abilities/synchronize.html">Synchronize</a>, <a href="../abilities/magic-bounce.html">Magic Bounce</a> <em class="muted">(Hidden)</em></p>
+    <p><strong>Growth Rate:</strong> Medium Fast</p>
+    <p><strong>Egg Groups:</strong> Field</p>
+<p><strong>EV Yield:</strong> 2 Sp. Atk</p>  </section>
+  <section class="card">
+    <h2>Base Stats</h2>
+    <table class="stat-table">
+        <tr>
+          <td class="stat-label">HP:</td>
+          <td class="stat-value">95</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-hp" style="width: 37.3%;"></div></div></td>
+        </tr>
+        <tr>
+          <td class="stat-label">Attack:</td>
+          <td class="stat-value">65</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-atk" style="width: 25.5%;"></div></div></td>
+        </tr>
+        <tr>
+          <td class="stat-label">Defense:</td>
+          <td class="stat-value">60</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-def" style="width: 23.5%;"></div></div></td>
+        </tr>
+        <tr>
+          <td class="stat-label">Sp. Atk:</td>
+          <td class="stat-value">130</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-spa" style="width: 51.0%;"></div></div></td>
+        </tr>
+        <tr>
+          <td class="stat-label">Sp. Def:</td>
+          <td class="stat-value">85</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-spd" style="width: 33.3%;"></div></div></td>
+        </tr>
+        <tr>
+          <td class="stat-label">Speed:</td>
+          <td class="stat-value">110</td>
+          <td class="stat-bar-cell"><div class="stat-bar-track"><div class="stat-bar-fill stat-bar-spe" style="width: 43.1%;"></div></div></td>
+        </tr>
+      <tr class="stat-total"><td class="stat-label"><strong>Total:</strong></td><td class="stat-value"><strong>545</strong></td><td></td></tr>
+    </table>
+    <p class="stat-physical">
+0.9 m / 26.5 kg    </p>
+  </section>
+</div>
+<section class="card species-section">
+  <h2>Description</h2>
+  <p>An Espeon is extremely loyal to any
+Trainer it considers to be worthy. It is
+said to have developed precognitive
+powers to protect its Trainer from harm.</p>
+</section>
+<section class="grid two species-section">
+  <div class="card">
+    <h2>Evolutions</h2>
+    <ul>
+        <li>  <a href="eevee.html" class="species-inline-link mon-card type-normal"><img src="../assets/game/graphics/pokemon/eevee/anim_front.png" alt="Eevee" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/eevee/anim_front__hover.png"><span>Eevee</span>
+  </a>
+ → Use <a href="../itemdex/sun-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/sun_stone.png" alt="" class="item-icon">Sun Stone</a></li>
+        <li>  <a href="vaporeon.html" class="species-inline-link mon-card type-water"><img src="../assets/game/graphics/pokemon/vaporeon/anim_front.png" alt="Vaporeon" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/vaporeon/anim_front__hover.png"><span>Vaporeon</span>
+  </a>
+ → Use <a href="../itemdex/sun-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/sun_stone.png" alt="" class="item-icon">Sun Stone</a></li>
+        <li>  <a href="jolteon.html" class="species-inline-link mon-card type-electric"><img src="../assets/game/graphics/pokemon/jolteon/anim_front.png" alt="Jolteon" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/jolteon/anim_front__hover.png"><span>Jolteon</span>
+  </a>
+ → Use <a href="../itemdex/sun-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/sun_stone.png" alt="" class="item-icon">Sun Stone</a></li>
+        <li>  <a href="flareon.html" class="species-inline-link mon-card type-fire"><img src="../assets/game/graphics/pokemon/flareon/anim_front.png" alt="Flareon" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/flareon/anim_front__hover.png"><span>Flareon</span>
+  </a>
+ → Use <a href="../itemdex/sun-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/sun_stone.png" alt="" class="item-icon">Sun Stone</a></li>
+        <li>  <a href="umbreon.html" class="species-inline-link mon-card type-dark"><img src="../assets/game/graphics/pokemon/umbreon/anim_front.png" alt="Umbreon" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/umbreon/anim_front__hover.png"><span>Umbreon</span>
+  </a>
+ → Use <a href="../itemdex/sun-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/sun_stone.png" alt="" class="item-icon">Sun Stone</a></li>
+        <li>  <a href="leafeon.html" class="species-inline-link mon-card type-grass"><img src="../assets/game/graphics/pokemon/leafeon/anim_front.png" alt="Leafeon" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/leafeon/anim_front__hover.png"><span>Leafeon</span>
+  </a>
+ → Use <a href="../itemdex/sun-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/sun_stone.png" alt="" class="item-icon">Sun Stone</a></li>
+        <li>  <a href="glaceon.html" class="species-inline-link mon-card type-ice"><img src="../assets/game/graphics/pokemon/glaceon/anim_front.png" alt="Glaceon" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/glaceon/anim_front__hover.png"><span>Glaceon</span>
+  </a>
+ → Use <a href="../itemdex/sun-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/sun_stone.png" alt="" class="item-icon">Sun Stone</a></li>
+        <li>  <a href="sylveon.html" class="species-inline-link mon-card type-fairy"><img src="../assets/game/graphics/pokemon/sylveon/anim_front.png" alt="Sylveon" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/sylveon/anim_front__hover.png"><span>Sylveon</span>
+  </a>
+ → Use <a href="../itemdex/sun-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/sun_stone.png" alt="" class="item-icon">Sun Stone</a></li>
+        <li>Use <a href="../itemdex/thunder-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/thunder_stone.png" alt="" class="item-icon">Thunder Stone</a> →   <a href="jolteon.html" class="species-inline-link mon-card type-electric"><img src="../assets/game/graphics/pokemon/jolteon/anim_front.png" alt="Jolteon" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/jolteon/anim_front__hover.png"><span>Jolteon</span>
+  </a>
+</li>
+        <li>Use <a href="../itemdex/water-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/water_stone.png" alt="" class="item-icon">Water Stone</a> →   <a href="vaporeon.html" class="species-inline-link mon-card type-water"><img src="../assets/game/graphics/pokemon/vaporeon/anim_front.png" alt="Vaporeon" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/vaporeon/anim_front__hover.png"><span>Vaporeon</span>
+  </a>
+</li>
+        <li>Use <a href="../itemdex/fire-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/fire_stone.png" alt="" class="item-icon">Fire Stone</a> →   <a href="flareon.html" class="species-inline-link mon-card type-fire"><img src="../assets/game/graphics/pokemon/flareon/anim_front.png" alt="Flareon" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/flareon/anim_front__hover.png"><span>Flareon</span>
+  </a>
+</li>
+        <li>Use <a href="../itemdex/shiny-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/shiny_stone.png" alt="" class="item-icon">Shiny Stone</a> →   <a href="sylveon.html" class="species-inline-link mon-card type-fairy"><img src="../assets/game/graphics/pokemon/sylveon/anim_front.png" alt="Sylveon" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/sylveon/anim_front__hover.png"><span>Sylveon</span>
+  </a>
+</li>
+        <li>Use <a href="../itemdex/moon-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/moon_stone.png" alt="" class="item-icon">Moon Stone</a> →   <a href="umbreon.html" class="species-inline-link mon-card type-dark"><img src="../assets/game/graphics/pokemon/umbreon/anim_front.png" alt="Umbreon" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/umbreon/anim_front__hover.png"><span>Umbreon</span>
+  </a>
+</li>
+        <li>Use <a href="../itemdex/leaf-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/leaf_stone.png" alt="" class="item-icon">Leaf Stone</a> →   <a href="leafeon.html" class="species-inline-link mon-card type-grass"><img src="../assets/game/graphics/pokemon/leafeon/anim_front.png" alt="Leafeon" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/leafeon/anim_front__hover.png"><span>Leafeon</span>
+  </a>
+</li>
+        <li>Use <a href="../itemdex/ice-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/ice_stone.png" alt="" class="item-icon">Ice Stone</a> →   <a href="glaceon.html" class="species-inline-link mon-card type-ice"><img src="../assets/game/graphics/pokemon/glaceon/anim_front.png" alt="Glaceon" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/glaceon/anim_front__hover.png"><span>Glaceon</span>
+  </a>
+</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Forms</h2>
+    <ul class="form-list">
+        <li>No alternate forms.</li>
+    </ul>
+  </div>
+</section>
+<section class="grid two species-section">
+  <div class="card">
+    <h2>Level-Up Learnset</h2>
+    <div class="table-scroll">
+    <ul class="move-list">
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><a href="../moves/confusion.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Confusion</span></a></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><a href="../moves/tail-whip.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Tail Whip</span></a></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><a href="../moves/helping-hand.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Helping Hand</span></a></span></li>
+        <li><span class="move-source">Lv. 1</span><span class="move-target"><a href="../moves/baby-doll-eyes.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Baby-Doll Eyes</span></a></span></li>
+        <li><span class="move-source">Lv. 8</span><span class="move-target"><a href="../moves/sand-attack.html" class="move-card type-ground"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Sand Attack</span></a></span></li>
+        <li><span class="move-source">Lv. 11</span><span class="move-target"><a href="../moves/bite.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Bite</span></a></span></li>
+        <li><span class="move-source">Lv. 14</span><span class="move-target"><a href="../moves/disarming-voice.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Disarming Voice</span></a></span></li>
+        <li><span class="move-source">Lv. 17</span><span class="move-target"><a href="../moves/swift.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Swift</span></a></span></li>
+        <li><span class="move-source">Lv. 22</span><span class="move-target"><a href="../moves/psycho-cut.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Psycho Cut</span></a></span></li>
+        <li><span class="move-source">Lv. 27</span><span class="move-target"><a href="../moves/guard-swap.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Guard Swap</span></a></span></li>
+        <li><span class="move-source">Lv. 29</span><span class="move-target"><a href="../moves/psych-up.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Psych Up</span></a></span></li>
+        <li><span class="move-source">Lv. 33</span><span class="move-target"><a href="../moves/psyshock.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Psyshock</span></a></span></li>
+        <li><span class="move-source">Lv. 36</span><span class="move-target"><a href="../moves/trump-card.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Trump Card</span></a></span></li>
+        <li><span class="move-source">Lv. 41</span><span class="move-target"><a href="../moves/future-sight.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Future Sight</span></a></span></li>
+        <li><span class="move-source">Lv. 45</span><span class="move-target"><a href="../moves/morning-sun.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Morning Sun</span></a></span></li>
+    </ul>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Teachable Moves</h2>
+    <h3>TMs/HMs</h3>
+    <div class="table-scroll">
+    <ul class="move-list">
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-sunny-day.html"><img src="../assets/game/graphics/items/icons/tm_fire.png" alt="Fire TM" class="item-icon">TM12</a></span><span class="move-target"><a href="../moves/sunny-day.html" class="move-card type-fire"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Sunny Day</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-rain-dance.html"><img src="../assets/game/graphics/items/icons/tm_water.png" alt="Water TM" class="item-icon">TM16</a></span><span class="move-target"><a href="../moves/rain-dance.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Rain Dance</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-thunder-wave.html"><img src="../assets/game/graphics/items/icons/tm_electric.png" alt="Electric TM" class="item-icon">TM20</a></span><span class="move-target"><a href="../moves/thunder-wave.html" class="move-card type-electric"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Thunder Wave</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-baton-pass.html"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="item-icon">TM23</a></span><span class="move-target"><a href="../moves/baton-pass.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Baton Pass</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-hidden-power.html"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="item-icon">TM26</a></span><span class="move-target"><a href="../moves/hidden-power.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Hidden Power</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-hyper-beam.html"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="item-icon">TM27</a></span><span class="move-target"><a href="../moves/hyper-beam.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Hyper Beam</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-protect.html"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="item-icon">TM29</a></span><span class="move-target"><a href="../moves/protect.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Protect</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-return.html"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="item-icon">TM30</a></span><span class="move-target"><a href="../moves/return.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Return</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-sleep-talk.html"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="item-icon">TM31</a></span><span class="move-target"><a href="../moves/sleep-talk.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Sleep Talk</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-substitute.html"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="item-icon">TM32</a></span><span class="move-target"><a href="../moves/substitute.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Substitute</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-weather-ball.html"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="item-icon">TM34</a></span><span class="move-target"><a href="../moves/weather-ball.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Weather Ball</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-wish.html"><img src="../assets/game/graphics/items/icons/tm_normal.png" alt="Normal TM" class="item-icon">TM35</a></span><span class="move-target"><a href="../moves/wish.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Wish</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-calm-mind.html"><img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="Psychic TM" class="item-icon">TM43</a></span><span class="move-target"><a href="../moves/calm-mind.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Calm Mind</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-light-screen.html"><img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="Psychic TM" class="item-icon">TM44</a></span><span class="move-target"><a href="../moves/light-screen.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Light Screen</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-psychic.html"><img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="Psychic TM" class="item-icon">TM45</a></span><span class="move-target"><a href="../moves/psychic.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Psychic</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-reflect.html"><img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="Psychic TM" class="item-icon">TM47</a></span><span class="move-target"><a href="../moves/reflect.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Reflect</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-rest.html"><img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="Psychic TM" class="item-icon">TM48</a></span><span class="move-target"><a href="../moves/rest.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Rest</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-trick.html"><img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="Psychic TM" class="item-icon">TM49</a></span><span class="move-target"><a href="../moves/trick.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Trick</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-trick-room.html"><img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="Psychic TM" class="item-icon">TM50</a></span><span class="move-target"><a href="../moves/trick-room.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Trick Room</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-dig.html"><img src="../assets/game/graphics/items/icons/tm_ground.png" alt="Ground TM" class="item-icon">TM66</a></span><span class="move-target"><a href="../moves/dig.html" class="move-card type-ground"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Dig</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-toxic.html"><img src="../assets/game/graphics/items/icons/tm_poison.png" alt="Poison TM" class="item-icon">TM77</a></span><span class="move-target"><a href="../moves/toxic.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Toxic</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-curse.html"><img src="../assets/game/graphics/items/icons/tm_ghost.png" alt="Ghost TM" class="item-icon">TM81</a></span><span class="move-target"><a href="../moves/curse.html" class="move-card type-ghost"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Curse</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-shadow-ball.html"><img src="../assets/game/graphics/items/icons/tm_ghost.png" alt="Ghost TM" class="item-icon">TM84</a></span><span class="move-target"><a href="../moves/shadow-ball.html" class="move-card type-ghost"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Shadow Ball</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-dazzling-gleam.html"><img src="../assets/game/graphics/items/icons/tm_fairy.png" alt="Fairy TM" class="item-icon">TM98</a></span><span class="move-target"><a href="../moves/dazzling-gleam.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Dazzling Gleam</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/tm-draining-kiss.html"><img src="../assets/game/graphics/items/icons/tm_fairy.png" alt="Fairy TM" class="item-icon">TM99</a></span><span class="move-target"><a href="../moves/draining-kiss.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Draining Kiss</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/hm-flash.html"><img src="../assets/game/graphics/items/icons/hm_normal.png" alt="Normal HM" class="item-icon">HM05</a></span><span class="move-target"><a href="../moves/flash.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Flash</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/hm-rock-smash.html"><img src="../assets/game/graphics/items/icons/hm_fighting.png" alt="Fighting HM" class="item-icon">HM06</a></span><span class="move-target"><a href="../moves/rock-smash.html" class="move-card type-fighting"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Rock Smash</span></a></span></li>
+          <li><span class="move-source"><a class="item-card" href="../itemdex/hm-cut.html"><img src="../assets/game/graphics/items/icons/hm_normal.png" alt="Normal HM" class="item-icon">HM09</a></span><span class="move-target"><a href="../moves/cut.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Cut</span></a></span></li>
+    </ul>
+    </div>
+    <h3>Move Tutors</h3>
+    <div class="table-scroll">
+    <ul class="move-list">
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><a href="../moves/body-slam.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Body Slam</span></a></span></li>
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><a href="../moves/dream-eater.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Dream Eater</span></a></span></li>
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><a href="../moves/endure.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Endure</span></a></span></li>
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><a href="../moves/mud-slap.html" class="move-card type-ground"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Mud-Slap</span></a></span></li>
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><a href="../moves/psych-up.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Psych Up</span></a></span></li>
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><a href="../moves/snore.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Snore</span></a></span></li>
+        <li><span class="move-source">Battle Frontier</span><span class="move-target"><a href="../moves/swift.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Swift</span></a></span></li>
+        <li><span class="move-source">Lavaridge Town House</span><span class="move-target"><a href="../moves/copycat.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Copycat</span></a></span></li>
+        <li><span class="move-source">Lilycove City Department Store Rooftop</span><span class="move-target"><a href="../moves/power-split.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Power Split</span></a></span></li>
+        <li><span class="move-source">Slateport City Pokemon Fan Club</span><span class="move-target"><a href="../moves/swagger.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Swagger</span></a></span></li>
+        <li><span class="move-source">Sootopolis City Pokemon Center 1F</span><span class="move-target"><a href="../moves/laser-focus.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Laser Focus</span></a></span></li>
+    </ul>
+    </div>
+  </div>
+</section>
+<section class="card species-section">
+  <h2>Egg Moves</h2>
+  <div class="move-card-row"><a href="../moves/charm.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Charm</span></a><a href="../moves/flail.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Flail</span></a><a href="../moves/endure.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Endure</span></a><a href="../moves/curse.html" class="move-card type-ghost"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Curse</span></a><a href="../moves/tickle.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Tickle</span></a><a href="../moves/wish.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Wish</span></a><a href="../moves/yawn.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Yawn</span></a><a href="../moves/fake-tears.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Fake Tears</span></a><a href="../moves/covet.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Covet</span></a><a href="../moves/detect.html" class="move-card type-fighting"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Detect</span></a><a href="../moves/natural-gift.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Natural Gift</span></a><a href="../moves/stored-power.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Stored Power</span></a><a href="../moves/synchronoise.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Synchronoise</span></a><a href="../moves/captivate.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Captivate</span></a></div>
+</section>
+<section class="card species-section">
+  <h2>Pre-Evolution Moves</h2>
+  <div class="move-card-row"><a href="../moves/acid-armor.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Acid Armor</span></a><a href="../moves/agility.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Agility</span></a><a href="../moves/aqua-ring.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Aqua Ring</span></a><a href="../moves/aurora-beam.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Aurora Beam</span></a><a href="../moves/aurora-veil.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Aurora Veil</span></a><a href="../moves/barrier.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Barrier</span></a><a href="../moves/blaze-kick.html" class="move-card type-fire"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Blaze Kick</span></a><a href="../moves/blizzard.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Blizzard</span></a><a href="../moves/broil.html" class="move-card type-fire"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Broil</span></a><a href="../moves/bubble-beam.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Bubble Beam</span></a><a href="../moves/bullet-seed.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Bullet Seed</span></a><a href="../moves/confuse-ray.html" class="move-card type-ghost"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Confuse Ray</span></a><a href="../moves/dark-pulse.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Dark Pulse</span></a><a href="../moves/disarm.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Disarm</span></a><a href="../moves/discharge.html" class="move-card type-electric"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Discharge</span></a><a href="../moves/dive.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Dive</span></a><a href="../moves/double-kick.html" class="move-card type-fighting"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Double Kick</span></a><a href="../moves/double-edge.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Double-Edge</span></a><a href="../moves/ember.html" class="move-card type-fire"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Ember</span></a><a href="../moves/endeavor.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Endeavor</span></a><a href="../moves/energy-ball.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Energy Ball</span></a><a href="../moves/false-swipe.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>False Swipe</span></a><a href="../moves/fire-fang.html" class="move-card type-fire"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Fire Fang</span></a><a href="../moves/fire-spin.html" class="move-card type-fire"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Fire Spin</span></a><a href="../moves/flame-charge.html" class="move-card type-fire"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Flame Charge</span></a><a href="../moves/flamethrower.html" class="move-card type-fire"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Flamethrower</span></a><a href="../moves/flare-blitz.html" class="move-card type-fire"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Flare Blitz</span></a><a href="../moves/floral-healing.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Floral Healing</span></a><a href="../moves/freeze-dry.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Freeze-Dry</span></a><a href="../moves/frost-breath.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Frost Breath</span></a><a href="../moves/giga-drain.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Giga Drain</span></a><a href="../moves/grass-whistle.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Grass Whistle</span></a><a href="../moves/hail.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Hail</span></a><a href="../moves/haze.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Haze</span></a><a href="../moves/howl.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Howl</span></a><a href="../moves/hydro-pump.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Hydro Pump</span></a><a href="../moves/ice-beam.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Ice Beam</span></a><a href="../moves/ice-fang.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Ice Fang</span></a><a href="../moves/ice-shard.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Ice Shard</span></a><a href="../moves/icy-wind.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Icy Wind</span></a><a href="../moves/iron-head.html" class="move-card type-steel"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Iron Head</span></a><a href="../moves/knock-off.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Knock Off</span></a><a href="../moves/last-resort.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Last Resort</span></a><a href="../moves/leaf-blade.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Leaf Blade</span></a><a href="../moves/leaf-tornado.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Leaf Tornado</span></a><a href="../moves/leafage.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Leafage</span></a><a href="../moves/leech-seed.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Leech Seed</span></a><a href="../moves/mean-look.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Mean Look</span></a><a href="../moves/misty-terrain.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Misty Terrain</span></a><a href="../moves/moonblast.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Moonblast</span></a><a href="../moves/nature-power.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Nature Power</span></a><a href="../moves/overheat.html" class="move-card type-fire"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Overheat</span></a><a href="../moves/pin-missile.html" class="move-card type-bug"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Pin Missile</span></a><a href="../moves/play-rough.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Play Rough</span></a><a href="../moves/powder-snow.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Powder Snow</span></a><a href="../moves/power-swap.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Power Swap</span></a><a href="../moves/quick-attack.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Quick Attack</span></a><a href="../moves/razor-leaf.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Razor Leaf</span></a><a href="../moves/refresh.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Refresh</span></a><a href="../moves/scary-face.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Scary Face</span></a><a href="../moves/scorching-sands.html" class="move-card type-ground"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Scorching Sands</span></a><a href="../moves/shadow-sneak.html" class="move-card type-ghost"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Shadow Sneak</span></a><a href="../moves/skill-swap.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Skill Swap</span></a><a href="../moves/sleep-powder.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Sleep Powder</span></a><a href="../moves/sludge-wave.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Sludge Wave</span></a><a href="../moves/smog.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Smog</span></a><a href="../moves/snap-freeze.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Snap Freeze</span></a><a href="../moves/solar-beam.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Solar Beam</span></a><a href="../moves/spark.html" class="move-card type-electric"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Spark</span></a><a href="../moves/strength.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Strength</span></a><a href="../moves/sucker-punch.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Sucker Punch</span></a><a href="../moves/surf.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Surf</span></a><a href="../moves/swords-dance.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Swords Dance</span></a><a href="../moves/synthesis.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Synthesis</span></a><a href="../moves/tackle.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Tackle</span></a><a href="../moves/taunt.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Taunt</span></a><a href="../moves/thief.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Thief</span></a><a href="../moves/thunder.html" class="move-card type-electric"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Thunder</span></a><a href="../moves/thunder-shock.html" class="move-card type-electric"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Thunder Shock</span></a><a href="../moves/thunderbolt.html" class="move-card type-electric"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Thunderbolt</span></a><a href="../moves/triple-axel.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Triple Axel</span></a><a href="../moves/volt-switch.html" class="move-card type-electric"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Volt Switch</span></a><a href="../moves/water-gun.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Water Gun</span></a><a href="../moves/water-pulse.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Water Pulse</span></a><a href="../moves/waterfall.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Waterfall</span></a><a href="../moves/will-o-wisp.html" class="move-card type-fire"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Will-O-Wisp</span></a><a href="../moves/wood-hammer.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Wood Hammer</span></a><a href="../moves/worry-seed.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Worry Seed</span></a><a href="../moves/x-scissor.html" class="move-card type-bug"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>X-Scissor</span></a></div>
+</section>
+
+  </main>
+  <script>
+    function obstagoonBindFilters() {
+      const inputs = document.querySelectorAll('[data-filter-input]');
+      inputs.forEach((input) => {
+        const selector = input.getAttribute('data-filter-target');
+        const emptyTextSelector = input.getAttribute('data-filter-empty');
+        const countSelector = input.getAttribute('data-filter-count');
+        const items = Array.from(document.querySelectorAll(selector || ''));
+        const emptyNode = emptyTextSelector ? document.querySelector(emptyTextSelector) : null;
+        const countNode = countSelector ? document.querySelector(countSelector) : null;
+        const stateKey = input.id || selector || '';
+        const apply = () => {
+          const query = obstagoonNormalize(input.value);
+          let visible = 0;
+          items.forEach((item) => {
+            const haystack = obstagoonNormalize(item.getAttribute('data-search-text') || item.textContent || '');
+            const match = !query || haystack.includes(query);
+            item.classList.toggle('filter-hidden', !match);
+            if (match) visible += 1;
+          });
+          if (emptyNode) emptyNode.style.display = visible === 0 ? '' : 'none';
+          if (countNode) countNode.textContent = visible;
+          if (stateKey) obstagoonSaveState(stateKey, {search: input.value});
+        };
+        if (stateKey) {
+          const saved = obstagoonLoadState(stateKey);
+          if (saved.search) input.value = saved.search;
+        }
+        input.addEventListener('input', apply);
+        apply();
+      });
+    }
+    function obstagoonBindRowLinks() {
+      // data-href rows act as buttons; nested <a>/<button> keep their own click semantics.
+      document.querySelectorAll('tr[data-href], li[data-href], td[data-href], section[data-href], .card[data-href]').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('a, button')) return;
+          window.location = row.getAttribute('data-href');
+        });
+      });
+    }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      // Scope to the card itself, not a bare li: an evolution li holds the card plus the arrow/method text, and li-scope would swap the sprite from anywhere in the row. Cross-link cards (no card class) scope to their own <a>.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, .cross-link-grid > li > a, .sprite-card, figure, section[data-href]') : null);
+      const restore = (img) => { if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; delete img.dataset.base; } };
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (!toHover) return restore(img);
+        // Skip if already swapped, so a repeat mouseover (touch fires with null relatedTarget) can't capture the hover frame as the base.
+        if (img.dataset.base) return;
+        img.dataset.base = img.src;
+        img.onerror = () => restore(img);
+        img.src = img.dataset.hover;
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+      // Touch has no hover, so swap the sprite while a card is pressed and restore on release.
+      document.body.addEventListener('touchstart', (e) => { const scope = scopeOf(e.target); if (scope) swap(scope, true); }, {passive: true});
+      const endTouch = (e) => { const scope = scopeOf(e.target); if (scope) swap(scope, false); };
+      document.body.addEventListener('touchend', endTouch, {passive: true});
+      document.body.addEventListener('touchcancel', endTouch, {passive: true});
+      // A tap on mobile swaps without a matching mouseout, so restore every sprite when the page shows (incl. bfcache back-nav).
+      window.addEventListener('pageshow', () => document.querySelectorAll('img[data-hover]').forEach(restore));
+    }
+    function obstagoonBindLinkedHotspots() {
+      // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
+      const partners = new Map();
+      document.querySelectorAll('.region-map a[href], .link-grid > li > a[href]').forEach((a) => {
+        const key = a.getAttribute('href');
+        if (!partners.has(key)) partners.set(key, []);
+        partners.get(key).push(a);
+      });
+      partners.forEach((group) => {
+        if (group.length < 2) return;
+        group.forEach((el) => {
+          el.addEventListener('mouseenter', () => group.forEach((other) => { if (other !== el) other.classList.add('linked-hover'); }));
+          el.addEventListener('mouseleave', () => group.forEach((other) => other.classList.remove('linked-hover')));
+        });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+    } else {
+      obstagoonBindFilters();
+      obstagoonBindRowLinks();
+      obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
+    }
+  </script>
+</body>
+</html>
