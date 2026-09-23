@@ -211,7 +211,7 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
@@ -232,32 +232,32 @@
   <h2>Sources</h2>
     <h3 class="item-source-heading">Shop <span class="item-price">(₽600)</span>:</h3>
     <ul class="item-source-list">
-      <li>Fallarbor Town</li>
-      <li><a href="../encounters/fortree-city.html">Fortree City</a></li>
-      <li><a href="../encounters/lavaridge-town.html">Lavaridge Town</a></li>
-      <li><a href="../encounters/lilycove-city.html">Lilycove City</a></li>
-      <li><a href="../encounters/mauville-city.html">Mauville City</a></li>
-      <li><a href="../encounters/petalburg-city.html">Petalburg City</a></li>
-      <li><a href="../encounters/slateport-city.html">Slateport City</a></li>
-      <li>Verdanturf Town</li>
+      <li><a href="../encounters/fallarbor-town.html#fallarbor-town-mart">Fallarbor Town · Poké Mart</a></li>
+      <li><a href="../encounters/fortree-city.html#fortree-city-mart">Fortree City · Poké Mart</a></li>
+      <li><a href="../encounters/lavaridge-town.html#lavaridge-town-mart">Lavaridge Town · Poké Mart</a></li>
+      <li><a href="../encounters/lilycove-city.html#lilycove-city-department-store-2f">Lilycove City · Department Store 2F</a></li>
+      <li><a href="../encounters/mauville-city.html#mauville-city-mart">Mauville City · Poké Mart</a></li>
+      <li><a href="../encounters/petalburg-city.html#petalburg-city-mart">Petalburg City · Poké Mart</a></li>
+      <li><a href="../encounters/slateport-city.html#slateport-city-mart">Slateport City · Poké Mart</a></li>
+      <li><a href="../encounters/verdanturf-town.html#verdanturf-town-mart">Verdanturf Town · Poké Mart</a></li>
     </ul>
     <h3 class="item-source-heading">NPC:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/petalburg-woods.html">Petalburg Woods</a></li>
+      <li><a href="../encounters/petalburg-woods.html#petalburg-woods">Petalburg Woods</a></li>
     </ul>
     <h3 class="item-source-heading">Overworld:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/dew-beach.html">Dew Beach</a></li>
-      <li><a href="../encounters/petalburg-woods.html">Petalburg Woods</a></li>
+      <li><a href="../encounters/dew-beach.html#dew-beach106">Dew Beach · 106</a></li>
+      <li><a href="../encounters/petalburg-woods.html#petalburg-woods">Petalburg Woods</a></li>
     </ul>
     <h3 class="item-source-heading">Hidden Item:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/jagged-pass.html">Jagged Pass</a></li>
-      <li><a href="../encounters/route-100.html">Route 100</a></li>
-      <li><a href="../encounters/route-109.html">Route 109</a></li>
-      <li><a href="../encounters/route-110.html">Route 110</a></li>
-      <li><a href="../encounters/route-117.html">Route 117</a></li>
-      <li><a href="../encounters/route-137.html">Route 137</a></li>
+      <li><a href="../encounters/jagged-pass.html#jagged-pass">Jagged Pass</a></li>
+      <li><a href="../encounters/route-100.html#route-100">Route 100</a></li>
+      <li><a href="../encounters/route-109.html#route109">Route 109</a></li>
+      <li><a href="../encounters/route-110.html#route110">Route 110</a></li>
+      <li><a href="../encounters/route-117.html#route117">Route 117</a></li>
+      <li><a href="../encounters/route-137.html#ingy-bingy-island">Route 137</a></li>
     </ul>
     <h3 class="item-source-heading">Time Prize (18+ min):</h3>
     <ul class="item-source-list">
@@ -295,6 +295,28 @@
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -355,9 +377,10 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

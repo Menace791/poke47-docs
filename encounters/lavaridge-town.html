@@ -211,16 +211,16 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
     </div>
   </header>
   <main class="wrap">
-<p class="muted"><a href="index.html">&larr; All encounters</a></p>
+<p class="muted"><a href="index.html">&larr; All locations</a></p>
 <h1>Lavaridge Town</h1>
-<section class="card encounter-block">
+<section class="card encounter-block" id="lavaridge-town">
     <h3>Gift Pokémon</h3>
           <h4>Egg</h4>
       <ul class="encounter-cards">
@@ -243,7 +243,7 @@
 <img src="../assets/game/graphics/items/icons/ice_heal.png" alt="" class="item-icon">  <span class="name">Ice Heal</span>
 </a></li>    </ul>
 </section>
-<section class="card encounter-block">
+<section class="card encounter-block" id="lavaridge-town-herb-shop">
 <h2>Herb Shop</h2>    <h3>Items</h3>
     <h4>Shop <span class="muted small-text">26</span></h4>
     <ul class="cross-link-grid">
@@ -306,15 +306,33 @@
 <img src="../assets/game/graphics/items/icons/charcoal.png" alt="" class="item-icon">  <span class="name">Charcoal</span>
 </a></li>    </ul>
 </section>
-<section class="card encounter-block">
+<section class="card encounter-block" id="lavaridge-town-gym-1f">
 <h2>Lavaridge Gym 1F</h2>    <h3>Items</h3>
     <h4>NPC <span class="muted small-text">1</span></h4>
     <ul class="cross-link-grid">
 <li><a href="../itemdex/tm-overheat.html">
 <img src="../assets/game/graphics/items/icons/tm_fire.png" alt="" class="item-icon">  <span class="name">TM11 Overheat</span>
 </a></li>    </ul>
+    <h3>Trainers <span class="muted small-text">6</span></h3>
+    <ul class="cross-link-grid">
+      <li><a href="../trainerdex/trainer-axle.html">Axle <span class="muted small-text">· Kindler</span></a></li>
+      <li><a href="../trainerdex/trainer-cole.html">Cole <span class="muted small-text">· Kindler</span></a></li>
+      <li><a href="../trainerdex/trainer-danielle.html">Danielle <span class="muted small-text">· Battle Girl</span></a></li>
+      <li><a href="../trainerdex/trainer-flannery.html">Flannery <span class="muted small-text">· Leader</span></a></li>
+      <li><a href="../trainerdex/trainer-gerald.html">Gerald <span class="muted small-text">· Cooltrainer</span></a></li>
+      <li><a href="../trainerdex/trainer-none.html">Trainer None <span class="muted small-text">· Pkmn Trainer 1</span></a></li>
+    </ul>
 </section>
-<section class="card encounter-block">
+<section class="card encounter-block" id="lavaridge-town-gym-b1f">
+<h2>Lavaridge Gym B1F</h2>    <h3>Trainers <span class="muted small-text">4</span></h3>
+    <ul class="cross-link-grid">
+      <li><a href="../trainerdex/trainer-eli.html">Eli <span class="muted small-text">· Hiker</span></a></li>
+      <li><a href="../trainerdex/trainer-jace.html">Jace <span class="muted small-text">· Kindler</span></a></li>
+      <li><a href="../trainerdex/trainer-jeff.html">Jeff <span class="muted small-text">· Kindler</span></a></li>
+      <li><a href="../trainerdex/trainer-keegan.html">Keegan <span class="muted small-text">· Kindler</span></a></li>
+    </ul>
+</section>
+<section class="card encounter-block" id="lavaridge-town-mart">
 <h2>Poké Mart</h2>    <h3>Items</h3>
     <h4>Shop <span class="muted small-text">9</span></h4>
     <ul class="cross-link-grid">
@@ -369,6 +387,28 @@
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -429,9 +469,10 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

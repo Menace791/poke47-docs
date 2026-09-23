@@ -211,7 +211,7 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
@@ -389,19 +389,19 @@ cannonballs made of water.</p>
       <h3 class="encounter-section-name"><a href="../encounters/meteor-falls.html">Meteor Falls</a></h3>
       <ul class="encounter-lines">
               <li>
-                <span class="encounter-where">1F 1R · Super Rod</span>
+                <span class="encounter-where"><a href="../encounters/meteor-falls.html#meteor-falls-1f-1r">1F 1R</a> · Super Rod</span>
                 <span class="muted small-text">Lv. 35-45 · 20%</span>
               </li>
               <li>
-                <span class="encounter-where">1F 2R · Super Rod</span>
+                <span class="encounter-where"><a href="../encounters/meteor-falls.html#meteor-falls-1f-2r">1F 2R</a> · Super Rod</span>
                 <span class="muted small-text">Lv. 35-45 · 20%</span>
               </li>
               <li>
-                <span class="encounter-where">B1F 1R · Super Rod</span>
+                <span class="encounter-where"><a href="../encounters/meteor-falls.html#meteor-falls-b1f-1r">B1F 1R</a> · Super Rod</span>
                 <span class="muted small-text">Lv. 35-45 · 20%</span>
               </li>
               <li>
-                <span class="encounter-where">B1F 2R · Super Rod</span>
+                <span class="encounter-where"><a href="../encounters/meteor-falls.html#meteor-falls-b1f-2r">B1F 2R</a> · Super Rod</span>
                 <span class="muted small-text">Lv. 35-45 · 20%</span>
               </li>
       </ul>
@@ -410,7 +410,7 @@ cannonballs made of water.</p>
       <h3 class="encounter-section-name"><a href="../encounters/victory-road.html">Victory Road</a></h3>
       <ul class="encounter-lines">
               <li>
-                <span class="encounter-where">B2F · Super Rod</span>
+                <span class="encounter-where"><a href="../encounters/victory-road.html#victory-road-b2f">B2F</a> · Super Rod</span>
                 <span class="muted small-text">Lv. 35-45 · 20%</span>
               </li>
       </ul>
@@ -447,6 +447,28 @@ cannonballs made of water.</p>
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -507,9 +529,10 @@ cannonballs made of water.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

@@ -211,16 +211,16 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
     </div>
   </header>
   <main class="wrap">
-<p class="muted"><a href="index.html">&larr; All encounters</a></p>
+<p class="muted"><a href="index.html">&larr; All locations</a></p>
 <h1>Route 116</h1>
-<section class="card encounter-block">
+<section class="card encounter-block" id="route116">
     <h3>Land</h3>
         <ul class="encounter-cards">
 <li><a href="../pokedex/lillipup.html" class="encounter-entry mon-card type-normal"><img src="../assets/game/graphics/pokemon/lillipup/anim_front.png" alt="Lillipup" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/lillipup/anim_front__hover.png"><span class="encounter-info"><span class="name">Lillipup</span><span class="encounter-meta">Lv. 8 · 20%</span></span>
@@ -271,8 +271,21 @@
 </a></li><li><a href="../itemdex/pinap-berry.html">
 <img src="../assets/game/graphics/items/icons/pinap_berry.png" alt="" class="item-icon">  <span class="name">Pinap Berry</span>
 </a></li>    </ul>
+    <h3>Trainers <span class="muted small-text">10</span></h3>
+    <ul class="cross-link-grid">
+      <li><a href="../trainerdex/trainer-clark.html">Clark <span class="muted small-text">· Hiker</span></a></li>
+      <li><a href="../trainerdex/trainer-dawson.html">Dawson <span class="muted small-text">· Rich Boy</span></a></li>
+      <li><a href="../trainerdex/trainer-devan.html">Devan <span class="muted small-text">· Hiker</span></a></li>
+      <li><a href="../trainerdex/trainer-janice.html">Janice <span class="muted small-text">· Lass</span></a></li>
+      <li><a href="../trainerdex/trainer-jerry.html">Jerry <span class="muted small-text">· School Kid</span></a></li>
+      <li><a href="../trainerdex/trainer-joey.html">Joey <span class="muted small-text">· Youngster</span></a></li>
+      <li><a href="../trainerdex/trainer-johnson.html">Johnson <span class="muted small-text">· Youngster</span></a></li>
+      <li><a href="../trainerdex/trainer-jose.html">Jose <span class="muted small-text">· Bug Catcher</span></a></li>
+      <li><a href="../trainerdex/trainer-karen.html">Karen <span class="muted small-text">· School Kid</span></a></li>
+      <li><a href="../trainerdex/trainer-sarah.html">Sarah <span class="muted small-text">· Lady</span></a></li>
+    </ul>
 </section>
-<section class="card encounter-block">
+<section class="card encounter-block" id="shaymin">
 <h2>Shaymin</h2>    <h3>Static Encounter</h3>
         <ul class="encounter-cards">
 <li><a href="../pokedex/shaymin.html" class="encounter-entry mon-card type-grass"><img src="../assets/game/graphics/pokemon/shaymin/anim_front.png" alt="Shaymin (Land)" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/shaymin/anim_front__hover.png"><span class="encounter-info"><span class="name">Shaymin (Land)</span><span class="encounter-meta">Lv. 4</span></span>
@@ -310,6 +323,28 @@
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -370,9 +405,10 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

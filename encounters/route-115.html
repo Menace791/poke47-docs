@@ -211,16 +211,16 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
     </div>
   </header>
   <main class="wrap">
-<p class="muted"><a href="index.html">&larr; All encounters</a></p>
+<p class="muted"><a href="index.html">&larr; All locations</a></p>
 <h1>Route 115</h1>
-<section class="card encounter-block">
+<section class="card encounter-block" id="route115">
     <h3>Land</h3>
         <ul class="encounter-cards">
 <li><a href="../pokedex/espurr.html" class="encounter-entry mon-card type-psychic"><img src="../assets/game/graphics/pokemon/espurr/anim_front.png" alt="Espurr" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/espurr/anim_front__hover.png"><span class="encounter-info"><span class="name">Espurr</span><span class="encounter-meta">Lv. 23 · 20%</span></span>
@@ -319,6 +319,19 @@
 </a></li><li><a href="../itemdex/yellow-shard.html">
 <img src="../assets/game/graphics/items/icons/yellow_shard.png" alt="" class="item-icon">  <span class="name">Yellow Shard <span class="muted small-text">· 6.2%</span></span>
 </a></li>    </ul>
+    <h3>Trainers <span class="muted small-text">10</span></h3>
+    <ul class="cross-link-grid">
+      <li><a href="../trainerdex/trainer-alix.html">Alix <span class="muted small-text">· Psychic</span></a></li>
+      <li><a href="../trainerdex/trainer-cyndy.html">Cyndy <span class="muted small-text">· Battle Girl</span></a></li>
+      <li><a href="../trainerdex/trainer-hector.html">Hector <span class="muted small-text">· Collector</span></a></li>
+      <li><a href="../trainerdex/trainer-helene.html">Helene <span class="muted small-text">· Battle Girl</span></a></li>
+      <li><a href="../trainerdex/trainer-jaiden.html">Jaiden <span class="muted small-text">· Ninja Boy</span></a></li>
+      <li><a href="../trainerdex/trainer-koichi.html">Koichi <span class="muted small-text">· Black Belt</span></a></li>
+      <li><a href="../trainerdex/trainer-kyra.html">Kyra <span class="muted small-text">· Triathlete</span></a></li>
+      <li><a href="../trainerdex/trainer-marlene.html">Marlene <span class="muted small-text">· Psychic</span></a></li>
+      <li><a href="../trainerdex/trainer-nob.html">Nob <span class="muted small-text">· Black Belt</span></a></li>
+      <li><a href="../trainerdex/trainer-timothy.html">Timothy <span class="muted small-text">· Expert</span></a></li>
+    </ul>
 </section>
   </main>
   <script>
@@ -351,6 +364,28 @@
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -411,9 +446,10 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

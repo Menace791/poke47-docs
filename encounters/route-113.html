@@ -211,16 +211,16 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
     </div>
   </header>
   <main class="wrap">
-<p class="muted"><a href="index.html">&larr; All encounters</a></p>
+<p class="muted"><a href="index.html">&larr; All locations</a></p>
 <h1>Route 113</h1>
-<section class="card encounter-block">
+<section class="card encounter-block" id="route113">
     <h3>Land</h3>
         <ul class="encounter-cards">
 <li><a href="../pokedex/skorupi.html" class="encounter-entry mon-card type-poison type2-bug mon-dual"><img src="../assets/game/graphics/pokemon/skorupi/anim_front.png" alt="Skorupi" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/skorupi/anim_front__hover.png"><span class="encounter-info"><span class="name">Skorupi</span><span class="encounter-meta">Lv. 15-17 · 20%</span></span>
@@ -257,8 +257,21 @@
 </a></li><li><a href="../itemdex/tm-venom-drench.html">
 <img src="../assets/game/graphics/items/icons/tm_poison.png" alt="" class="item-icon">  <span class="name">TM79 Venom Drench</span>
 </a></li>    </ul>
+    <h3>Trainers <span class="muted small-text">10</span></h3>
+    <ul class="cross-link-grid">
+      <li><a href="../trainerdex/trainer-coby.html">Coby <span class="muted small-text">· Bird Keeper</span></a></li>
+      <li><a href="../trainerdex/trainer-dillon.html">Dillon <span class="muted small-text">· Youngster</span></a></li>
+      <li><a href="../trainerdex/trainer-jaylen.html">Jaylen <span class="muted small-text">· Youngster</span></a></li>
+      <li><a href="../trainerdex/trainer-lao.html">Lao <span class="muted small-text">· Ninja Boy</span></a></li>
+      <li><a href="../trainerdex/trainer-lawrence.html">Lawrence <span class="muted small-text">· Camper</span></a></li>
+      <li><a href="../trainerdex/trainer-lung.html">Lung <span class="muted small-text">· Ninja Boy</span></a></li>
+      <li><a href="../trainerdex/trainer-madeline.html">Madeline <span class="muted small-text">· Parasol Lady</span></a></li>
+      <li><a href="../trainerdex/trainer-sophie.html">Sophie <span class="muted small-text">· Picnicker</span></a></li>
+      <li><a href="../trainerdex/trainer-tori-and-tia.html">Tori &amp; Tia <span class="muted small-text">· Twins</span></a></li>
+      <li><a href="../trainerdex/trainer-wyatt.html">Wyatt <span class="muted small-text">· Pokémaniac</span></a></li>
+    </ul>
 </section>
-<section class="card encounter-block">
+<section class="card encounter-block" id="route113-glass-workshop">
 <h2>Glass Workshop</h2>    <h3>Items</h3>
     <h4>Shop <span class="muted small-text">6</span></h4>
     <ul class="cross-link-grid">
@@ -312,6 +325,28 @@
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -372,9 +407,10 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

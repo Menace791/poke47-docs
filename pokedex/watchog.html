@@ -211,7 +211,7 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
@@ -403,7 +403,7 @@ in the dark.</p>
       <h3 class="encounter-section-name"><a href="../encounters/safari-zone.html">Safari Zone</a></h3>
       <ul class="encounter-lines">
               <li>
-                <span class="encounter-where">North · Land</span>
+                <span class="encounter-where"><a href="../encounters/safari-zone.html#safari-zone-north">North</a> · Land</span>
                 <span class="muted small-text">Lv. 25-27 · 30%</span>
               </li>
       </ul>
@@ -412,7 +412,7 @@ in the dark.</p>
       <h3 class="encounter-section-name"><a href="../encounters/gauntletne.html">Gauntlet Island NE</a></h3>
       <ul class="encounter-lines">
               <li>
-                <span class="encounter-where">Gauntlet Island Corridor Entrance · Land</span>
+                <span class="encounter-where"><a href="../encounters/gauntletne.html#gauntletisland-corridor-entrance">Gauntlet Island Corridor Entrance</a> · Land</span>
                 <span class="muted small-text">Lv. 20 · 10%</span>
               </li>
       </ul>
@@ -421,7 +421,7 @@ in the dark.</p>
       <h3 class="encounter-section-name"><a href="../encounters/gauntletnw.html">Gauntlet Island NW</a></h3>
       <ul class="encounter-lines">
               <li>
-                <span class="encounter-where">Gauntlet Island Northwest · Land</span>
+                <span class="encounter-where"><a href="../encounters/gauntletnw.html#gauntlet-island-northwest">Gauntlet Island Northwest</a> · Land</span>
                 <span class="muted small-text">Lv. 20-22 · 20%</span>
               </li>
       </ul>
@@ -430,7 +430,7 @@ in the dark.</p>
       <h3 class="encounter-section-name"><a href="../encounters/gauntletsw.html">Gauntlet Island SW</a></h3>
       <ul class="encounter-lines">
               <li>
-                <span class="encounter-where">Gauntlet Island Southwest · Land</span>
+                <span class="encounter-where"><a href="../encounters/gauntletsw.html#gauntlet-island-southwest">Gauntlet Island Southwest</a> · Land</span>
                 <span class="muted small-text">Lv. 22-23 · 10%</span>
               </li>
       </ul>
@@ -467,6 +467,28 @@ in the dark.</p>
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -527,9 +549,10 @@ in the dark.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

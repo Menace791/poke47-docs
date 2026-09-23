@@ -211,7 +211,7 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
@@ -388,7 +388,7 @@ and garner more respect among Meowth.</p>
       <h3 class="encounter-section-name"><a href="../encounters/battle-frontier.html">Battle Frontier</a></h3>
       <ul class="encounter-lines">
               <li>
-                <span class="encounter-where">Lounge 6 · In-Game Trade</span>
+                <span class="encounter-where"><a href="../encounters/battle-frontier.html#battle-frontier-lounge6">Lounge 6</a> · In-Game Trade</span>
                 <span class="muted small-text">For <a href="../pokedex/pikachu.html" class="encounter-entry mon-card type-electric">
       <span>Pikachu</span><img src="../assets/game/graphics/pokemon/pikachu/anim_front.png" alt="Pikachu" class="encounter-sprite"></a></span>
               </li>
@@ -426,6 +426,28 @@ and garner more respect among Meowth.</p>
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -486,9 +508,10 @@ and garner more respect among Meowth.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

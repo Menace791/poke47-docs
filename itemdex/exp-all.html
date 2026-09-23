@@ -211,7 +211,7 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
@@ -232,10 +232,10 @@
   <h2>Sources</h2>
     <h3 class="item-source-heading">NPC:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/ever-grande-city.html">Ever Grande City</a></li>
-      <li><a href="../encounters/littleroot-town.html">Littleroot Town</a></li>
-      <li><a href="../encounters/route-101.html">Route 101</a></li>
-      <li><a href="../encounters/route-103.html">Route 103</a></li>
+      <li><a href="../encounters/ever-grande-city.html#ever-grande-city-champions-room">Ever Grande City · Champion&#39;s Room</a></li>
+      <li><a href="../encounters/littleroot-town.html#littleroot-town-professor-birchs-lab">Littleroot Town · Professor Birch&#39;s Lab</a></li>
+      <li><a href="../encounters/route-101.html#route101">Route 101</a></li>
+      <li><a href="../encounters/route-103.html#route103">Route 103</a></li>
     </ul>
 </section>
   </main>
@@ -269,6 +269,28 @@
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -329,9 +351,10 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

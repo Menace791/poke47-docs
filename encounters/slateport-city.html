@@ -211,16 +211,16 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
     </div>
   </header>
   <main class="wrap">
-<p class="muted"><a href="index.html">&larr; All encounters</a></p>
+<p class="muted"><a href="index.html">&larr; All locations</a></p>
 <h1>Slateport City</h1>
-<section class="card encounter-block">
+<section class="card encounter-block" id="slateport-city">
     <h3>Water</h3>
         <ul class="encounter-cards">
 <li><a href="../pokedex/frillish.html" class="encounter-entry mon-card type-water type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/frillish/anim_front.png" alt="Frillish" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/frillish/anim_front__hover.png"><span class="encounter-info"><span class="name">Frillish</span><span class="encounter-meta">Lv. 5-30 · 60%</span></span>
@@ -311,7 +311,7 @@
 <img src="../assets/game/graphics/items/icons/tm_ground.png" alt="" class="item-icon">  <span class="name">TM69 Sand Tomb</span>
 </a></li>    </ul>
 </section>
-<section class="card encounter-block">
+<section class="card encounter-block" id="slateport-city-battle-tent-lobby">
 <h2>Battle Tent Lobby</h2>    <h3>Items</h3>
     <h4>NPC <span class="muted small-text">1</span></h4>
     <ul class="cross-link-grid">
@@ -319,7 +319,7 @@
 <img src="../assets/game/graphics/items/icons/tm_poison.png" alt="" class="item-icon">  <span class="name">TM80 Venoshock</span>
 </a></li>    </ul>
 </section>
-<section class="card encounter-block">
+<section class="card encounter-block" id="slateport-city-harbor">
 <h2>Harbor</h2>    <h3>Items</h3>
     <h4>NPC <span class="muted small-text">1</span></h4>
     <ul class="cross-link-grid">
@@ -332,7 +332,7 @@
 <img src="../assets/game/graphics/items/icons/tm_fairy.png" alt="" class="item-icon">  <span class="name">TM99 Draining Kiss</span>
 </a></li>    </ul>
 </section>
-<section class="card encounter-block">
+<section class="card encounter-block" id="slateport-city-oceanic-museum-1f">
 <h2>Oceanic Museum 1F</h2>    <h3>Items</h3>
     <h4>NPC <span class="muted small-text">1</span></h4>
     <ul class="cross-link-grid">
@@ -340,7 +340,14 @@
 <img src="../assets/game/graphics/items/icons/tm_dark.png" alt="" class="item-icon">  <span class="name">TM90 Knock Off</span>
 </a></li>    </ul>
 </section>
-<section class="card encounter-block">
+<section class="card encounter-block" id="slateport-city-oceanic-museum-2f">
+<h2>Oceanic Museum 2F</h2>    <h3>Trainers <span class="muted small-text">2</span></h3>
+    <ul class="cross-link-grid">
+      <li><a href="../trainerdex/trainer-grunt-museum-1.html">Grunt <span class="muted small-text">· Team Aqua</span></a></li>
+      <li><a href="../trainerdex/trainer-grunt-museum-2.html">Grunt <span class="muted small-text">· Team Aqua</span></a></li>
+    </ul>
+</section>
+<section class="card encounter-block" id="slateport-city-mart">
 <h2>Poké Mart</h2>    <h3>Items</h3>
     <h4>Shop <span class="muted small-text">9</span></h4>
     <ul class="cross-link-grid">
@@ -364,7 +371,7 @@
 <img src="../assets/game/graphics/items/icons/super_potion.png" alt="" class="item-icon">  <span class="name">Super Potion <span class="muted small-text">· ₽700</span></span>
 </a></li>    </ul>
 </section>
-<section class="card encounter-block">
+<section class="card encounter-block" id="slateport-city-pokemon-fan-club">
 <h2>Pokémon Fan Club</h2>    <h3>Items</h3>
     <h4>NPC <span class="muted small-text">6</span></h4>
     <ul class="cross-link-grid">
@@ -413,6 +420,28 @@
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -473,9 +502,10 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

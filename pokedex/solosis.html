@@ -211,7 +211,7 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
@@ -387,11 +387,11 @@ can use telepathy to talk with others.</p>
       <h3 class="encounter-section-name"><a href="../encounters/new-mauville.html">New Mauville</a></h3>
       <ul class="encounter-lines">
               <li>
-                <span class="encounter-where">Entrance · Land</span>
+                <span class="encounter-where"><a href="../encounters/new-mauville.html#new-mauville-entrance">Entrance</a> · Land</span>
                 <span class="muted small-text">Lv. 24-26 · 35%</span>
               </li>
               <li>
-                <span class="encounter-where">Inside · Land</span>
+                <span class="encounter-where"><a href="../encounters/new-mauville.html#new-mauville-inside">Inside</a> · Land</span>
                 <span class="muted small-text">Lv. 25-27 · 20%</span>
               </li>
       </ul>
@@ -428,6 +428,28 @@ can use telepathy to talk with others.</p>
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -488,9 +510,10 @@ can use telepathy to talk with others.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

@@ -211,7 +211,7 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
@@ -475,7 +475,7 @@ seas causes Shellos to take on this form.</p>
       <h3 class="encounter-section-name"><a href="../encounters/route-129.html">Route 129</a></h3>
       <ul class="encounter-lines">
               <li>
-                <span class="encounter-where">Cavern · Land</span>
+                <span class="encounter-where"><a href="../encounters/route-129.html#route128-cavern">Cavern</a> · Land</span>
                 <span class="muted small-text">Lv. 32-36 · 15%</span>
               </li>
               <li>
@@ -497,7 +497,7 @@ seas causes Shellos to take on this form.</p>
       <h3 class="encounter-section-name"><a href="../encounters/gauntletne.html">Gauntlet Island NE</a></h3>
       <ul class="encounter-lines">
               <li>
-                <span class="encounter-where">Gauntlet Island Northeast · Water</span>
+                <span class="encounter-where"><a href="../encounters/gauntletne.html#gauntlet-island-northeast">Gauntlet Island Northeast</a> · Water</span>
                 <span class="muted small-text">Lv. 15 · 5%</span>
               </li>
       </ul>
@@ -506,7 +506,7 @@ seas causes Shellos to take on this form.</p>
       <h3 class="encounter-section-name"><a href="../encounters/gauntletsw.html">Gauntlet Island SW</a></h3>
       <ul class="encounter-lines">
               <li>
-                <span class="encounter-where">Gauntlet Island South · Water</span>
+                <span class="encounter-where"><a href="../encounters/gauntletsw.html#gauntlet-island-south">Gauntlet Island South</a> · Water</span>
                 <span class="muted small-text">Lv. 7-8 · 10%</span>
               </li>
       </ul>
@@ -515,7 +515,7 @@ seas causes Shellos to take on this form.</p>
       <h3 class="encounter-section-name"><a href="../encounters/gauntletse.html">Gauntlet Island SE</a></h3>
       <ul class="encounter-lines">
               <li>
-                <span class="encounter-where">Gauntlet Island Southeast · Water</span>
+                <span class="encounter-where"><a href="../encounters/gauntletse.html#gauntlet-island-southeast">Gauntlet Island Southeast</a> · Water</span>
                 <span class="muted small-text">Lv. 7-8 · 10%</span>
               </li>
       </ul>
@@ -599,6 +599,28 @@ seas causes Shellos to take on this form.</p>
         apply();
       });
     }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
+      });
+    }
     function obstagoonBindRowLinks() {
       // data-href rows act as buttons; nested <a>/<button> keep their own click semantics.
       document.querySelectorAll('tr[data-href], li[data-href], td[data-href], section[data-href], .card[data-href]').forEach((row) => {
@@ -657,9 +679,10 @@ seas causes Shellos to take on this form.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

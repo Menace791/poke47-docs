@@ -211,7 +211,7 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
@@ -402,15 +402,15 @@ spirits of children to those of adults.</p>
       <h3 class="encounter-section-name"><a href="../encounters/mt-pyre.html">Mt. Pyre</a></h3>
       <ul class="encounter-lines">
               <li>
-                <span class="encounter-where">Mt Pyre 1F · Land</span>
+                <span class="encounter-where"><a href="../encounters/mt-pyre.html#mt-pyre-1f">Mt Pyre 1F</a> · Land</span>
                 <span class="muted small-text">Lv. 27 · 10%</span>
               </li>
               <li>
-                <span class="encounter-where">Mt Pyre 2F · Land</span>
+                <span class="encounter-where"><a href="../encounters/mt-pyre.html#mt-pyre-2f">Mt Pyre 2F</a> · Land</span>
                 <span class="muted small-text">Lv. 27 · 10%</span>
               </li>
               <li>
-                <span class="encounter-where">Mt Pyre 3F · Land</span>
+                <span class="encounter-where"><a href="../encounters/mt-pyre.html#mt-pyre-3f">Mt Pyre 3F</a> · Land</span>
                 <span class="muted small-text">Lv. 27 · 10%</span>
               </li>
       </ul>
@@ -447,6 +447,28 @@ spirits of children to those of adults.</p>
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -507,9 +529,10 @@ spirits of children to those of adults.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

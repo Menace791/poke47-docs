@@ -211,16 +211,16 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
     </div>
   </header>
   <main class="wrap">
-<p class="muted"><a href="index.html">&larr; All encounters</a></p>
+<p class="muted"><a href="index.html">&larr; All locations</a></p>
 <h1>Route 128</h1>
-<section class="card encounter-block">
+<section class="card encounter-block" id="route128">
     <h3>Land</h3>
         <ul class="encounter-cards">
 <li><a href="../pokedex/shellos-east.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/shellos/east/anim_front.png" alt="Shellos (East Sea)" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/shellos/east/anim_front__hover.png"><span class="encounter-info"><span class="name">Shellos (East Sea)</span><span class="encounter-meta">Lv. 32-37 · 45%</span></span>
@@ -308,8 +308,18 @@
 </a></li><li><a href="../itemdex/yellow-shard.html">
 <img src="../assets/game/graphics/items/icons/yellow_shard.png" alt="" class="item-icon">  <span class="name">Yellow Shard <span class="muted small-text">· 12.5%</span></span>
 </a></li>    </ul>
+    <h3>Trainers <span class="muted small-text">7</span></h3>
+    <ul class="cross-link-grid">
+      <li><a href="../trainerdex/trainer-alexa.html">Alexa <span class="muted small-text">· Cooltrainer</span></a></li>
+      <li><a href="../trainerdex/trainer-carlee.html">Carlee <span class="muted small-text">· Swimmer F</span></a></li>
+      <li><a href="../trainerdex/trainer-harrison.html">Harrison <span class="muted small-text">· Swimmer M</span></a></li>
+      <li><a href="../trainerdex/trainer-isaiah.html">Isaiah <span class="muted small-text">· Triathlete</span></a></li>
+      <li><a href="../trainerdex/trainer-katelyn.html">Katelyn <span class="muted small-text">· Triathlete</span></a></li>
+      <li><a href="../trainerdex/trainer-ruben.html">Ruben <span class="muted small-text">· Cooltrainer</span></a></li>
+      <li><a href="../trainerdex/trainer-wayne.html">Wayne <span class="muted small-text">· Fisherman</span></a></li>
+    </ul>
 </section>
-<section class="card encounter-block">
+<section class="card encounter-block" id="underwater-route128">
 <h2>Underwater</h2>    <h3>Items</h3>
     <h4>Hidden Item <span class="muted small-text">2</span></h4>
     <ul class="cross-link-grid">
@@ -350,6 +360,28 @@
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -410,9 +442,10 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

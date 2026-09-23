@@ -211,16 +211,16 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
     </div>
   </header>
   <main class="wrap">
-<p class="muted"><a href="index.html">&larr; All encounters</a></p>
+<p class="muted"><a href="index.html">&larr; All locations</a></p>
 <h1>Granite Cave</h1>
-<section class="card encounter-block">
+<section class="card encounter-block" id="granite-cave-1f">
 <h2>1F</h2>    <h3>Land</h3>
         <ul class="encounter-cards">
 <li><a href="../pokedex/roggenrola.html" class="encounter-entry mon-card type-rock"><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png"><span class="encounter-info"><span class="name">Roggenrola</span><span class="encounter-meta">Lv. 9 · 30%</span></span>
@@ -244,7 +244,7 @@
 <img src="../assets/game/graphics/items/icons/escape_rope.png" alt="" class="item-icon">  <span class="name">Escape Rope</span>
 </a></li>    </ul>
 </section>
-<section class="card encounter-block">
+<section class="card encounter-block" id="granite-cave-b1f">
 <h2>B1F</h2>    <h3>Land</h3>
         <ul class="encounter-cards">
 <li><a href="../pokedex/bronzor.html" class="encounter-entry mon-card type-steel type2-psychic mon-dual"><img src="../assets/game/graphics/pokemon/bronzor/anim_front.png" alt="Bronzor" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/bronzor/anim_front__hover.png"><span class="encounter-info"><span class="name">Bronzor</span><span class="encounter-meta">Lv. 10 · 20%</span></span>
@@ -265,7 +265,7 @@
 <img src="../assets/game/graphics/items/icons/float_stone.png" alt="" class="item-icon">  <span class="name">Float Stone</span>
 </a></li>    </ul>
 </section>
-<section class="card encounter-block">
+<section class="card encounter-block" id="granite-cave-b2f">
 <h2>B2F</h2>    <h3>Land</h3>
         <ul class="encounter-cards">
 <li><a href="../pokedex/bronzor.html" class="encounter-entry mon-card type-steel type2-psychic mon-dual"><img src="../assets/game/graphics/pokemon/bronzor/anim_front.png" alt="Bronzor" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/bronzor/anim_front__hover.png"><span class="encounter-info"><span class="name">Bronzor</span><span class="encounter-meta">Lv. 11-12 · 30%</span></span>
@@ -312,7 +312,7 @@
 <img src="../assets/game/graphics/items/icons/star_piece.png" alt="" class="item-icon">  <span class="name">Star Piece <span class="muted small-text">· 12.5%</span></span>
 </a></li>    </ul>
 </section>
-<section class="card encounter-block">
+<section class="card encounter-block" id="granite-cave-stevens-room">
 <h2>Steven&#39;s Room</h2>    <h3>Land</h3>
         <ul class="encounter-cards">
 <li><a href="../pokedex/timburr.html" class="encounter-entry mon-card type-fighting"><img src="../assets/game/graphics/pokemon/timburr/anim_front.png" alt="Timburr" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/timburr/anim_front__hover.png"><span class="encounter-info"><span class="name">Timburr</span><span class="encounter-meta">Lv. 9-10 · 25%</span></span>
@@ -363,6 +363,28 @@
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -423,9 +445,10 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

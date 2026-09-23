@@ -211,7 +211,7 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
@@ -232,20 +232,20 @@
   <h2>Sources</h2>
     <h3 class="item-source-heading">Shop <span class="item-price">(₽10,000)</span>:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/battle-frontier.html">Battle Frontier</a></li>
-      <li><a href="../encounters/lilycove-city.html">Lilycove City</a></li>
-      <li><a href="../encounters/slateport-city.html">Slateport City</a></li>
+      <li><a href="../encounters/battle-frontier.html#battle-frontier-mart">Battle Frontier · Poké Mart</a></li>
+      <li><a href="../encounters/lilycove-city.html#lilycove-city-department-store-3f">Lilycove City · Department Store 3F</a></li>
+      <li><a href="../encounters/slateport-city.html#slateport-city">Slateport City</a></li>
     </ul>
     <h3 class="item-source-heading">Overworld:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/route-105.html">Route 105</a></li>
-      <li><a href="../encounters/route-115.html">Route 115</a></li>
+      <li><a href="../encounters/route-105.html#route105">Route 105</a></li>
+      <li><a href="../encounters/route-115.html#route115">Route 115</a></li>
     </ul>
     <h3 class="item-source-heading">Hidden Item:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/route-118.html">Route 118</a></li>
-      <li><a href="../encounters/route-129.html">Route 129</a></li>
-      <li><a href="../encounters/route-126.html">Route 126</a></li>
+      <li><a href="../encounters/route-118.html#route118">Route 118</a></li>
+      <li><a href="../encounters/route-129.html#route129">Route 129</a></li>
+      <li><a href="../encounters/route-126.html#underwater-route126">Route 126 · Underwater</a></li>
     </ul>
 </section>
   </main>
@@ -279,6 +279,28 @@
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -339,9 +361,10 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

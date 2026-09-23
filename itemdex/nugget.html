@@ -211,7 +211,7 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
@@ -232,19 +232,19 @@
   <h2>Sources</h2>
     <h3 class="item-source-heading">Overworld:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/aqua-hideout.html">Aqua Hideout</a></li>
-      <li><a href="../encounters/magma-hideout.html">Magma Hideout</a></li>
-      <li><a href="../encounters/route-112.html">Route 112</a></li>
-      <li><a href="../encounters/route-119.html">Route 119</a></li>
-      <li><a href="../encounters/route-120.html">Route 120</a></li>
-      <li><a href="../encounters/route-129.html">Route 129</a></li>
-      <li><a href="../encounters/safari-zone.html">Safari Zone</a></li>
+      <li><a href="../encounters/aqua-hideout.html#aqua-hideout-b1f">Aqua Hideout · B1F</a></li>
+      <li><a href="../encounters/magma-hideout.html#magma-hideout-3f-1r">Magma Hideout · 3F 1R</a></li>
+      <li><a href="../encounters/route-112.html#route112">Route 112</a></li>
+      <li><a href="../encounters/route-119.html#route119">Route 119</a></li>
+      <li><a href="../encounters/route-120.html#route120">Route 120</a></li>
+      <li><a href="../encounters/route-129.html#route128-cavern">Route 129 · Cavern</a></li>
+      <li><a href="../encounters/safari-zone.html#safari-zone-northeast">Safari Zone · Northeast</a></li>
     </ul>
     <h3 class="item-source-heading">Hidden Item:</h3>
     <ul class="item-source-list">
-      <li>Fallarbor Town</li>
-      <li><a href="../encounters/route-110.html">Route 110</a></li>
-      <li><a href="../encounters/route-121.html">Route 121</a></li>
+      <li><a href="../encounters/fallarbor-town.html#fallarbor-town">Fallarbor Town</a></li>
+      <li><a href="../encounters/route-110.html#route110-trick-house-end">Route 110 · Trick House End</a></li>
+      <li><a href="../encounters/route-121.html#route121">Route 121</a></li>
     </ul>
     <h3 class="item-source-heading"><a href="../abilities/pickup.html">Pickup</a>:</h3>
     <ul class="item-source-list">
@@ -306,6 +306,28 @@
         apply();
       });
     }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
+      });
+    }
     function obstagoonBindRowLinks() {
       // data-href rows act as buttons; nested <a>/<button> keep their own click semantics.
       document.querySelectorAll('tr[data-href], li[data-href], td[data-href], section[data-href], .card[data-href]').forEach((row) => {
@@ -364,9 +386,10 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

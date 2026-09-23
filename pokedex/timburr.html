@@ -211,7 +211,7 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
@@ -402,15 +402,15 @@ As they grow, they carry bigger logs.</p>
       <h3 class="encounter-section-name"><a href="../encounters/granite-cave.html">Granite Cave</a></h3>
       <ul class="encounter-lines">
               <li>
-                <span class="encounter-where">1F · Land</span>
+                <span class="encounter-where"><a href="../encounters/granite-cave.html#granite-cave-1f">1F</a> · Land</span>
                 <span class="muted small-text">Lv. 7-10 · 20%</span>
               </li>
               <li>
-                <span class="encounter-where">B1F · Land</span>
+                <span class="encounter-where"><a href="../encounters/granite-cave.html#granite-cave-b1f">B1F</a> · Land</span>
                 <span class="muted small-text">Lv. 9-10 · 15%</span>
               </li>
               <li>
-                <span class="encounter-where">Steven&#39;s Room · Land</span>
+                <span class="encounter-where"><a href="../encounters/granite-cave.html#granite-cave-stevens-room">Steven&#39;s Room</a> · Land</span>
                 <span class="muted small-text">Lv. 9-10 · 25%</span>
               </li>
       </ul>
@@ -447,6 +447,28 @@ As they grow, they carry bigger logs.</p>
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -507,9 +529,10 @@ As they grow, they carry bigger logs.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

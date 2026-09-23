@@ -211,7 +211,7 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
@@ -232,23 +232,23 @@
   <h2>Sources</h2>
     <h3 class="item-source-heading">Shop <span class="item-price">(₽10,000)</span>:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/battle-frontier.html">Battle Frontier</a></li>
-      <li><a href="../encounters/lilycove-city.html">Lilycove City</a></li>
-      <li><a href="../encounters/slateport-city.html">Slateport City</a></li>
+      <li><a href="../encounters/battle-frontier.html#battle-frontier-mart">Battle Frontier · Poké Mart</a></li>
+      <li><a href="../encounters/lilycove-city.html#lilycove-city-department-store-3f">Lilycove City · Department Store 3F</a></li>
+      <li><a href="../encounters/slateport-city.html#slateport-city">Slateport City</a></li>
     </ul>
     <h3 class="item-source-heading">Overworld:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/route-119.html">Route 119</a></li>
-      <li><a href="../encounters/route-121.html">Route 121</a></li>
-      <li><a href="../encounters/route-127.html">Route 127</a></li>
+      <li><a href="../encounters/route-119.html#route119">Route 119</a></li>
+      <li><a href="../encounters/route-121.html#route121">Route 121</a></li>
+      <li><a href="../encounters/route-127.html#route127">Route 127</a></li>
     </ul>
     <h3 class="item-source-heading">Hidden Item:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/artisan-cave.html">Artisan Cave</a></li>
-      <li><a href="../encounters/mt-pyre.html">Mt. Pyre</a></li>
-      <li><a href="../encounters/route-106.html">Route 106</a></li>
-      <li><a href="../encounters/route-120.html">Route 120</a></li>
-      <li><a href="../encounters/safari-zone.html">Safari Zone</a></li>
+      <li><a href="../encounters/artisan-cave.html#artisan-cave-b1f">Artisan Cave · B1F</a></li>
+      <li><a href="../encounters/mt-pyre.html#mt-pyre-summit">Mt. Pyre · Mt Pyre - Summit</a></li>
+      <li><a href="../encounters/route-106.html#route106">Route 106</a></li>
+      <li><a href="../encounters/route-120.html#route120">Route 120</a></li>
+      <li><a href="../encounters/safari-zone.html#safari-zone-northeast">Safari Zone · Northeast</a></li>
     </ul>
 </section>
   </main>
@@ -282,6 +282,28 @@
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -342,9 +364,10 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

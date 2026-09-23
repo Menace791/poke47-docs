@@ -211,7 +211,7 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
@@ -232,25 +232,25 @@
   <h2>Sources</h2>
     <h3 class="item-source-heading">Shop <span class="item-price">(₽10,000)</span>:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/battle-frontier.html">Battle Frontier</a></li>
-      <li><a href="../encounters/lilycove-city.html">Lilycove City</a></li>
-      <li><a href="../encounters/slateport-city.html">Slateport City</a></li>
+      <li><a href="../encounters/battle-frontier.html#battle-frontier-mart">Battle Frontier · Poké Mart</a></li>
+      <li><a href="../encounters/lilycove-city.html#lilycove-city-department-store-3f">Lilycove City · Department Store 3F</a></li>
+      <li><a href="../encounters/slateport-city.html#slateport-city">Slateport City</a></li>
     </ul>
     <h3 class="item-source-heading">NPC:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/safari-zone.html">Safari Zone</a></li>
+      <li><a href="../encounters/safari-zone.html#safari-zone-north">Safari Zone · North</a></li>
     </ul>
     <h3 class="item-source-heading">Overworld:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/route-106.html">Route 106</a></li>
-      <li><a href="../encounters/route-114.html">Route 114</a></li>
-      <li><a href="../encounters/route-132.html">Route 132</a></li>
+      <li><a href="../encounters/route-106.html#route106">Route 106</a></li>
+      <li><a href="../encounters/route-114.html#route114">Route 114</a></li>
+      <li><a href="../encounters/route-132.html#route132">Route 132</a></li>
     </ul>
     <h3 class="item-source-heading">Hidden Item:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/route-109.html">Route 109</a></li>
-      <li><a href="../encounters/route-111.html">Route 111</a></li>
-      <li><a href="../encounters/route-114.html">Route 114</a></li>
+      <li><a href="../encounters/route-109.html#route109">Route 109</a></li>
+      <li><a href="../encounters/route-111.html#route111">Route 111</a></li>
+      <li><a href="../encounters/route-114.html#route114">Route 114</a></li>
     </ul>
 </section>
   </main>
@@ -284,6 +284,28 @@
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -344,9 +366,10 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

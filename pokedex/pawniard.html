@@ -211,7 +211,7 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
@@ -384,7 +384,7 @@ sharpens them on stones by the river.</p>
       <h3 class="encounter-section-name"><a href="../encounters/cave-of-origin.html">Cave Of Origin</a></h3>
       <ul class="encounter-lines">
               <li>
-                <span class="encounter-where">1F · Land</span>
+                <span class="encounter-where"><a href="../encounters/cave-of-origin.html#cave-of-origin-1f">1F</a> · Land</span>
                 <span class="muted small-text">Lv. 28-33 · 30%</span>
               </li>
       </ul>
@@ -393,15 +393,15 @@ sharpens them on stones by the river.</p>
       <h3 class="encounter-section-name"><a href="../encounters/sky-pillar.html">Sky Pillar</a></h3>
       <ul class="encounter-lines">
               <li>
-                <span class="encounter-where">1F · Land</span>
+                <span class="encounter-where"><a href="../encounters/sky-pillar.html#sky-pillar-1f">1F</a> · Land</span>
                 <span class="muted small-text">Lv. 33-35 · 30%</span>
               </li>
               <li>
-                <span class="encounter-where">3F · Land</span>
+                <span class="encounter-where"><a href="../encounters/sky-pillar.html#sky-pillar-3f">3F</a> · Land</span>
                 <span class="muted small-text">Lv. 33-35 · 30%</span>
               </li>
               <li>
-                <span class="encounter-where">5F · Land</span>
+                <span class="encounter-where"><a href="../encounters/sky-pillar.html#sky-pillar-5f">5F</a> · Land</span>
                 <span class="muted small-text">Lv. 33-35 · 30%</span>
               </li>
       </ul>
@@ -438,6 +438,28 @@ sharpens them on stones by the river.</p>
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -498,9 +520,10 @@ sharpens them on stones by the river.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

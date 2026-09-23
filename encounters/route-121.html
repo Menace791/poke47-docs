@@ -211,16 +211,16 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
     </div>
   </header>
   <main class="wrap">
-<p class="muted"><a href="index.html">&larr; All encounters</a></p>
+<p class="muted"><a href="index.html">&larr; All locations</a></p>
 <h1>Route 121</h1>
-<section class="card encounter-block">
+<section class="card encounter-block" id="route121">
     <h3>Land</h3>
         <ul class="encounter-cards">
 <li><a href="../pokedex/purrloin.html" class="encounter-entry mon-card type-dark"><img src="../assets/game/graphics/pokemon/purrloin/anim_front.png" alt="Purrloin" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/purrloin/anim_front__hover.png"><span class="encounter-info"><span class="name">Purrloin</span><span class="encounter-meta">Lv. 26-28 · 30%</span></span>
@@ -316,6 +316,19 @@
 </a></li><li><a href="../itemdex/rawst-berry.html">
 <img src="../assets/game/graphics/items/icons/rawst_berry.png" alt="" class="item-icon">  <span class="name">Rawst Berry</span>
 </a></li>    </ul>
+    <h3>Trainers <span class="muted small-text">10</span></h3>
+    <ul class="cross-link-grid">
+      <li><a href="../trainerdex/trainer-cale.html">Cale <span class="muted small-text">· Bug Maniac</span></a></li>
+      <li><a href="../trainerdex/trainer-cristin.html">Cristin <span class="muted small-text">· Cooltrainer</span></a></li>
+      <li><a href="../trainerdex/trainer-jessica.html">Jessica <span class="muted small-text">· Beauty</span></a></li>
+      <li><a href="../trainerdex/trainer-kate-and-joy.html">Kate &amp; Joy <span class="muted small-text">· Sr And Jr</span></a></li>
+      <li><a href="../trainerdex/trainer-marcel.html">Marcel <span class="muted small-text">· Cooltrainer</span></a></li>
+      <li><a href="../trainerdex/trainer-myles.html">Myles <span class="muted small-text">· Pkmn Breeder</span></a></li>
+      <li><a href="../trainerdex/trainer-pat.html">Pat <span class="muted small-text">· Pkmn Breeder</span></a></li>
+      <li><a href="../trainerdex/trainer-tammy.html">Tammy <span class="muted small-text">· Hex Maniac</span></a></li>
+      <li><a href="../trainerdex/trainer-vanessa.html">Vanessa <span class="muted small-text">· Pokéfan</span></a></li>
+      <li><a href="../trainerdex/trainer-walter.html">Walter <span class="muted small-text">· Gentleman</span></a></li>
+    </ul>
 </section>
   </main>
   <script>
@@ -348,6 +361,28 @@
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -408,9 +443,10 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

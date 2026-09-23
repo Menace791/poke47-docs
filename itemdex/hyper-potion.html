@@ -211,7 +211,7 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
@@ -232,23 +232,23 @@
   <h2>Sources</h2>
     <h3 class="item-source-heading">Shop <span class="item-price">(₽1,500)</span>:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/battle-frontier.html">Battle Frontier</a></li>
-      <li><a href="../encounters/ever-grande-city.html">Ever Grande City</a></li>
-      <li><a href="../encounters/fortree-city.html">Fortree City</a></li>
-      <li><a href="../encounters/lilycove-city.html">Lilycove City</a></li>
-      <li><a href="../encounters/mossdeep-city.html">Mossdeep City</a></li>
-      <li><a href="../encounters/sootopolis-city.html">Sootopolis City</a></li>
-      <li>Trainer Hill</li>
+      <li><a href="../encounters/battle-frontier.html#battle-frontier-mart">Battle Frontier · Poké Mart</a></li>
+      <li><a href="../encounters/ever-grande-city.html#ever-grande-city-pokemon-league-1f">Ever Grande City · Pokémon League 1F</a></li>
+      <li><a href="../encounters/fortree-city.html#fortree-city-mart">Fortree City · Poké Mart</a></li>
+      <li><a href="../encounters/lilycove-city.html#lilycove-city-department-store-2f">Lilycove City · Department Store 2F</a></li>
+      <li><a href="../encounters/mossdeep-city.html#mossdeep-city-mart">Mossdeep City · Poké Mart</a></li>
+      <li><a href="../encounters/sootopolis-city.html#sootopolis-city-mart">Sootopolis City · Poké Mart</a></li>
+      <li><a href="../encounters/trainer-hill.html#trainer-hill-entrance">Trainer Hill · Entrance</a></li>
     </ul>
     <h3 class="item-source-heading">Overworld:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/route-113.html">Route 113</a></li>
-      <li><a href="../encounters/route-118.html">Route 118</a></li>
-      <li><a href="../encounters/route-119.html">Route 119</a></li>
+      <li><a href="../encounters/route-113.html#route113">Route 113</a></li>
+      <li><a href="../encounters/route-118.html#route118">Route 118</a></li>
+      <li><a href="../encounters/route-119.html#route119">Route 119</a></li>
     </ul>
     <h3 class="item-source-heading">Hidden Item:</h3>
     <ul class="item-source-list">
-      <li><a href="../encounters/route-123.html">Route 123</a></li>
+      <li><a href="../encounters/route-123.html#route123">Route 123</a></li>
     </ul>
     <h3 class="item-source-heading"><a href="../abilities/pickup.html">Pickup</a>:</h3>
     <ul class="item-source-list">
@@ -291,6 +291,28 @@
         }
         input.addEventListener('input', apply);
         apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
       });
     }
     function obstagoonBindRowLinks() {
@@ -351,9 +373,10 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

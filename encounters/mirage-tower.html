@@ -211,16 +211,16 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Encounters</a>
+        <a href="../encounters/index.html">Locations</a>
         <a href="../itemdex/index.html">Itemdex</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
     </div>
   </header>
   <main class="wrap">
-<p class="muted"><a href="index.html">&larr; All encounters</a></p>
+<p class="muted"><a href="index.html">&larr; All locations</a></p>
 <h1>Mirage Tower</h1>
-<section class="card encounter-block">
+<section class="card encounter-block" id="mirage-tower-1f">
 <h2>1F</h2>    <h3>Land</h3>
         <ul class="encounter-cards">
 <li><a href="../pokedex/yamask.html" class="encounter-entry mon-card type-ghost"><img src="../assets/game/graphics/pokemon/yamask/anim_front.png" alt="Yamask" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/yamask/anim_front__hover.png"><span class="encounter-info"><span class="name">Yamask</span><span class="encounter-meta">Lv. 20-21 · 50%</span></span>
@@ -231,7 +231,7 @@
     </a></li>    </ul>
 
 </section>
-<section class="card encounter-block">
+<section class="card encounter-block" id="mirage-tower-2f">
 <h2>2F</h2>    <h3>Land</h3>
         <ul class="encounter-cards">
 <li><a href="../pokedex/yamask.html" class="encounter-entry mon-card type-ghost"><img src="../assets/game/graphics/pokemon/yamask/anim_front.png" alt="Yamask" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/yamask/anim_front__hover.png"><span class="encounter-info"><span class="name">Yamask</span><span class="encounter-meta">Lv. 20-21 · 50%</span></span>
@@ -242,7 +242,7 @@
     </a></li>    </ul>
 
 </section>
-<section class="card encounter-block">
+<section class="card encounter-block" id="mirage-tower-3f">
 <h2>3F</h2>    <h3>Land</h3>
         <ul class="encounter-cards">
 <li><a href="../pokedex/yamask.html" class="encounter-entry mon-card type-ghost"><img src="../assets/game/graphics/pokemon/yamask/anim_front.png" alt="Yamask" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/yamask/anim_front__hover.png"><span class="encounter-info"><span class="name">Yamask</span><span class="encounter-meta">Lv. 20-21 · 50%</span></span>
@@ -261,7 +261,7 @@
 <img src="../assets/game/graphics/items/icons/stardust.png" alt="" class="item-icon">  <span class="name">Stardust <span class="muted small-text">· 18.8%</span></span>
 </a></li>    </ul>
 </section>
-<section class="card encounter-block">
+<section class="card encounter-block" id="mirage-tower-4f">
 <h2>4F</h2>    <h3>Land</h3>
         <ul class="encounter-cards">
 <li><a href="../pokedex/yamask.html" class="encounter-entry mon-card type-ghost"><img src="../assets/game/graphics/pokemon/yamask/anim_front.png" alt="Yamask" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/yamask/anim_front__hover.png"><span class="encounter-info"><span class="name">Yamask</span><span class="encounter-meta">Lv. 20-21 · 50%</span></span>
@@ -340,6 +340,28 @@
         apply();
       });
     }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
+      });
+    }
     function obstagoonBindRowLinks() {
       // data-href rows act as buttons; nested <a>/<button> keep their own click semantics.
       document.querySelectorAll('tr[data-href], li[data-href], td[data-href], section[data-href], .card[data-href]').forEach((row) => {
@@ -398,9 +420,10 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
+      obstagoonBindClearHit();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
