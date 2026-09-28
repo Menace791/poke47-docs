@@ -211,8 +211,8 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Locations</a>
-        <a href="../itemdex/index.html">Itemdex</a>
+        <a href="../locations/index.html">Locations</a>
+        <a href="../itemdex/index.html">Items</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
     </div>
@@ -240,11 +240,11 @@
         <td><span class="type-badge type-grass">Grass</span> <span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/overgrow.html">Overgrow</a>, <a href="../abilities/shell-armor.html">Shell Armor</a>, <a href="../abilities/solid-rock.html">Solid Rock</a></td>
       </tr>
-      <tr data-search-text="47 Wormadam"
+      <tr data-search-text="47 Wormadam (Sandy Cloak)"
           data-href="../pokedex/wormadam-sandy.html">
         <td>47</td>
-        <td><img src="../assets/game/graphics/pokemon/wormadam/sandy/anim_front.png" alt="Wormadam front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/wormadam/sandy/anim_front__hover.png"></td>
-        <td><a href="../pokedex/wormadam-sandy.html">Wormadam</a></td>
+        <td><img src="../assets/game/graphics/pokemon/wormadam/sandy/anim_front.png" alt="Wormadam (Sandy Cloak) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/wormadam/sandy/anim_front__hover.png"></td>
+        <td><a href="../pokedex/wormadam-sandy.html">Wormadam<span class="species-form">(Sandy Cloak)</span></a></td>
         <td><span class="type-badge type-bug">Bug</span> <span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/sand-force.html">Sand Force</a>, <a href="../abilities/overcoat.html">Overcoat</a></td>
       </tr>
@@ -408,11 +408,11 @@
         <td><span class="type-badge type-ground">Ground</span> <span class="type-badge type-dark">Dark</span></td>
         <td><a href="../abilities/intimidate.html">Intimidate</a>, <a href="../abilities/moxie.html">Moxie</a>, <a href="../abilities/supreme-overlord.html">Supreme Overlord</a></td>
       </tr>
-      <tr data-search-text="196 Yamask"
+      <tr data-search-text="196 Yamask (Galarian)"
           data-href="../pokedex/yamask-galar.html">
         <td>196</td>
-        <td><img src="../assets/game/graphics/pokemon/yamask/galar/front.png" alt="Yamask front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;"></td>
-        <td><a href="../pokedex/yamask-galar.html">Yamask</a></td>
+        <td><img src="../assets/game/graphics/pokemon/yamask/galar/front.png" alt="Yamask (Galarian) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;"></td>
+        <td><a href="../pokedex/yamask-galar.html">Yamask<span class="species-form">(Galarian)</span></a></td>
         <td><span class="type-badge type-ground">Ground</span> <span class="type-badge type-ghost">Ghost</span></td>
         <td><a href="../abilities/wandering-spirit.html">Wandering Spirit</a>, <a href="../abilities/pressure.html">Pressure</a>, <a href="../abilities/berserk.html">Berserk</a></td>
       </tr>
@@ -432,11 +432,11 @@
         <td><span class="type-badge type-ground">Ground</span> <span class="type-badge type-electric">Electric</span></td>
         <td><a href="../abilities/static.html">Static</a>, <a href="../abilities/sand-veil.html">Sand Veil</a>, <a href="../abilities/water-absorb.html">Water Absorb</a></td>
       </tr>
-      <tr data-search-text="291 Silvally"
+      <tr data-search-text="291 Silvally (Type: Ground)"
           data-href="../pokedex/silvally-ground.html">
         <td>291</td>
-        <td><img src="../assets/game/graphics/pokemon/silvally/ground/anim_front.png" alt="Silvally front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/silvally/ground/anim_front__hover.png"></td>
-        <td><a href="../pokedex/silvally-ground.html">Silvally</a></td>
+        <td><img src="../assets/game/graphics/pokemon/silvally/ground/anim_front.png" alt="Silvally (Type: Ground) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/silvally/ground/anim_front__hover.png"></td>
+        <td><a href="../pokedex/silvally-ground.html">Silvally<span class="species-form">(Type: Ground)</span></a></td>
         <td><span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/multitype.html">Multitype</a></td>
       </tr>
@@ -840,6 +840,29 @@
         sync();
       });
     }
+    function obstagoonBindRoster() {
+      // A mon card opens its own page, not the row toggle.
+      document.querySelectorAll('.roster-mon[data-href]').forEach((card) => {
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('a')) return;
+          e.stopPropagation();
+          window.location = card.getAttribute('data-href');
+        });
+      });
+      document.querySelectorAll('.roster-row').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('a')) return;
+          const panel = row.querySelector('.roster-expand');
+          if (!panel) return;
+          // Pin the row's on-screen position across the toggle.
+          const before = row.getBoundingClientRect().top;
+          const opening = panel.hasAttribute('hidden');
+          if (opening) panel.removeAttribute('hidden'); else panel.setAttribute('hidden', '');
+          row.classList.toggle('is-open', opening);
+          window.scrollBy(0, row.getBoundingClientRect().top - before);
+        });
+      });
+    }
     function obstagoonBindRowLinks() {
       // data-href rows act as buttons; nested <a>/<button> keep their own click semantics.
       document.querySelectorAll('tr[data-href], li[data-href], td[data-href], section[data-href], .card[data-href]').forEach((row) => {
@@ -852,7 +875,7 @@
     function obstagoonBindSpriteHover() {
       // Delegated on body so it covers every page's sprite lists and survives re-renders.
       // Scope to the card itself, not a bare li: an evolution li holds the card plus the arrow/method text, and li-scope would swap the sprite from anywhere in the row. Cross-link cards (no card class) scope to their own <a>.
-      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, .cross-link-grid > li > a, .sprite-card, figure, section[data-href]') : null);
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, .cross-link-grid > li > a, .sprite-card, figure, section[data-href], .roster-cmon, .roster-mon') : null);
       const restore = (img) => { if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; delete img.dataset.base; } };
       const swap = (scope, toHover) => {
         const img = scope && scope.querySelector('img[data-hover]');
@@ -898,10 +921,11 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
+      obstagoonBindRoster();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

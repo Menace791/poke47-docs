@@ -211,8 +211,8 @@
         <a href="../moves/index.html">Moves</a>
         <a href="../abilities/index.html">Abilities</a>
         <a href="../forms/index.html">Forms</a>
-        <a href="../encounters/index.html">Locations</a>
-        <a href="../itemdex/index.html">Itemdex</a>
+        <a href="../locations/index.html">Locations</a>
+        <a href="../itemdex/index.html">Items</a>
         <a href="../trainerdex/index.html">Trainers</a>
       </nav>
     </div>
@@ -480,11 +480,11 @@
         <td><span class="type-badge type-ghost">Ghost</span> <span class="type-badge type-grass">Grass</span></td>
         <td><a href="../abilities/steelworker.html">Steelworker</a></td>
       </tr>
-      <tr data-search-text="222 Rotom"
+      <tr data-search-text="222 Rotom (Mow)"
           data-href="../pokedex/rotom-mow.html">
         <td>222</td>
-        <td><img src="../assets/game/graphics/pokemon/rotom/mow/anim_front.png" alt="Rotom front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/rotom/mow/anim_front__hover.png"></td>
-        <td><a href="../pokedex/rotom-mow.html">Rotom</a></td>
+        <td><img src="../assets/game/graphics/pokemon/rotom/mow/anim_front.png" alt="Rotom (Mow) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/rotom/mow/anim_front__hover.png"></td>
+        <td><a href="../pokedex/rotom-mow.html">Rotom<span class="species-form">(Mow)</span></a></td>
         <td><span class="type-badge type-electric">Electric</span> <span class="type-badge type-grass">Grass</span></td>
         <td><a href="../abilities/levitate.html">Levitate</a></td>
       </tr>
@@ -568,11 +568,11 @@
         <td><span class="type-badge type-ghost">Ghost</span> <span class="type-badge type-grass">Grass</span></td>
         <td><a href="../abilities/ripen.html">Ripen</a>, <a href="../abilities/flash-fire.html">Flash Fire</a>, <a href="../abilities/pickup.html">Pickup</a></td>
       </tr>
-      <tr data-search-text="291 Silvally"
+      <tr data-search-text="291 Silvally (Type: Grass)"
           data-href="../pokedex/silvally-grass.html">
         <td>291</td>
-        <td><img src="../assets/game/graphics/pokemon/silvally/grass/anim_front.png" alt="Silvally front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/silvally/grass/anim_front__hover.png"></td>
-        <td><a href="../pokedex/silvally-grass.html">Silvally</a></td>
+        <td><img src="../assets/game/graphics/pokemon/silvally/grass/anim_front.png" alt="Silvally (Type: Grass) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/silvally/grass/anim_front__hover.png"></td>
+        <td><a href="../pokedex/silvally-grass.html">Silvally<span class="species-form">(Type: Grass)</span></a></td>
         <td><span class="type-badge type-grass">Grass</span></td>
         <td><a href="../abilities/multitype.html">Multitype</a></td>
       </tr>
@@ -1369,6 +1369,29 @@
         sync();
       });
     }
+    function obstagoonBindRoster() {
+      // A mon card opens its own page, not the row toggle.
+      document.querySelectorAll('.roster-mon[data-href]').forEach((card) => {
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('a')) return;
+          e.stopPropagation();
+          window.location = card.getAttribute('data-href');
+        });
+      });
+      document.querySelectorAll('.roster-row').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('a')) return;
+          const panel = row.querySelector('.roster-expand');
+          if (!panel) return;
+          // Pin the row's on-screen position across the toggle.
+          const before = row.getBoundingClientRect().top;
+          const opening = panel.hasAttribute('hidden');
+          if (opening) panel.removeAttribute('hidden'); else panel.setAttribute('hidden', '');
+          row.classList.toggle('is-open', opening);
+          window.scrollBy(0, row.getBoundingClientRect().top - before);
+        });
+      });
+    }
     function obstagoonBindRowLinks() {
       // data-href rows act as buttons; nested <a>/<button> keep their own click semantics.
       document.querySelectorAll('tr[data-href], li[data-href], td[data-href], section[data-href], .card[data-href]').forEach((row) => {
@@ -1381,7 +1404,7 @@
     function obstagoonBindSpriteHover() {
       // Delegated on body so it covers every page's sprite lists and survives re-renders.
       // Scope to the card itself, not a bare li: an evolution li holds the card plus the arrow/method text, and li-scope would swap the sprite from anywhere in the row. Cross-link cards (no card class) scope to their own <a>.
-      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, .cross-link-grid > li > a, .sprite-card, figure, section[data-href]') : null);
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, .cross-link-grid > li > a, .sprite-card, figure, section[data-href], .roster-cmon, .roster-mon') : null);
       const restore = (img) => { if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; delete img.dataset.base; } };
       const swap = (scope, toHover) => {
         const img = scope && scope.querySelector('img[data-hover]');
@@ -1427,10 +1450,11 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
+      obstagoonBindRoster();
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();

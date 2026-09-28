@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lilycove City - Poké47</title>  <meta property="og:title" content="Poké47">
+  <meta property="og:description" content="Expansion-native documentation for Poké47.">
+  <meta property="og:image" content="https://menace791.github.io/poke47-docs/assets/og-image.gif">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">  <link rel="stylesheet" href="../assets/style.css">
+  <script>
+    // Casefold + diacritic-strip + non-alphanumeric strip so "basculinwhitestriped" matches "Basculin (White-Striped)".
+    window.obstagoonNormalize = (s) => (s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+    // Per-tab index state restored on back/forward + reload, not on fresh nav-link clicks.
+    window.obstagoonShouldRestoreState = () => {
+      const nav = performance.getEntriesByType('navigation')[0];
+      return !!(nav && (nav.type === 'back_forward' || nav.type === 'reload'));
+    };
+    window.obstagoonLoadState = (key) => {
+      if (!obstagoonShouldRestoreState()) return {};
+      try { return JSON.parse(sessionStorage.getItem('obstagoon:' + key) || '{}'); }
+      catch (e) { return {}; }
+    };
+    window.obstagoonSaveState = (key, state) => {
+      // Private browsing / quota-exceeded throws; degrade silently.
+      try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
+      catch (e) {}
+    };
+    // Shared search+chips+sort binding for index pages; opts carry the per-page ids and source lists.
+    window.obstagoonBindIndexPage = (opts) => {
+      const input = document.getElementById(opts.inputId);
+      const dropdown = document.getElementById(opts.dropdownId);
+      const chipsBox = document.getElementById(opts.chipsBoxId);
+      const empty = opts.emptyId ? document.getElementById(opts.emptyId) : null;
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      const rows = Array.from(document.querySelectorAll(opts.rowsSelector));
+      const haystackByKind = opts.haystackByKind || {};
+      const sources = opts.sources || [];
+      const defaultKind = opts.defaultKind || null;
+      const saved = obstagoonLoadState(opts.stateKey);
+      const chips = (Array.isArray(saved.chips) ? saved.chips : [])
+        .map((c) => c.kind ? c : {kind: defaultKind || 'Pokémon', name: c.name});
+      if (saved.search) input.value = saved.search;
+      let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
+      let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
+      const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const persist = () => obstagoonSaveState(opts.stateKey, {
+        search: input.value, chips,
+        ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
+      });
+
+      const formCellTargets = ['spriteHtml', 'nameHtml', 'typesHtml', 'abilitiesHtml'];
+      const formMatchesChips = (form) => chips.every((c) => {
+        const list = form[haystackByKind[c.kind]];
+        return Array.isArray(list) && list.includes(c.name);
+      });
+      const applyFilters = () => {
+        const q = obstagoonNormalize(input.value);
+        let visible = 0;
+        rows.forEach((el) => {
+          const text = obstagoonNormalize(el.dataset.searchText || '');
+          let show = !q || text.includes(q);
+          let target = null;
+          if (show && chips.length) {
+            if (el.dataset.forms) {
+              const forms = JSON.parse(el.dataset.forms);
+              target = formMatchesChips(forms[0]) ? forms[0] : forms.find(formMatchesChips) || null;
+              show = !!target;
+            } else {
+              for (const c of chips) {
+                const haystack = el.dataset[haystackByKind[c.kind]];
+                if (!haystack || !haystack.includes(`|${c.name}|`)) { show = false; break; }
+              }
+            }
+          }
+          el.classList.toggle('filter-hidden', !show);
+          if (show) visible += 1;
+          if (show && el.dataset.forms) applyFormSwap(el, target);
+        });
+        if (empty) empty.style.display = visible === 0 ? '' : 'none';
+        if (countEl) countEl.textContent = visible;
+        persist();
+      };
+      const applyFormSwap = (el, target) => {
+        const forms = JSON.parse(el.dataset.forms);
+        if (!target) target = forms[0];
+        if (el._activeFormSlug === target.slug) return;
+        if (el._activeFormSlug === undefined) {
+          const cells = el.querySelectorAll('td');
+          el._origCells = [cells[1].innerHTML, cells[2].innerHTML, cells[3].innerHTML, cells[4].innerHTML];
+          el._origHref = el.dataset.href;
+        }
+        const cells = el.querySelectorAll('td');
+        if (target === forms[0]) {
+          [cells[1].innerHTML, cells[2].innerHTML, cells[3].innerHTML, cells[4].innerHTML] = el._origCells;
+          el.dataset.href = el._origHref;
+        } else {
+          formCellTargets.forEach((key, i) => { cells[i + 1].innerHTML = target[key]; });
+          el.dataset.href = target.slug + '.html';
+        }
+        el._activeFormSlug = target.slug;
+      };
+      const renderChips = () => {
+        chipsBox.innerHTML = chips.map((c, i) =>
+          `<span class="filter-chip"><span class="chip-kind">${c.kind}</span> ${esc(c.name)}<button type="button" class="chip-remove" data-idx="${i}" aria-label="Remove">×</button></span>`
+        ).join('');
+        chipsBox.querySelectorAll('.chip-remove').forEach((btn) => btn.addEventListener('click', () => {
+          chips.splice(parseInt(btn.dataset.idx, 10), 1); renderChips(); applyFilters();
+        }));
+      };
+      let activeIdx = -1;
+      const setActiveIdx = (i) => {
+        const items = dropdown.querySelectorAll('.suggestion');
+        if (!items.length) return;
+        activeIdx = (i + items.length) % items.length;
+        items.forEach((b, j) => b.classList.toggle('is-active', j === activeIdx));
+        items[activeIdx].scrollIntoView({block: 'nearest'});
+      };
+      const acceptSuggestion = (btn) => {
+        chips.push({kind: btn.dataset.kind, name: btn.dataset.name});
+        input.value = ''; dropdown.hidden = true; activeIdx = -1; renderChips(); applyFilters();
+      };
+      const renderSuggestions = () => {
+        const q = obstagoonNormalize(input.value);
+        if (q.length < 3) { dropdown.hidden = true; activeIdx = -1; return; }
+        const taken = new Set(chips.map((c) => `${c.kind}:${c.name}`));
+        const matches = [];
+        // Source values may be strings or {name, alias}; alias lets programmatic names match without changing the chip label.
+        for (const [kind, list] of sources) {
+          for (const v of list) {
+            const name = typeof v === 'string' ? v : v.name;
+            const haystack = obstagoonNormalize(typeof v === 'string' ? v : v.name + ' ' + (v.alias || ''));
+            if (haystack.includes(q) && !taken.has(`${kind}:${name}`)) matches.push({kind, name});
+          }
+        }
+        if (matches.length === 0) { dropdown.hidden = true; activeIdx = -1; return; }
+        dropdown.innerHTML = matches.slice(0, 30).map((m) =>
+          `<button type="button" class="suggestion" data-kind="${m.kind}" data-name="${esc(m.name)}"><span class="suggestion-kind">${m.kind}</span> ${esc(m.name)}</button>`
+        ).join('');
+        dropdown.hidden = false;
+        activeIdx = -1;
+        dropdown.querySelectorAll('.suggestion').forEach((btn) => btn.addEventListener('click', () => acceptSuggestion(btn)));
+      };
+      input.addEventListener('input', () => { renderSuggestions(); applyFilters(); });
+      input.addEventListener('focus', renderSuggestions);
+      input.addEventListener('keydown', (e) => {
+        if (dropdown.hidden) return;
+        const items = dropdown.querySelectorAll('.suggestion');
+        if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(activeIdx + 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(activeIdx <= 0 ? items.length - 1 : activeIdx - 1); }
+        else if (e.key === 'Enter') {
+          // Priority: manually-arrowed selection > sole remaining suggestion > exact name match (post-normalize).
+          let idx = activeIdx;
+          if (idx < 0 && items.length === 1) idx = 0;
+          if (idx < 0) {
+            const q = obstagoonNormalize(input.value);
+            idx = Array.from(items).findIndex((b) => obstagoonNormalize(b.dataset.name) === q);
+          }
+          if (idx >= 0) { e.preventDefault(); acceptSuggestion(items[idx]); }
+        }
+        else if (e.key === 'Escape') { dropdown.hidden = true; activeIdx = -1; }
+      });
+      document.addEventListener('click', (e) => { if (!dropdown.contains(e.target) && e.target !== input) dropdown.hidden = true; });
+      renderChips();
+      applyFilters();
+
+      if (opts.tableSelector) {
+        const tbody = document.querySelector(opts.tableSelector + ' tbody');
+        const headers = Array.from(document.querySelectorAll(opts.tableSelector + ' thead th'));
+        const original = Array.from(tbody.querySelectorAll('tr'));
+        const cellValue = (tr, i, kind) => {
+          const text = tr.cells[i].textContent.trim();
+          if (kind === 'number') { const n = parseFloat(text); return isNaN(n) ? -Infinity : n; }
+          return text.toLowerCase();
+        };
+        const applySort = () => {
+          headers.forEach((h, j) => {
+            h.classList.toggle('sort-asc', activeDir === 'asc' && j === activeCol);
+            h.classList.toggle('sort-desc', activeDir === 'desc' && j === activeCol);
+          });
+          if (!activeDir) { original.forEach((tr) => tbody.appendChild(tr)); return; }
+          const kind = headers[activeCol]?.dataset.sort || 'text';
+          const sign = activeDir === 'asc' ? 1 : -1;
+          [...original].sort((a, b) => {
+            const av = cellValue(a, activeCol, kind), bv = cellValue(b, activeCol, kind);
+            return av < bv ? -sign : av > bv ? sign : 0;
+          }).forEach((tr) => tbody.appendChild(tr));
+        };
+        headers.forEach((th, i) => {
+          if (!th.dataset.sort) return;
+          th.classList.add('sortable');
+          th.addEventListener('click', () => {
+            activeDir = i !== activeCol ? 'asc' : activeDir === 'asc' ? 'desc' : activeDir === 'desc' ? '' : 'asc';
+            activeCol = activeDir ? i : -1;
+            applySort();
+            persist();
+          });
+        });
+        applySort();
+      }
+    };
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../index.html">Poké47</a>
+      <nav>
+        <a href="../pokedex/index.html">Pokédex</a>
+        <a href="../moves/index.html">Moves</a>
+        <a href="../abilities/index.html">Abilities</a>
+        <a href="../forms/index.html">Forms</a>
+        <a href="../locations/index.html">Locations</a>
+        <a href="../itemdex/index.html">Items</a>
+        <a href="../trainerdex/index.html">Trainers</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+<p class="muted"><a href="index.html">&larr; All locations</a></p>
+<h1>Lilycove City</h1>
+<section class="card encounter-block" id="lilycove-city">
+    <h3>Water</h3>
+        <ul class="encounter-cards">
+<li><a href="../pokedex/frillish.html" class="encounter-entry mon-card type-water type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/frillish/anim_front.png" alt="Frillish" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/frillish/anim_front__hover.png"><span class="encounter-info"><span class="name">Frillish</span><span class="encounter-meta">Lv. 20-35 · 60%</span></span>
+    </a></li><li><a href="../pokedex/shellos-east.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/shellos/east/anim_front.png" alt="Shellos (East Sea)" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/shellos/east/anim_front__hover.png"><span class="encounter-info"><span class="name">Shellos (East Sea)</span><span class="encounter-meta">Lv. 20-35 · 35%</span></span>
+    </a></li><li><a href="../pokedex/jellicent.html" class="encounter-entry mon-card type-water type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/jellicent/anim_front.png" alt="Jellicent" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/jellicent/anim_front__hover.png"><span class="encounter-info"><span class="name">Jellicent</span><span class="encounter-meta">Lv. 20-30 · 5%</span></span>
+    </a></li>    </ul>
+
+    <h3>Fishing</h3>
+          <h4>Old Rod</h4>
+      <ul class="encounter-cards">
+<li><a href="../pokedex/basculin-blue-striped.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/basculin/blue_striped/anim_front.png" alt="Basculin (Blue-Striped)" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/basculin/blue_striped/anim_front__hover.png"><span class="encounter-info"><span class="name">Basculin (Blue-Striped)</span><span class="encounter-meta">Lv. 5-10 · 100%</span></span>
+    </a></li>      </ul>
+      <h4>Good Rod</h4>
+      <ul class="encounter-cards">
+<li><a href="../pokedex/basculin-blue-striped.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/basculin/blue_striped/anim_front.png" alt="Basculin (Blue-Striped)" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/basculin/blue_striped/anim_front__hover.png"><span class="encounter-info"><span class="name">Basculin (Blue-Striped)</span><span class="encounter-meta">Lv. 20-30 · 60%</span></span>
+    </a></li><li><a href="../pokedex/finneon.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/finneon/anim_front.png" alt="Finneon" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/finneon/anim_front__hover.png"><span class="encounter-info"><span class="name">Finneon</span><span class="encounter-meta">Lv. 20-30 · 20%</span></span>
+    </a></li><li><a href="../pokedex/clauncher.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/clauncher/anim_front.png" alt="Clauncher" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/clauncher/anim_front__hover.png"><span class="encounter-info"><span class="name">Clauncher</span><span class="encounter-meta">Lv. 20-30 · 20%</span></span>
+    </a></li>      </ul>
+      <h4>Super Rod</h4>
+      <ul class="encounter-cards">
+<li><a href="../pokedex/lumineon.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/lumineon/anim_front.png" alt="Lumineon" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/lumineon/anim_front__hover.png"><span class="encounter-info"><span class="name">Lumineon</span><span class="encounter-meta">Lv. 30-35 · 55%</span></span>
+    </a></li><li><a href="../pokedex/clauncher.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/clauncher/anim_front.png" alt="Clauncher" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/clauncher/anim_front__hover.png"><span class="encounter-info"><span class="name">Clauncher</span><span class="encounter-meta">Lv. 30-35 · 40%</span></span>
+    </a></li><li><a href="../pokedex/basculin-blue-striped.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/basculin/blue_striped/anim_front.png" alt="Basculin (Blue-Striped)" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/basculin/blue_striped/anim_front__hover.png"><span class="encounter-info"><span class="name">Basculin (Blue-Striped)</span><span class="encounter-meta">Lv. 30-45 · 5%</span></span>
+    </a></li>      </ul>
+
+    <h3>Items</h3>
+    <h4>Overworld <span class="muted small-text">1</span></h4>
+    <ul class="cross-link-grid">
+<li><a href="../itemdex/shiny-stone.html">
+<img src="../assets/game/graphics/items/icons/shiny_stone.png" alt="" class="item-icon">  <span class="name">Shiny Stone</span>
+</a></li>    </ul>
+    <h4>Hidden Item <span class="muted small-text">3</span></h4>
+    <ul class="cross-link-grid">
+<li><a href="../itemdex/pp-up.html">
+<img src="../assets/game/graphics/items/icons/pp_up.png" alt="" class="item-icon">  <span class="name">PP Up</span>
+</a></li><li><a href="../itemdex/poke-ball.html">
+<img src="../assets/game/graphics/items/icons/poke_ball.png" alt="" class="item-icon">  <span class="name">Poké Ball</span>
+</a></li><li><a href="../itemdex/tm-scorching-sands.html">
+<img src="../assets/game/graphics/items/icons/tm_ground.png" alt="" class="item-icon">  <span class="name">TM68 Scorching Sands</span>
+</a></li>    </ul>
+    <h4>Random Berry Gift <span class="muted small-text">10</span></h4>
+    <ul class="cross-link-grid">
+<li><a href="../itemdex/aspear-berry.html">
+<img src="../assets/game/graphics/items/icons/aspear_berry.png" alt="" class="item-icon">  <span class="name">Aspear Berry <span class="muted small-text">(Daily)</span></span>
+</a></li><li><a href="../itemdex/cheri-berry.html">
+<img src="../assets/game/graphics/items/icons/cheri_berry.png" alt="" class="item-icon">  <span class="name">Cheri Berry <span class="muted small-text">(Daily)</span></span>
+</a></li><li><a href="../itemdex/chesto-berry.html">
+<img src="../assets/game/graphics/items/icons/chesto_berry.png" alt="" class="item-icon">  <span class="name">Chesto Berry <span class="muted small-text">(Daily)</span></span>
+</a></li><li><a href="../itemdex/leppa-berry.html">
+<img src="../assets/game/graphics/items/icons/leppa_berry.png" alt="" class="item-icon">  <span class="name">Leppa Berry <span class="muted small-text">(Daily)</span></span>
+</a></li><li><a href="../itemdex/lum-berry.html">
+<img src="../assets/game/graphics/items/icons/lum_berry.png" alt="" class="item-icon">  <span class="name">Lum Berry <span class="muted small-text">(Daily)</span></span>
+</a></li><li><a href="../itemdex/oran-berry.html">
+<img src="../assets/game/graphics/items/icons/oran_berry.png" alt="" class="item-icon">  <span class="name">Oran Berry <span class="muted small-text">(Daily)</span></span>
+</a></li><li><a href="../itemdex/pecha-berry.html">
+<img src="../assets/game/graphics/items/icons/pecha_berry.png" alt="" class="item-icon">  <span class="name">Pecha Berry <span class="muted small-text">(Daily)</span></span>
+</a></li><li><a href="../itemdex/persim-berry.html">
+<img src="../assets/game/graphics/items/icons/persim_berry.png" alt="" class="item-icon">  <span class="name">Persim Berry <span class="muted small-text">(Daily)</span></span>
+</a></li><li><a href="../itemdex/rawst-berry.html">
+<img src="../assets/game/graphics/items/icons/rawst_berry.png" alt="" class="item-icon">  <span class="name">Rawst Berry <span class="muted small-text">(Daily)</span></span>
+</a></li><li><a href="../itemdex/sitrus-berry.html">
+<img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="" class="item-icon">  <span class="name">Sitrus Berry <span class="muted small-text">(Daily)</span></span>
+</a></li>    </ul>
+    <h3>Trainers <span class="muted small-text">6</span></h3>
+    <ul class="roster">
+      <li class="roster-row">
+<a href="../trainerdex/trainer-brendan-lilycove-mudkip.html" class="roster-tpic-link"><img src="../assets/game/graphics/trainers/front_pics/brendan.png" alt="Brendan" class="roster-tpic"></a>        <div class="roster-body">
+          <div class="roster-head"><a class="roster-name" href="../trainerdex/trainer-brendan-lilycove-mudkip.html">Brendan</a><span class="muted small-text">Rival</span><span class="muted small-text">· Singles</span><span class="roster-caret" aria-hidden="true">&#9656;</span></div>
+            <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/darmanitan.html" title="Darmanitan Lv. 33"><img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="Darmanitan" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/floatzel.html" title="Floatzel Lv. 33"><img src="../assets/game/graphics/pokemon/floatzel/anim_front.png" alt="Floatzel" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/floatzel/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/staraptor.html" title="Staraptor Lv. 33"><img src="../assets/game/graphics/pokemon/staraptor/anim_front.png" alt="Staraptor" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/staraptor/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/decidueye.html" title="Decidueye Lv. 35"><img src="../assets/game/graphics/pokemon/decidueye/anim_front.png" alt="Decidueye" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/decidueye/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 35</span></a></div>
+
+          <div class="roster-expand" hidden><div class="roster-team"><div class="roster-mon" data-href="../pokedex/darmanitan.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="Darmanitan" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__hover.png"><span class="roster-mon-name">Darmanitan</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/sheer-force.html">Sheer Force</a></span><div class="roster-mon-moves"><a href="../moves/taunt.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Taunt</span></a><a href="../moves/uproar.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Uproar</span></a><a href="../moves/belly-drum.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Belly Drum</span></a><a href="../moves/fire-punch.html" class="move-card type-fire"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Fire Punch</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/floatzel.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/floatzel/anim_front.png" alt="Floatzel" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/floatzel/anim_front__hover.png"><span class="roster-mon-name">Floatzel</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/swift-swim.html">Swift Swim</a></span><div class="roster-mon-moves"><a href="../moves/bite.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Bite</span></a><a href="../moves/agility.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Agility</span></a><a href="../moves/dive.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Dive</span></a><a href="../moves/jet-punch.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Jet Punch</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/staraptor.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/staraptor/anim_front.png" alt="Staraptor" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/staraptor/anim_front__hover.png"><span class="roster-mon-name">Staraptor</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/intimidate.html">Intimidate</a></span><div class="roster-mon-moves"><a href="../moves/aerial-ace.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Aerial Ace</span></a><a href="../moves/tailwind.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Tailwind</span></a><a href="../moves/swords-dance.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Swords Dance</span></a><a href="../moves/drill-peck.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Drill Peck</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/decidueye.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/decidueye/anim_front.png" alt="Decidueye" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/decidueye/anim_front__hover.png"><span class="roster-mon-name">Decidueye</span></span>
+<span class="roster-mon-lvl">Lv. 35</span><span class="roster-mon-attr"><a href="../abilities/overgrow.html">Overgrow</a></span><div class="roster-mon-moves"><a href="../moves/miracle-eye.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Miracle Eye</span></a><a href="../moves/pluck.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Pluck</span></a><a href="../moves/synthesis.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Synthesis</span></a><a href="../moves/fury-attack.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Fury Attack</span></a></div>    </div></div>
+</div>
+        </div>
+      </li>
+      <li class="roster-row">
+<a href="../trainerdex/trainer-brendan-lilycove-treecko.html" class="roster-tpic-link"><img src="../assets/game/graphics/trainers/front_pics/brendan.png" alt="Brendan" class="roster-tpic"></a>        <div class="roster-body">
+          <div class="roster-head"><a class="roster-name" href="../trainerdex/trainer-brendan-lilycove-treecko.html">Brendan</a><span class="muted small-text">Rival</span><span class="muted small-text">· Singles</span><span class="roster-caret" aria-hidden="true">&#9656;</span></div>
+            <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/staraptor.html" title="Staraptor Lv. 33"><img src="../assets/game/graphics/pokemon/staraptor/anim_front.png" alt="Staraptor" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/staraptor/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/floatzel.html" title="Floatzel Lv. 33"><img src="../assets/game/graphics/pokemon/floatzel/anim_front.png" alt="Floatzel" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/floatzel/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/cherrim.html" title="Cherrim Lv. 33"><img src="../assets/game/graphics/pokemon/cherrim/anim_front.png" alt="Cherrim" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/cherrim/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/incineroar.html" title="Incineroar Lv. 35"><img src="../assets/game/graphics/pokemon/incineroar/anim_front.png" alt="Incineroar" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/incineroar/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 35</span></a></div>
+
+          <div class="roster-expand" hidden><div class="roster-team"><div class="roster-mon" data-href="../pokedex/staraptor.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/staraptor/anim_front.png" alt="Staraptor" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/staraptor/anim_front__hover.png"><span class="roster-mon-name">Staraptor</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/intimidate.html">Intimidate</a></span><div class="roster-mon-moves"><a href="../moves/aerial-ace.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Aerial Ace</span></a><a href="../moves/tailwind.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Tailwind</span></a><a href="../moves/swords-dance.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Swords Dance</span></a><a href="../moves/drill-peck.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Drill Peck</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/floatzel.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/floatzel/anim_front.png" alt="Floatzel" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/floatzel/anim_front__hover.png"><span class="roster-mon-name">Floatzel</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/swift-swim.html">Swift Swim</a></span><div class="roster-mon-moves"><a href="../moves/bite.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Bite</span></a><a href="../moves/agility.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Agility</span></a><a href="../moves/dive.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Dive</span></a><a href="../moves/jet-punch.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Jet Punch</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/cherrim.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/cherrim/anim_front.png" alt="Cherrim" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/cherrim/anim_front__hover.png"><span class="roster-mon-name">Cherrim</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/flower-gift.html">Flower Gift</a></span><div class="roster-mon-moves"><a href="../moves/flower-shield.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Flower Shield</span></a><a href="../moves/magical-leaf.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Magical Leaf</span></a><a href="../moves/morning-sun.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Morning Sun</span></a><a href="../moves/lightbloom.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Solar Dance</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/incineroar.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/incineroar/anim_front.png" alt="Incineroar" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/incineroar/anim_front__hover.png"><span class="roster-mon-name">Incineroar</span></span>
+<span class="roster-mon-lvl">Lv. 35</span><span class="roster-mon-attr"><a href="../abilities/blaze.html">Blaze</a></span><div class="roster-mon-moves"><a href="../moves/roar.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Roar</span></a><a href="../moves/bite.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Bite</span></a><a href="../moves/swagger.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Swagger</span></a><a href="../moves/fury-swipes.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Fury Swipes</span></a></div>    </div></div>
+</div>
+        </div>
+      </li>
+      <li class="roster-row">
+<a href="../trainerdex/trainer-brendan-lilycove-torchic.html" class="roster-tpic-link"><img src="../assets/game/graphics/trainers/front_pics/brendan.png" alt="Brendan" class="roster-tpic"></a>        <div class="roster-body">
+          <div class="roster-head"><a class="roster-name" href="../trainerdex/trainer-brendan-lilycove-torchic.html">Brendan</a><span class="muted small-text">Rival</span><span class="muted small-text">· Singles</span><span class="roster-caret" aria-hidden="true">&#9656;</span></div>
+            <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/staraptor.html" title="Staraptor Lv. 33"><img src="../assets/game/graphics/pokemon/staraptor/anim_front.png" alt="Staraptor" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/staraptor/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/darmanitan.html" title="Darmanitan Lv. 33"><img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="Darmanitan" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/gogoat.html" title="Gogoat Lv. 33"><img src="../assets/game/graphics/pokemon/gogoat/anim_front.png" alt="Gogoat" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/gogoat/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/primarina.html" title="Primarina Lv. 35"><img src="../assets/game/graphics/pokemon/primarina/anim_front.png" alt="Primarina" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/primarina/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 35</span></a></div>
+
+          <div class="roster-expand" hidden><div class="roster-team"><div class="roster-mon" data-href="../pokedex/staraptor.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/staraptor/anim_front.png" alt="Staraptor" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/staraptor/anim_front__hover.png"><span class="roster-mon-name">Staraptor</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/intimidate.html">Intimidate</a></span><div class="roster-mon-moves"><a href="../moves/aerial-ace.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Aerial Ace</span></a><a href="../moves/tailwind.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Tailwind</span></a><a href="../moves/swords-dance.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Swords Dance</span></a><a href="../moves/drill-peck.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Drill Peck</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/darmanitan.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="Darmanitan" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__hover.png"><span class="roster-mon-name">Darmanitan</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/sheer-force.html">Sheer Force</a></span><div class="roster-mon-moves"><a href="../moves/taunt.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Taunt</span></a><a href="../moves/uproar.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Uproar</span></a><a href="../moves/belly-drum.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Belly Drum</span></a><a href="../moves/fire-punch.html" class="move-card type-fire"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Fire Punch</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/gogoat.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/gogoat/anim_front.png" alt="Gogoat" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/gogoat/anim_front__hover.png"><span class="roster-mon-name">Gogoat</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/seed-sower.html">Seed Sower</a></span><div class="roster-mon-moves"><a href="../moves/endure.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Endure</span></a><a href="../moves/grassy-glide.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Grassy Glide</span></a><a href="../moves/rototiller.html" class="move-card type-ground"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Rototiller</span></a><a href="../moves/double-kick.html" class="move-card type-fighting"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Double Kick</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/primarina.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/primarina/anim_front.png" alt="Primarina" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/primarina/anim_front__hover.png"><span class="roster-mon-name">Primarina</span></span>
+<span class="roster-mon-lvl">Lv. 35</span><span class="roster-mon-attr"><a href="../abilities/torrent.html">Torrent</a></span><div class="roster-mon-moves"><a href="../moves/encore.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Encore</span></a><a href="../moves/bubble-beam.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Bubble Beam</span></a><a href="../moves/sing.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Sing</span></a><a href="../moves/hyper-voice.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Hyper Voice</span></a></div>    </div></div>
+</div>
+        </div>
+      </li>
+      <li class="roster-row">
+<a href="../trainerdex/trainer-may-lilycove-mudkip.html" class="roster-tpic-link"><img src="../assets/game/graphics/trainers/front_pics/may.png" alt="May" class="roster-tpic"></a>        <div class="roster-body">
+          <div class="roster-head"><a class="roster-name" href="../trainerdex/trainer-may-lilycove-mudkip.html">May</a><span class="muted small-text">Rival</span><span class="muted small-text">· Singles</span><span class="roster-caret" aria-hidden="true">&#9656;</span></div>
+            <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/staraptor.html" title="Staraptor Lv. 33"><img src="../assets/game/graphics/pokemon/staraptor/anim_front.png" alt="Staraptor" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/staraptor/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/darmanitan.html" title="Darmanitan Lv. 33"><img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="Darmanitan" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/floatzel.html" title="Floatzel Lv. 33"><img src="../assets/game/graphics/pokemon/floatzel/anim_front.png" alt="Floatzel" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/floatzel/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/torterra.html" title="Torterra Lv. 35"><img src="../assets/game/graphics/pokemon/torterra/anim_front.png" alt="Torterra" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/torterra/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 35</span></a></div>
+
+          <div class="roster-expand" hidden><div class="roster-team"><div class="roster-mon" data-href="../pokedex/staraptor.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/staraptor/anim_front.png" alt="Staraptor" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/staraptor/anim_front__hover.png"><span class="roster-mon-name">Staraptor</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/intimidate.html">Intimidate</a></span><div class="roster-mon-moves"><a href="../moves/aerial-ace.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Aerial Ace</span></a><a href="../moves/tailwind.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Tailwind</span></a><a href="../moves/swords-dance.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Swords Dance</span></a><a href="../moves/drill-peck.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Drill Peck</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/darmanitan.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="Darmanitan" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__hover.png"><span class="roster-mon-name">Darmanitan</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/sheer-force.html">Sheer Force</a></span><div class="roster-mon-moves"><a href="../moves/taunt.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Taunt</span></a><a href="../moves/uproar.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Uproar</span></a><a href="../moves/belly-drum.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Belly Drum</span></a><a href="../moves/fire-punch.html" class="move-card type-fire"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Fire Punch</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/floatzel.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/floatzel/anim_front.png" alt="Floatzel" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/floatzel/anim_front__hover.png"><span class="roster-mon-name">Floatzel</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/swift-swim.html">Swift Swim</a></span><div class="roster-mon-moves"><a href="../moves/bite.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Bite</span></a><a href="../moves/agility.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Agility</span></a><a href="../moves/dive.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Dive</span></a><a href="../moves/jet-punch.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Jet Punch</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/torterra.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/torterra/anim_front.png" alt="Torterra" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/torterra/anim_front__hover.png"><span class="roster-mon-name">Torterra</span></span>
+<span class="roster-mon-lvl">Lv. 35</span><span class="roster-mon-attr"><a href="../abilities/overgrow.html">Overgrow</a></span><div class="roster-mon-moves"><a href="../moves/stealth-rock.html" class="move-card type-rock"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Stealth Rock</span></a><a href="../moves/synthesis.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Synthesis</span></a><a href="../moves/jaw-lock.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Jaw Lock</span></a><a href="../moves/seed-bomb.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Seed Bomb</span></a></div>    </div></div>
+</div>
+        </div>
+      </li>
+      <li class="roster-row">
+<a href="../trainerdex/trainer-may-lilycove-treecko.html" class="roster-tpic-link"><img src="../assets/game/graphics/trainers/front_pics/may.png" alt="May" class="roster-tpic"></a>        <div class="roster-body">
+          <div class="roster-head"><a class="roster-name" href="../trainerdex/trainer-may-lilycove-treecko.html">May</a><span class="muted small-text">Rival</span><span class="muted small-text">· Singles</span><span class="roster-caret" aria-hidden="true">&#9656;</span></div>
+            <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/staraptor.html" title="Staraptor Lv. 33"><img src="../assets/game/graphics/pokemon/staraptor/anim_front.png" alt="Staraptor" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/staraptor/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/floatzel.html" title="Floatzel Lv. 33"><img src="../assets/game/graphics/pokemon/floatzel/anim_front.png" alt="Floatzel" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/floatzel/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/cherrim.html" title="Cherrim Lv. 33"><img src="../assets/game/graphics/pokemon/cherrim/anim_front.png" alt="Cherrim" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/cherrim/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/infernape.html" title="Infernape Lv. 35"><img src="../assets/game/graphics/pokemon/infernape/anim_front.png" alt="Infernape" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/infernape/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 35</span></a></div>
+
+          <div class="roster-expand" hidden><div class="roster-team"><div class="roster-mon" data-href="../pokedex/staraptor.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/staraptor/anim_front.png" alt="Staraptor" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/staraptor/anim_front__hover.png"><span class="roster-mon-name">Staraptor</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/intimidate.html">Intimidate</a></span><div class="roster-mon-moves"><a href="../moves/aerial-ace.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Aerial Ace</span></a><a href="../moves/tailwind.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Tailwind</span></a><a href="../moves/swords-dance.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Swords Dance</span></a><a href="../moves/drill-peck.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Drill Peck</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/floatzel.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/floatzel/anim_front.png" alt="Floatzel" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/floatzel/anim_front__hover.png"><span class="roster-mon-name">Floatzel</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/swift-swim.html">Swift Swim</a></span><div class="roster-mon-moves"><a href="../moves/bite.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Bite</span></a><a href="../moves/agility.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Agility</span></a><a href="../moves/dive.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Dive</span></a><a href="../moves/jet-punch.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Jet Punch</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/cherrim.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/cherrim/anim_front.png" alt="Cherrim" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/cherrim/anim_front__hover.png"><span class="roster-mon-name">Cherrim</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/flower-gift.html">Flower Gift</a></span><div class="roster-mon-moves"><a href="../moves/flower-shield.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Flower Shield</span></a><a href="../moves/magical-leaf.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Magical Leaf</span></a><a href="../moves/morning-sun.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Morning Sun</span></a><a href="../moves/lightbloom.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Solar Dance</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/infernape.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/infernape/anim_front.png" alt="Infernape" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/infernape/anim_front__hover.png"><span class="roster-mon-name">Infernape</span></span>
+<span class="roster-mon-lvl">Lv. 35</span><span class="roster-mon-attr"><a href="../abilities/blaze.html">Blaze</a></span><div class="roster-mon-moves"><a href="../moves/mach-punch.html" class="move-card type-fighting"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Mach Punch</span></a><a href="../moves/u-turn.html" class="move-card type-bug"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>U-turn</span></a><a href="../moves/tickle.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Tickle</span></a><a href="../moves/acrobatics.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Acrobatics</span></a></div>    </div></div>
+</div>
+        </div>
+      </li>
+      <li class="roster-row">
+<a href="../trainerdex/trainer-may-lilycove-torchic.html" class="roster-tpic-link"><img src="../assets/game/graphics/trainers/front_pics/may.png" alt="May" class="roster-tpic"></a>        <div class="roster-body">
+          <div class="roster-head"><a class="roster-name" href="../trainerdex/trainer-may-lilycove-torchic.html">May</a><span class="muted small-text">Rival</span><span class="muted small-text">· Singles</span><span class="roster-caret" aria-hidden="true">&#9656;</span></div>
+            <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/staraptor.html" title="Staraptor Lv. 33"><img src="../assets/game/graphics/pokemon/staraptor/anim_front.png" alt="Staraptor" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/staraptor/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/darmanitan.html" title="Darmanitan Lv. 33"><img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="Darmanitan" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/gogoat.html" title="Gogoat Lv. 33"><img src="../assets/game/graphics/pokemon/gogoat/anim_front.png" alt="Gogoat" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/gogoat/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/empoleon.html" title="Empoleon Lv. 35"><img src="../assets/game/graphics/pokemon/empoleon/anim_front.png" alt="Empoleon" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/empoleon/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 35</span></a></div>
+
+          <div class="roster-expand" hidden><div class="roster-team"><div class="roster-mon" data-href="../pokedex/staraptor.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/staraptor/anim_front.png" alt="Staraptor" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/staraptor/anim_front__hover.png"><span class="roster-mon-name">Staraptor</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/intimidate.html">Intimidate</a></span><div class="roster-mon-moves"><a href="../moves/aerial-ace.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Aerial Ace</span></a><a href="../moves/tailwind.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Tailwind</span></a><a href="../moves/swords-dance.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Swords Dance</span></a><a href="../moves/drill-peck.html" class="move-card type-flying"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Drill Peck</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/darmanitan.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="Darmanitan" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__hover.png"><span class="roster-mon-name">Darmanitan</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/sheer-force.html">Sheer Force</a></span><div class="roster-mon-moves"><a href="../moves/taunt.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Taunt</span></a><a href="../moves/uproar.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Uproar</span></a><a href="../moves/belly-drum.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Belly Drum</span></a><a href="../moves/fire-punch.html" class="move-card type-fire"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Fire Punch</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/gogoat.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/gogoat/anim_front.png" alt="Gogoat" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/gogoat/anim_front__hover.png"><span class="roster-mon-name">Gogoat</span></span>
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/seed-sower.html">Seed Sower</a></span><div class="roster-mon-moves"><a href="../moves/endure.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Endure</span></a><a href="../moves/grassy-glide.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Grassy Glide</span></a><a href="../moves/rototiller.html" class="move-card type-ground"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Rototiller</span></a><a href="../moves/double-kick.html" class="move-card type-fighting"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Double Kick</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/empoleon.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/empoleon/anim_front.png" alt="Empoleon" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/empoleon/anim_front__hover.png"><span class="roster-mon-name">Empoleon</span></span>
+<span class="roster-mon-lvl">Lv. 35</span><span class="roster-mon-attr"><a href="../abilities/torrent.html">Torrent</a></span><div class="roster-mon-moves"><a href="../moves/naval-blockade.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Naval Blockade</span></a><a href="../moves/metal-burst.html" class="move-card type-steel"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Metal Burst</span></a><a href="../moves/scald.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Scald</span></a><a href="../moves/mist.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Mist</span></a></div>    </div></div>
+</div>
+        </div>
+      </li>
+    </ul>
+</section>
+<section class="card encounter-block" id="contest-hall">
+<h2>Contest Hall</h2>    <h3>Items</h3>
+    <h4>NPC <span class="muted small-text">1</span></h4>
+    <ul class="cross-link-grid">
+<li><a href="../itemdex/luxury-ball.html">
+<img src="../assets/game/graphics/items/icons/luxury_ball.png" alt="" class="item-icon">  <span class="name">Luxury Ball <span class="muted small-text">(Repeatable)</span></span>
+</a></li>    </ul>
+</section>
+<section class="card encounter-block" id="lilycove-city-contest-lobby">
+<h2>Contest Lobby</h2>    <h3>Items</h3>
+    <h4>NPC <span class="muted small-text">4</span></h4>
+    <ul class="cross-link-grid">
+<li><a href="../itemdex/contest-pass.html">
+<img src="../assets/game/graphics/items/icons/contest_pass.png" alt="" class="item-icon">  <span class="name">Contest Pass</span>
+</a></li><li><a href="../itemdex/luxury-ball.html">
+<img src="../assets/game/graphics/items/icons/luxury_ball.png" alt="" class="item-icon">  <span class="name">Luxury Ball <span class="muted small-text">(Repeatable)</span></span>
+</a></li><li><a href="../itemdex/pecha-berry.html">
+<img src="../assets/game/graphics/items/icons/pecha_berry.png" alt="" class="item-icon">  <span class="name">Pecha Berry <span class="muted small-text">(Daily)</span></span>
+</a></li><li><a href="../itemdex/pokeblock-case.html">
+<img src="../assets/game/graphics/items/icons/pokeblock_case.png" alt="" class="item-icon">  <span class="name">Pokéblock Case</span>
+</a></li>    </ul>
+</section>
+<section class="card encounter-block" id="lilycove-city-cove-lily-motel-2f">
+<h2>Cove Lily Motel 2F</h2>    <h3>Items</h3>
+    <h4>Overworld <span class="muted small-text">1</span></h4>
+    <ul class="cross-link-grid">
+<li><a href="../itemdex/spandex-flares.html">
+<img src="../assets/game/graphics/items/icons/spandex_flares.png" alt="" class="item-icon">  <span class="name">Spandex Flares</span>
+</a></li>    </ul>
+</section>
+<section class="card encounter-block" id="lilycove-city-department-store-1f">
+<h2>Department Store 1F</h2>    <h3>Items</h3>
+    <h4>Overworld <span class="muted small-text">1</span></h4>
+    <ul class="cross-link-grid">
+<li><a href="../itemdex/rotom-catalog.html">
+<img src="../assets/game/graphics/items/icons/rotom_catalog.png" alt="" class="item-icon">  <span class="name">Rotom Catalog</span>
+</a></li>    </ul>
+</section>
+<section class="card encounter-block" id="lilycove-city-department-store-2f">
+<h2>Department Store 2F</h2>    <h3>Items</h3>
+    <h4>Shop <span class="muted small-text">22</span></h4>
+    <ul class="cross-link-grid">
+<li><a href="../itemdex/dive-ball.html">
+<img src="../assets/game/graphics/items/icons/dive_ball.png" alt="" class="item-icon">  <span class="name">Dive Ball <span class="muted small-text">· ₽1,000</span></span>
+</a></li><li><a href="../itemdex/escape-rope.html">
+<img src="../assets/game/graphics/items/icons/escape_rope.png" alt="" class="item-icon">  <span class="name">Escape Rope <span class="muted small-text">· ₽1,000</span></span>
+</a></li><li><a href="../itemdex/fluffy-tail.html">
+<img src="../assets/game/graphics/items/icons/fluffy_tail.png" alt="" class="item-icon">  <span class="name">Fluffy Tail <span class="muted small-text">· ₽100</span></span>
+</a></li><li><a href="../itemdex/full-heal.html">
+<img src="../assets/game/graphics/items/icons/full_heal.png" alt="" class="item-icon">  <span class="name">Full Heal <span class="muted small-text">· ₽400</span></span>
+</a></li><li><a href="../itemdex/great-ball.html">
+<img src="../assets/game/graphics/items/icons/great_ball.png" alt="" class="item-icon">  <span class="name">Great Ball <span class="muted small-text">· ₽600</span></span>
+</a></li><li><a href="../itemdex/heal-ball.html">
+<img src="../assets/game/graphics/items/icons/heal_ball.png" alt="" class="item-icon">  <span class="name">Heal Ball <span class="muted small-text">· ₽300</span></span>
+</a></li><li><a href="../itemdex/hyper-potion.html">
+<img src="../assets/game/graphics/items/icons/hyper_potion.png" alt="" class="item-icon">  <span class="name">Hyper Potion <span class="muted small-text">· ₽1,500</span></span>
+</a></li><li><a href="../itemdex/max-potion.html">
+<img src="../assets/game/graphics/items/icons/max_potion.png" alt="" class="item-icon">  <span class="name">Max Potion <span class="muted small-text">· ₽2,500</span></span>
+</a></li><li><a href="../itemdex/max-repel.html">
+<img src="../assets/game/graphics/items/icons/max_repel.png" alt="" class="item-icon">  <span class="name">Max Repel <span class="muted small-text">· ₽900</span></span>
+</a></li><li><a href="../itemdex/mech-mail.html">
+<img src="../assets/game/graphics/items/icons/mech_mail.png" alt="" class="item-icon">  <span class="name">Mech Mail <span class="muted small-text">· ₽50</span></span>
+</a></li><li><a href="../itemdex/net-ball.html">
+<img src="../assets/game/graphics/items/icons/net_ball.png" alt="" class="item-icon">  <span class="name">Net Ball <span class="muted small-text">· ₽1,000</span></span>
+</a></li><li><a href="../itemdex/poke-ball.html">
+<img src="../assets/game/graphics/items/icons/poke_ball.png" alt="" class="item-icon">  <span class="name">Poké Ball <span class="muted small-text">· ₽200</span></span>
+</a></li><li><a href="../itemdex/potion.html">
+<img src="../assets/game/graphics/items/icons/potion.png" alt="" class="item-icon">  <span class="name">Potion <span class="muted small-text">· ₽200</span></span>
+</a></li><li><a href="../itemdex/quick-ball.html">
+<img src="../assets/game/graphics/items/icons/quick_ball.png" alt="" class="item-icon">  <span class="name">Quick Ball <span class="muted small-text">· ₽1,000</span></span>
+</a></li><li><a href="../itemdex/repeat-ball.html">
+<img src="../assets/game/graphics/items/icons/repeat_ball.png" alt="" class="item-icon">  <span class="name">Repeat Ball <span class="muted small-text">· ₽1,000</span></span>
+</a></li><li><a href="../itemdex/repel.html">
+<img src="../assets/game/graphics/items/icons/repel.png" alt="" class="item-icon">  <span class="name">Repel <span class="muted small-text">· ₽400</span></span>
+</a></li><li><a href="../itemdex/revive.html">
+<img src="../assets/game/graphics/items/icons/revive.png" alt="" class="item-icon">  <span class="name">Revive <span class="muted small-text">· ₽2,000</span></span>
+</a></li><li><a href="../itemdex/super-potion.html">
+<img src="../assets/game/graphics/items/icons/super_potion.png" alt="" class="item-icon">  <span class="name">Super Potion <span class="muted small-text">· ₽700</span></span>
+</a></li><li><a href="../itemdex/super-repel.html">
+<img src="../assets/game/graphics/items/icons/super_repel.png" alt="" class="item-icon">  <span class="name">Super Repel <span class="muted small-text">· ₽700</span></span>
+</a></li><li><a href="../itemdex/timer-ball.html">
+<img src="../assets/game/graphics/items/icons/timer_ball.png" alt="" class="item-icon">  <span class="name">Timer Ball <span class="muted small-text">· ₽1,000</span></span>
+</a></li><li><a href="../itemdex/ultra-ball.html">
+<img src="../assets/game/graphics/items/icons/ultra_ball.png" alt="" class="item-icon">  <span class="name">Ultra Ball <span class="muted small-text">· ₽800</span></span>
+</a></li><li><a href="../itemdex/wave-mail.html">
+<img src="../assets/game/graphics/items/icons/wave_mail.png" alt="" class="item-icon">  <span class="name">Wave Mail <span class="muted small-text">· ₽50</span></span>
+</a></li>    </ul>
+</section>
+<section class="card encounter-block" id="lilycove-city-department-store-3f">
+<h2>Department Store 3F</h2>    <h3>Items</h3>
+    <h4>Shop <span class="muted small-text">14</span></h4>
+    <ul class="cross-link-grid">
+<li><a href="../itemdex/calcium.html">
+<img src="../assets/game/graphics/items/icons/calcium.png" alt="" class="item-icon">  <span class="name">Calcium <span class="muted small-text">· ₽10,000</span></span>
+</a></li><li><a href="../itemdex/carbos.html">
+<img src="../assets/game/graphics/items/icons/carbos.png" alt="" class="item-icon">  <span class="name">Carbos <span class="muted small-text">· ₽10,000</span></span>
+</a></li><li><a href="../itemdex/dire-hit.html">
+<img src="../assets/game/graphics/items/icons/dire_hit.png" alt="" class="item-icon">  <span class="name">Dire Hit <span class="muted small-text">· ₽1,000</span></span>
+</a></li><li><a href="../itemdex/guard-spec.html">
+<img src="../assets/game/graphics/items/icons/guard_spec.png" alt="" class="item-icon">  <span class="name">Guard Spec. <span class="muted small-text">· ₽1,500</span></span>
+</a></li><li><a href="../itemdex/hp-up.html">
+<img src="../assets/game/graphics/items/icons/hp_up.png" alt="" class="item-icon">  <span class="name">HP Up <span class="muted small-text">· ₽10,000</span></span>
+</a></li><li><a href="../itemdex/iron.html">
+<img src="../assets/game/graphics/items/icons/iron.png" alt="" class="item-icon">  <span class="name">Iron <span class="muted small-text">· ₽10,000</span></span>
+</a></li><li><a href="../itemdex/protein.html">
+<img src="../assets/game/graphics/items/icons/protein.png" alt="" class="item-icon">  <span class="name">Protein <span class="muted small-text">· ₽10,000</span></span>
+</a></li><li><a href="../itemdex/x-accuracy.html">
+<img src="../assets/game/graphics/items/icons/x_accuracy.png" alt="" class="item-icon">  <span class="name">X Accuracy <span class="muted small-text">· ₽1,000</span></span>
+</a></li><li><a href="../itemdex/x-attack.html">
+<img src="../assets/game/graphics/items/icons/x_attack.png" alt="" class="item-icon">  <span class="name">X Attack <span class="muted small-text">· ₽1,000</span></span>
+</a></li><li><a href="../itemdex/x-defense.html">
+<img src="../assets/game/graphics/items/icons/x_defense.png" alt="" class="item-icon">  <span class="name">X Defense <span class="muted small-text">· ₽2,000</span></span>
+</a></li><li><a href="../itemdex/x-sp-atk.html">
+<img src="../assets/game/graphics/items/icons/x_sp_atk.png" alt="" class="item-icon">  <span class="name">X Sp. Atk <span class="muted small-text">· ₽1,000</span></span>
+</a></li><li><a href="../itemdex/x-sp-def.html">
+<img src="../assets/game/graphics/items/icons/x_sp_def.png" alt="" class="item-icon">  <span class="name">X Sp. Def <span class="muted small-text">· ₽2,000</span></span>
+</a></li><li><a href="../itemdex/x-speed.html">
+<img src="../assets/game/graphics/items/icons/x_speed.png" alt="" class="item-icon">  <span class="name">X Speed <span class="muted small-text">· ₽1,000</span></span>
+</a></li><li><a href="../itemdex/zinc.html">
+<img src="../assets/game/graphics/items/icons/zinc.png" alt="" class="item-icon">  <span class="name">Zinc <span class="muted small-text">· ₽10,000</span></span>
+</a></li>    </ul>
+</section>
+<section class="card encounter-block" id="lilycove-city-department-store-4f">
+<h2>Department Store 4F</h2>    <h3>Items</h3>
+    <h4>Shop <span class="muted small-text">11</span></h4>
+    <ul class="cross-link-grid">
+<li><a href="../itemdex/tm-solar-beam.html">
+<img src="../assets/game/graphics/items/icons/tm_grass.png" alt="" class="item-icon">  <span class="name">TM07 Solar Beam <span class="muted small-text">· ₽60,000</span></span>
+</a></li><li><a href="../itemdex/tm-thunder.html">
+<img src="../assets/game/graphics/items/icons/tm_electric.png" alt="" class="item-icon">  <span class="name">TM18 Thunder <span class="muted small-text">· ₽60,000</span></span>
+</a></li><li><a href="../itemdex/tm-encore.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="" class="item-icon">  <span class="name">TM24 Encore <span class="muted small-text">· ₽10,000</span></span>
+</a></li><li><a href="../itemdex/tm-protect.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="" class="item-icon">  <span class="name">TM29 Protect <span class="muted small-text">· ₽10,000</span></span>
+</a></li><li><a href="../itemdex/tm-sleep-talk.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="" class="item-icon">  <span class="name">TM31 Sleep Talk <span class="muted small-text">· ₽30,000</span></span>
+</a></li><li><a href="../itemdex/tm-substitute.html">
+<img src="../assets/game/graphics/items/icons/tm_normal.png" alt="" class="item-icon">  <span class="name">TM32 Substitute <span class="muted small-text">· ₽30,000</span></span>
+</a></li><li><a href="../itemdex/tm-coaching.html">
+<img src="../assets/game/graphics/items/icons/tm_fighting.png" alt="" class="item-icon">  <span class="name">TM38 Coaching <span class="muted small-text">· ₽10,000</span></span>
+</a></li><li><a href="../itemdex/tm-roost.html">
+<img src="../assets/game/graphics/items/icons/tm_flying.png" alt="" class="item-icon">  <span class="name">TM54 Roost <span class="muted small-text">· ₽30,000</span></span>
+</a></li><li><a href="../itemdex/tm-blizzard.html">
+<img src="../assets/game/graphics/items/icons/tm_ice.png" alt="" class="item-icon">  <span class="name">TM57 Blizzard <span class="muted small-text">· ₽60,000</span></span>
+</a></li><li><a href="../itemdex/tm-destiny-bond.html">
+<img src="../assets/game/graphics/items/icons/tm_ghost.png" alt="" class="item-icon">  <span class="name">TM82 Destiny Bond <span class="muted small-text">· ₽30,000</span></span>
+</a></li><li><a href="../itemdex/tm-iron-defense.html">
+<img src="../assets/game/graphics/items/icons/tm_steel.png" alt="" class="item-icon">  <span class="name">TM96 Iron Defense <span class="muted small-text">· ₽10,000</span></span>
+</a></li>    </ul>
+</section>
+<section class="card encounter-block" id="lilycove-city-department-store-rooftop">
+<h2>Department Store Rooftop</h2>    <h3>Items</h3>
+    <h4>NPC <span class="muted small-text">3</span></h4>
+    <ul class="cross-link-grid">
+<li><a href="../itemdex/fresh-water.html">
+<img src="../assets/game/graphics/items/icons/fresh_water.png" alt="" class="item-icon">  <span class="name">Fresh Water</span>
+</a></li><li><a href="../itemdex/lemonade.html">
+<img src="../assets/game/graphics/items/icons/lemonade.png" alt="" class="item-icon">  <span class="name">Lemonade</span>
+</a></li><li><a href="../itemdex/soda-pop.html">
+<img src="../assets/game/graphics/items/icons/soda_pop.png" alt="" class="item-icon">  <span class="name">Soda Pop</span>
+</a></li>    </ul>
+</section>
+<section class="card encounter-block" id="lilycove-city-house2">
+<h2>House 2</h2>    <h3>Items</h3>
+    <h4>NPC <span class="muted small-text">1</span></h4>
+    <ul class="cross-link-grid">
+<li><a href="../itemdex/tm-rest.html">
+<img src="../assets/game/graphics/items/icons/tm_psychic.png" alt="" class="item-icon">  <span class="name">TM48 Rest</span>
+</a></li>    </ul>
+</section>
+<section class="card encounter-block" id="ss-tidal-lower-deck">
+<h2>S.S. Tidal Lower Deck</h2>    <h3>Items</h3>
+    <h4>Hidden Item <span class="muted small-text">1</span></h4>
+    <ul class="cross-link-grid">
+<li><a href="../itemdex/leftovers.html">
+<img src="../assets/game/graphics/items/icons/leftovers.png" alt="" class="item-icon">  <span class="name">Leftovers</span>
+</a></li>    </ul>
+</section>
+<section class="card encounter-block" id="ss-tidal-rooms">
+<h2>S.S. Tidal Rooms</h2>    <h3>Items</h3>
+    <h4>NPC <span class="muted small-text">1</span></h4>
+    <ul class="cross-link-grid">
+<li><a href="../itemdex/tm-curse.html">
+<img src="../assets/game/graphics/items/icons/tm_ghost.png" alt="" class="item-icon">  <span class="name">TM81 Curse</span>
+</a></li>    </ul>
+</section>
+<section class="card encounter-block" id="ss-tidal-corridor">
+<h2>SS Tidal Corridor</h2>    <h3>Trainers <span class="muted small-text">8</span></h3>
+    <ul class="roster">
+      <li class="roster-row">
+<a href="../trainerdex/trainer-colton.html" class="roster-tpic-link"><img src="../assets/game/graphics/trainers/front_pics/pokefan_m.png" alt="Colton" class="roster-tpic"></a>        <div class="roster-body">
+          <div class="roster-head"><a class="roster-name" href="../trainerdex/trainer-colton.html">Colton</a><span class="muted small-text">Pokéfan</span><span class="muted small-text">· Singles</span><span class="roster-caret" aria-hidden="true">&#9656;</span></div>
+            <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/glameow.html" title="Glameow Lv. 22"><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 22</span></a><a class="roster-cmon" href="../pokedex/glameow.html" title="Glameow Lv. 36"><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 36</span></a><a class="roster-cmon" href="../pokedex/glameow.html" title="Glameow Lv. 40"><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 40</span></a><a class="roster-cmon" href="../pokedex/glameow.html" title="Glameow Lv. 12"><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 12</span></a><a class="roster-cmon" href="../pokedex/glameow.html" title="Glameow Lv. 30"><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 30</span></a><a class="roster-cmon" href="../pokedex/glameow.html" title="Glameow Lv. 42"><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 42</span></a></div>
+
+          <div class="roster-expand" hidden><div class="roster-team"><div class="roster-mon" data-href="../pokedex/glameow.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"><span class="roster-mon-name">Glameow</span></span>
+<span class="roster-mon-lvl">Lv. 22</span><span class="roster-mon-attr"><a href="../abilities/limber.html">Limber</a></span><span class="roster-mon-item"><a href="../itemdex/oran-berry.html" class="item-card"><img src="../assets/game/graphics/items/icons/oran_berry.png" alt="Oran Berry" class="item-icon">Oran Berry</a></span><div class="roster-mon-moves"><a href="../moves/assist.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Assist</span></a><a href="../moves/charm.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Charm</span></a><a href="../moves/fury-swipes.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Fury Swipes</span></a><a href="../moves/lick.html" class="move-card type-ghost"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Lick</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/glameow.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"><span class="roster-mon-name">Glameow</span></span>
+<span class="roster-mon-lvl">Lv. 36</span><span class="roster-mon-attr"><a href="../abilities/limber.html">Limber</a></span><span class="roster-mon-item"><a href="../itemdex/oran-berry.html" class="item-card"><img src="../assets/game/graphics/items/icons/oran_berry.png" alt="Oran Berry" class="item-icon">Oran Berry</a></span><div class="roster-mon-moves"><a href="../moves/assist.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Assist</span></a><a href="../moves/charm.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Charm</span></a><a href="../moves/pay-day.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Pay Day</span></a><a href="../moves/heal-bell.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Heal Bell</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/glameow.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"><span class="roster-mon-name">Glameow</span></span>
+<span class="roster-mon-lvl">Lv. 40</span><span class="roster-mon-attr"><a href="../abilities/limber.html">Limber</a></span><span class="roster-mon-item"><a href="../itemdex/oran-berry.html" class="item-card"><img src="../assets/game/graphics/items/icons/oran_berry.png" alt="Oran Berry" class="item-icon">Oran Berry</a></span><div class="roster-mon-moves"><a href="../moves/assist.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Assist</span></a><a href="../moves/charm.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Charm</span></a><a href="../moves/play-rough.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Play Rough</span></a><a href="../moves/heal-bell.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Heal Bell</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/glameow.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"><span class="roster-mon-name">Glameow</span></span>
+<span class="roster-mon-lvl">Lv. 12</span><span class="roster-mon-attr"><a href="../abilities/limber.html">Limber</a></span><span class="roster-mon-item"><a href="../itemdex/oran-berry.html" class="item-card"><img src="../assets/game/graphics/items/icons/oran_berry.png" alt="Oran Berry" class="item-icon">Oran Berry</a></span><div class="roster-mon-moves"><a href="../moves/assist.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Assist</span></a><a href="../moves/charm.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Charm</span></a><a href="../moves/fury-swipes.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Fury Swipes</span></a><a href="../moves/lick.html" class="move-card type-ghost"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Lick</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/glameow.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"><span class="roster-mon-name">Glameow</span></span>
+<span class="roster-mon-lvl">Lv. 30</span><span class="roster-mon-attr"><a href="../abilities/limber.html">Limber</a></span><span class="roster-mon-item"><a href="../itemdex/oran-berry.html" class="item-card"><img src="../assets/game/graphics/items/icons/oran_berry.png" alt="Oran Berry" class="item-icon">Oran Berry</a></span><div class="roster-mon-moves"><a href="../moves/assist.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Assist</span></a><a href="../moves/charm.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Charm</span></a><a href="../moves/fury-swipes.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Fury Swipes</span></a><a href="../moves/lick.html" class="move-card type-ghost"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Lick</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/glameow.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"><span class="roster-mon-name">Glameow</span></span>
+<span class="roster-mon-lvl">Lv. 42</span><span class="roster-mon-attr"><a href="../abilities/limber.html">Limber</a></span><span class="roster-mon-item"><a href="../itemdex/oran-berry.html" class="item-card"><img src="../assets/game/graphics/items/icons/oran_berry.png" alt="Oran Berry" class="item-icon">Oran Berry</a></span><div class="roster-mon-moves"><a href="../moves/assist.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Assist</span></a><a href="../moves/charm.html" class="move-card type-fairy"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Charm</span></a><a href="../moves/feint-attack.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Feint Attack</span></a><a href="../moves/heal-bell.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Heal Bell</span></a></div>    </div></div>
+</div>
+        </div>
+      </li>
+      <li class="roster-row">
+<a href="../trainerdex/trainer-garret.html" class="roster-tpic-link"><img src="../assets/game/graphics/trainers/front_pics/rich_boy.png" alt="Garret" class="roster-tpic"></a>        <div class="roster-body">
+          <div class="roster-head"><a class="roster-name" href="../trainerdex/trainer-garret.html">Garret</a><span class="muted small-text">Rich Boy</span><span class="muted small-text">· Singles</span><span class="roster-caret" aria-hidden="true">&#9656;</span></div>
+            <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/darmanitan.html" title="Darmanitan Lv. 45"><img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="Darmanitan" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 45</span></a></div>
+
+          <div class="roster-expand" hidden><div class="roster-team"><div class="roster-mon" data-href="../pokedex/darmanitan.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="Darmanitan" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__hover.png"><span class="roster-mon-name">Darmanitan</span></span>
+<span class="roster-mon-lvl">Lv. 45</span><span class="roster-mon-attr"><a href="../abilities/sheer-force.html">Sheer Force</a></span><span class="roster-mon-item"><a href="../itemdex/nugget.html" class="item-card"><img src="../assets/game/graphics/items/icons/nugget.png" alt="Nugget" class="item-icon">Nugget</a></span><div class="roster-mon-moves"><a href="../moves/belly-drum.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Belly Drum</span></a><a href="../moves/fire-punch.html" class="move-card type-fire"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Fire Punch</span></a><a href="../moves/thrash.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Thrash</span></a><a href="../moves/superpower.html" class="move-card type-fighting"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Superpower</span></a></div>    </div></div>
+</div>
+        </div>
+      </li>
+      <li class="roster-row">
+<a href="../trainerdex/trainer-lea-and-jed.html" class="roster-tpic-link"><img src="../assets/game/graphics/trainers/front_pics/young_couple.png" alt="Lea &amp; Jed" class="roster-tpic"></a>        <div class="roster-body">
+          <div class="roster-head"><a class="roster-name" href="../trainerdex/trainer-lea-and-jed.html">Lea &amp; Jed</a><span class="muted small-text">Young Couple</span><span class="muted small-text">· Doubles</span><span class="roster-caret" aria-hidden="true">&#9656;</span></div>
+            <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/alomomola.html" title="Alomomola Lv. 45"><img src="../assets/game/graphics/pokemon/alomomola/anim_front.png" alt="Alomomola" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/alomomola/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 45</span></a><a class="roster-cmon" href="../pokedex/alomomola.html" title="Alomomola Lv. 45"><img src="../assets/game/graphics/pokemon/alomomola/anim_front.png" alt="Alomomola" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/alomomola/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 45</span></a></div>
+
+          <div class="roster-expand" hidden><div class="roster-team"><div class="roster-mon" data-href="../pokedex/alomomola.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/alomomola/anim_front.png" alt="Alomomola" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/alomomola/anim_front__hover.png"><span class="roster-mon-name">Alomomola</span></span>
+<span class="roster-mon-lvl">Lv. 45</span><span class="roster-mon-attr"><a href="../abilities/regenerator.html">Regenerator</a></span><div class="roster-mon-moves"><a href="../moves/captivate.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Captivate</span></a><a href="../moves/sparkling-aria.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Sparkling Aria</span></a><a href="../moves/soak.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Soak</span></a><a href="../moves/flip-turn.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Flip Turn</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/alomomola.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/alomomola/anim_front.png" alt="Alomomola" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/alomomola/anim_front__hover.png"><span class="roster-mon-name">Alomomola</span></span>
+<span class="roster-mon-lvl">Lv. 45</span><span class="roster-mon-attr"><a href="../abilities/regenerator.html">Regenerator</a></span><div class="roster-mon-moves"><a href="../moves/captivate.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Captivate</span></a><a href="../moves/sparkling-aria.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Sparkling Aria</span></a><a href="../moves/soak.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Soak</span></a><a href="../moves/flip-turn.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Flip Turn</span></a></div>    </div></div>
+</div>
+        </div>
+      </li>
+      <li class="roster-row">
+<a href="../trainerdex/trainer-leonard.html" class="roster-tpic-link"><img src="../assets/game/graphics/trainers/front_pics/sailor.png" alt="Leonard" class="roster-tpic"></a>        <div class="roster-body">
+          <div class="roster-head"><a class="roster-name" href="../trainerdex/trainer-leonard.html">Leonard</a><span class="muted small-text">Sailor</span><span class="muted small-text">· Singles</span><span class="roster-caret" aria-hidden="true">&#9656;</span></div>
+            <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/crabominable.html" title="Crabominable Lv. 43"><img src="../assets/game/graphics/pokemon/crabominable/anim_front.png" alt="Crabominable" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/crabominable/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 43</span></a><a class="roster-cmon" href="../pokedex/dhelmise.html" title="Dhelmise Lv. 43"><img src="../assets/game/graphics/pokemon/dhelmise/anim_front.png" alt="Dhelmise" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/dhelmise/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 43</span></a><a class="roster-cmon" href="../pokedex/seismitoad.html" title="Seismitoad Lv. 43"><img src="../assets/game/graphics/pokemon/seismitoad/anim_front.png" alt="Seismitoad" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/seismitoad/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 43</span></a></div>
+
+          <div class="roster-expand" hidden><div class="roster-team"><div class="roster-mon" data-href="../pokedex/crabominable.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/crabominable/anim_front.png" alt="Crabominable" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/crabominable/anim_front__hover.png"><span class="roster-mon-name">Crabominable</span></span>
+<span class="roster-mon-lvl">Lv. 43</span><span class="roster-mon-attr"><a href="../abilities/double-wallop.html">Double Whammy</a></span><div class="roster-mon-moves"><a href="../moves/avalanche.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Avalanche</span></a><a href="../moves/reversal.html" class="move-card type-fighting"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Reversal</span></a><a href="../moves/ice-hammer.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Ice Hammer</span></a><a href="../moves/iron-defense.html" class="move-card type-steel"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Iron Defense</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/dhelmise.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/dhelmise/anim_front.png" alt="Dhelmise" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/dhelmise/anim_front__hover.png"><span class="roster-mon-name">Dhelmise</span></span>
+<span class="roster-mon-lvl">Lv. 43</span><span class="roster-mon-attr"><a href="../abilities/steelworker.html">Steelworker</a></span><div class="roster-mon-moves"><a href="../moves/anchor-shot.html" class="move-card type-steel"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Anchor Shot</span></a><a href="../moves/shadow-ball.html" class="move-card type-ghost"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Shadow Ball</span></a><a href="../moves/brine.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Brine</span></a><a href="../moves/phantom-force.html" class="move-card type-ghost"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Phantom Force</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/seismitoad.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/seismitoad/anim_front.png" alt="Seismitoad" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/seismitoad/anim_front__hover.png"><span class="roster-mon-name">Seismitoad</span></span>
+<span class="roster-mon-lvl">Lv. 43</span><span class="roster-mon-attr"><a href="../abilities/poison-touch.html">Poison Touch</a></span><div class="roster-mon-moves"><a href="../moves/triple-dive.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Triple Dive</span></a><a href="../moves/belly-drum.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Belly Drum</span></a><a href="../moves/gastro-acid.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Gastro Acid</span></a><a href="../moves/aqua-ring.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Aqua Ring</span></a></div>    </div></div>
+</div>
+        </div>
+      </li>
+      <li class="roster-row">
+<a href="../trainerdex/trainer-micah.html" class="roster-tpic-link"><img src="../assets/game/graphics/trainers/front_pics/gentleman.png" alt="Micah" class="roster-tpic"></a>        <div class="roster-body">
+          <div class="roster-head"><a class="roster-name" href="../trainerdex/trainer-micah.html">Micah</a><span class="muted small-text">Gentleman</span><span class="muted small-text">· Singles</span><span class="roster-caret" aria-hidden="true">&#9656;</span></div>
+            <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/stoutland.html" title="Stoutland Lv. 44"><img src="../assets/game/graphics/pokemon/stoutland/anim_front.png" alt="Stoutland" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/stoutland/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 44</span></a><a class="roster-cmon" href="../pokedex/lycanroc-dusk.html" title="Lycanroc (Dusk) Lv. 44"><img src="../assets/game/graphics/pokemon/lycanroc/dusk/anim_front.png" alt="Lycanroc (Dusk)" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/lycanroc/dusk/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 44</span></a></div>
+
+          <div class="roster-expand" hidden><div class="roster-team"><div class="roster-mon" data-href="../pokedex/stoutland.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/stoutland/anim_front.png" alt="Stoutland" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/stoutland/anim_front__hover.png"><span class="roster-mon-name">Stoutland</span><span class="roster-mon-form">&nbsp;</span></span>
+<span class="roster-mon-lvl">Lv. 44</span><span class="roster-mon-attr"><a href="../abilities/intimidate.html">Intimidate</a></span><div class="roster-mon-moves"><a href="../moves/last-resort.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Last Resort</span></a><a href="../moves/knock-off.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Knock Off</span></a><a href="../moves/roar.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Roar</span></a><a href="../moves/crunch.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Crunch</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/lycanroc-dusk.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/lycanroc/dusk/anim_front.png" alt="Lycanroc (Dusk)" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/lycanroc/dusk/anim_front__hover.png"><span class="roster-mon-name">Lycanroc</span><span class="roster-mon-form">(Dusk)</span></span>
+<span class="roster-mon-lvl">Lv. 44</span><span class="roster-mon-attr"><a href="../abilities/tough-claws.html">Tough Claws</a></span><div class="roster-mon-moves"><a href="../moves/stealth-rock.html" class="move-card type-rock"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Stealth Rock</span></a><a href="../moves/rock-slide.html" class="move-card type-rock"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Rock Slide</span></a><a href="../moves/scary-face.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Scary Face</span></a><a href="../moves/crunch.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Crunch</span></a></div>    </div></div>
+</div>
+        </div>
+      </li>
+      <li class="roster-row">
+<a href="../trainerdex/trainer-naomi.html" class="roster-tpic-link"><img src="../assets/game/graphics/trainers/front_pics/lady.png" alt="Naomi" class="roster-tpic"></a>        <div class="roster-body">
+          <div class="roster-head"><a class="roster-name" href="../trainerdex/trainer-naomi.html">Naomi</a><span class="muted small-text">Lady</span><span class="muted small-text">· Singles</span><span class="roster-caret" aria-hidden="true">&#9656;</span></div>
+            <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/roserade.html" title="Roserade Lv. 45"><img src="../assets/game/graphics/pokemon/roserade/anim_front.png" alt="Roserade" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/roserade/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 45</span></a></div>
+
+          <div class="roster-expand" hidden><div class="roster-team"><div class="roster-mon" data-href="../pokedex/roserade.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/roserade/anim_front.png" alt="Roserade" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/roserade/anim_front__hover.png"><span class="roster-mon-name">Roserade</span></span>
+<span class="roster-mon-lvl">Lv. 45</span><span class="roster-mon-attr"><a href="../abilities/natural-cure.html">Natural Cure</a></span><span class="roster-mon-item"><a href="../itemdex/nugget.html" class="item-card"><img src="../assets/game/graphics/items/icons/nugget.png" alt="Nugget" class="item-icon">Nugget</a></span><div class="roster-mon-moves"><a href="../moves/acid-spray.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Acid Spray</span></a><a href="../moves/weather-ball.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Weather Ball</span></a><a href="../moves/aromatherapy.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Aromatherapy</span></a><a href="../moves/synthesis.html" class="move-card type-grass"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Synthesis</span></a></div>    </div></div>
+</div>
+        </div>
+      </li>
+      <li class="roster-row">
+<a href="../trainerdex/trainer-phillip.html" class="roster-tpic-link"><img src="../assets/game/graphics/trainers/front_pics/sailor.png" alt="Phillip" class="roster-tpic"></a>        <div class="roster-body">
+          <div class="roster-head"><a class="roster-name" href="../trainerdex/trainer-phillip.html">Phillip</a><span class="muted small-text">Sailor</span><span class="muted small-text">· Singles</span><span class="roster-caret" aria-hidden="true">&#9656;</span></div>
+            <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/floatzel.html" title="Floatzel Lv. 44"><img src="../assets/game/graphics/pokemon/floatzel/anim_front.png" alt="Floatzel" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/floatzel/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 44</span></a><a class="roster-cmon" href="../pokedex/crabominable.html" title="Crabominable Lv. 44"><img src="../assets/game/graphics/pokemon/crabominable/anim_front.png" alt="Crabominable" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/crabominable/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 44</span></a></div>
+
+          <div class="roster-expand" hidden><div class="roster-team"><div class="roster-mon" data-href="../pokedex/floatzel.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/floatzel/anim_front.png" alt="Floatzel" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/floatzel/anim_front__hover.png"><span class="roster-mon-name">Floatzel</span></span>
+<span class="roster-mon-lvl">Lv. 44</span><span class="roster-mon-attr"><a href="../abilities/swift-swim.html">Swift Swim</a></span><div class="roster-mon-moves"><a href="../moves/dive.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Dive</span></a><a href="../moves/jet-punch.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Jet Punch</span></a><a href="../moves/tail-slap.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Tail Slap</span></a><a href="../moves/hydro-pump.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Hydro Pump</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/crabominable.html">
+      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/crabominable/anim_front.png" alt="Crabominable" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/crabominable/anim_front__hover.png"><span class="roster-mon-name">Crabominable</span></span>
+<span class="roster-mon-lvl">Lv. 44</span><span class="roster-mon-attr"><a href="../abilities/double-wallop.html">Double Whammy</a></span><div class="roster-mon-moves"><a href="../moves/avalanche.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Avalanche</span></a><a href="../moves/reversal.html" class="move-card type-fighting"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Reversal</span></a><a href="../moves/ice-hammer.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Ice Hammer</span></a><a href="../moves/iron-defense.html" class="move-card type-steel"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Iron Defense</span></a></div>    </div></div>
+</div>
+        </div>
+      </li>
+      <li class="roster-row">
+<a href="../trainerdex/trainer-thomas.html" class="roster-tpic-link"><img src="../assets/game/graphics/trainers/front_pics/gentleman.png" alt="Thomas" class="roster-tpic"></a>        <div class="roster-body">
+          <div class="roster-head"><a class="roster-name" href="../trainerdex/trainer-thomas.html">Thomas</a><span class="muted small-text">Gentleman</span><span class="muted small-text">· Singles</span><span class="roster-caret" aria-hidden="true">&#9656;</span></div>
+            <div class="roster-team roster-team--compact"><span class="roster-cmon">Zangoose Level 45 <span class="roster-mon-lvl">Lv. 45</span></span></div>
+
+          <div class="roster-expand" hidden><div class="roster-team"><div class="roster-mon">
+      <span class="roster-mon-head"><span class="roster-mon-name">Zangoose Level 45</span></span>
+<span class="roster-mon-lvl">Lv. 45</span>    </div></div>
+</div>
+        </div>
+      </li>
+    </ul>
+</section>
+  </main>
+  <script>
+    function obstagoonBindFilters() {
+      const inputs = document.querySelectorAll('[data-filter-input]');
+      inputs.forEach((input) => {
+        const selector = input.getAttribute('data-filter-target');
+        const emptyTextSelector = input.getAttribute('data-filter-empty');
+        const countSelector = input.getAttribute('data-filter-count');
+        const items = Array.from(document.querySelectorAll(selector || ''));
+        const emptyNode = emptyTextSelector ? document.querySelector(emptyTextSelector) : null;
+        const countNode = countSelector ? document.querySelector(countSelector) : null;
+        const stateKey = input.id || selector || '';
+        const apply = () => {
+          const query = obstagoonNormalize(input.value);
+          let visible = 0;
+          items.forEach((item) => {
+            const haystack = obstagoonNormalize(item.getAttribute('data-search-text') || item.textContent || '');
+            const match = !query || haystack.includes(query);
+            item.classList.toggle('filter-hidden', !match);
+            if (match) visible += 1;
+          });
+          if (emptyNode) emptyNode.style.display = visible === 0 ? '' : 'none';
+          if (countNode) countNode.textContent = visible;
+          if (stateKey) obstagoonSaveState(stateKey, {search: input.value});
+        };
+        if (stateKey) {
+          const saved = obstagoonLoadState(stateKey);
+          if (saved.search) input.value = saved.search;
+        }
+        input.addEventListener('input', apply);
+        apply();
+      });
+    }
+    function obstagoonBindClearHit() {
+      document.querySelectorAll('input.filter-input[type="search"]').forEach((input) => {
+        if (input._clearHit) return;
+        input._clearHit = true;
+        const wrap = document.createElement('span');
+        wrap.className = 'search-clear-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const hit = document.createElement('span');
+        hit.className = 'search-clear-hit';
+        hit.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(hit);
+        const sync = () => { hit.style.display = input.value ? 'block' : 'none'; };
+        hit.addEventListener('click', () => {
+          input.value = '';
+          input.dispatchEvent(new Event('input', {bubbles: true}));
+          input.focus();
+        });
+        input.addEventListener('input', sync);
+        sync();
+      });
+    }
+    function obstagoonBindRoster() {
+      // A mon card opens its own page, not the row toggle.
+      document.querySelectorAll('.roster-mon[data-href]').forEach((card) => {
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('a')) return;
+          e.stopPropagation();
+          window.location = card.getAttribute('data-href');
+        });
+      });
+      document.querySelectorAll('.roster-row').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('a')) return;
+          const panel = row.querySelector('.roster-expand');
+          if (!panel) return;
+          // Pin the row's on-screen position across the toggle.
+          const before = row.getBoundingClientRect().top;
+          const opening = panel.hasAttribute('hidden');
+          if (opening) panel.removeAttribute('hidden'); else panel.setAttribute('hidden', '');
+          row.classList.toggle('is-open', opening);
+          window.scrollBy(0, row.getBoundingClientRect().top - before);
+        });
+      });
+    }
+    function obstagoonBindRowLinks() {
+      // data-href rows act as buttons; nested <a>/<button> keep their own click semantics.
+      document.querySelectorAll('tr[data-href], li[data-href], td[data-href], section[data-href], .card[data-href]').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('a, button')) return;
+          window.location = row.getAttribute('data-href');
+        });
+      });
+    }
+    function obstagoonBindSpriteHover() {
+      // Delegated on body so it covers every page's sprite lists and survives re-renders.
+      // Scope to the card itself, not a bare li: an evolution li holds the card plus the arrow/method text, and li-scope would swap the sprite from anywhere in the row. Cross-link cards (no card class) scope to their own <a>.
+      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, .cross-link-grid > li > a, .sprite-card, figure, section[data-href], .roster-cmon, .roster-mon') : null);
+      const restore = (img) => { if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; delete img.dataset.base; } };
+      const swap = (scope, toHover) => {
+        const img = scope && scope.querySelector('img[data-hover]');
+        if (!img) return;
+        if (!toHover) return restore(img);
+        // Skip if already swapped, so a repeat mouseover (touch fires with null relatedTarget) can't capture the hover frame as the base.
+        if (img.dataset.base) return;
+        img.dataset.base = img.src;
+        img.onerror = () => restore(img);
+        img.src = img.dataset.hover;
+      };
+      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
+      document.body.addEventListener('mouseover', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
+      });
+      document.body.addEventListener('mouseout', (e) => {
+        const scope = scopeOf(e.target);
+        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
+      });
+      // Touch has no hover, so swap the sprite while a card is pressed and restore on release.
+      document.body.addEventListener('touchstart', (e) => { const scope = scopeOf(e.target); if (scope) swap(scope, true); }, {passive: true});
+      const endTouch = (e) => { const scope = scopeOf(e.target); if (scope) swap(scope, false); };
+      document.body.addEventListener('touchend', endTouch, {passive: true});
+      document.body.addEventListener('touchcancel', endTouch, {passive: true});
+      // A tap on mobile swaps without a matching mouseout, so restore every sprite when the page shows (incl. bfcache back-nav).
+      window.addEventListener('pageshow', () => document.querySelectorAll('img[data-hover]').forEach(restore));
+    }
+    function obstagoonBindLinkedHotspots() {
+      // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
+      const partners = new Map();
+      document.querySelectorAll('.region-map a[href], .link-grid > li > a[href]').forEach((a) => {
+        const key = a.getAttribute('href');
+        if (!partners.has(key)) partners.set(key, []);
+        partners.get(key).push(a);
+      });
+      partners.forEach((group) => {
+        if (group.length < 2) return;
+        group.forEach((el) => {
+          el.addEventListener('mouseenter', () => group.forEach((other) => { if (other !== el) other.classList.add('linked-hover'); }));
+          el.addEventListener('mouseleave', () => group.forEach((other) => other.classList.remove('linked-hover')));
+        });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+    } else {
+      obstagoonBindFilters();
+      obstagoonBindClearHit();
+      obstagoonBindRoster();
+      obstagoonBindRowLinks();
+      obstagoonBindLinkedHotspots();
+      obstagoonBindSpriteHover();
+    }
+  </script>
+</body>
+</html>
