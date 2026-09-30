@@ -452,7 +452,7 @@
       });
       document.querySelectorAll('.roster-row').forEach((row) => {
         row.addEventListener('click', (e) => {
-          if (e.target.closest('a')) return;
+          if (e.target.closest('a, button')) return;
           const panel = row.querySelector('.roster-expand');
           if (!panel) return;
           // Pin the row's on-screen position across the toggle.
@@ -461,6 +461,15 @@
           if (opening) panel.removeAttribute('hidden'); else panel.setAttribute('hidden', '');
           row.classList.toggle('is-open', opening);
           window.scrollBy(0, row.getBoundingClientRect().top - before);
+        });
+      });
+      // A roster tab shows its variant's preview and team, hiding the other variants in the same row.
+      document.querySelectorAll('.roster-tier-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          const row = tab.closest('.roster-row');
+          const idx = tab.getAttribute('data-tier');
+          row.querySelectorAll('.roster-tier-tab').forEach((t) => t.classList.toggle('is-active', t === tab));
+          row.querySelectorAll('.roster-tier-compact, .roster-tier-team').forEach((p) => p.hidden = (p.getAttribute('data-tier') !== idx));
         });
       });
     }

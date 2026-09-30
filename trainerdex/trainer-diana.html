@@ -220,12 +220,12 @@
   <main class="wrap">
 <div class="trainer-heading">
   <h1>Picnicker Diana</h1>
-    <nav class="rematch-tabs" aria-label="Rematch tiers">
-<a class="rematch-tab tier-0" href="#first-fight">First Fight</a>
-<a class="rematch-tab tier-1" href="#rematch-1">Rematch 1</a>
-<a class="rematch-tab tier-2" href="#rematch-2">Rematch 2</a>
-<a class="rematch-tab tier-3" href="#rematch-3">Rematch 3</a>
-<a class="rematch-tab tier-4" href="#rematch-4">Rematch 4</a>
+    <nav class="rematch-tabs" aria-label="Battle variants">
+        <a class="rematch-tab" data-variant="first-fight" href="#first-fight">First Fight</a>
+        <a class="rematch-tab" data-variant="rematch-1" href="#rematch-1">Rematch 1</a>
+        <a class="rematch-tab" data-variant="rematch-2" href="#rematch-2">Rematch 2</a>
+        <a class="rematch-tab" data-variant="rematch-3" href="#rematch-3">Rematch 3</a>
+        <a class="rematch-tab" data-variant="rematch-4" href="#rematch-4">Rematch 4</a>
     </nav>
 </div>
 <section class="card pokemon-hero-card trainer-hero-card">
@@ -236,7 +236,7 @@
     </div>
   </div>
 </section>
-    <section id="first-fight" class="card species-section table-card party-panel tier-0">
+    <section id="first-fight" class="card species-section table-card party-panel" data-variant="first-fight">
       <h2>Party</h2>
 <p><strong>Battle Type:</strong> Singles</p>      <div class="table-scroll">
   <table class="sortable-table">
@@ -296,7 +296,7 @@
 </div>
 
     </section>
-    <section id="rematch-1" class="card species-section table-card party-panel tier-1">
+    <section id="rematch-1" class="card species-section table-card party-panel" data-variant="rematch-1">
       <h2>Party</h2>
 <p><strong>Battle Type:</strong> Singles</p>      <div class="table-scroll">
   <table class="sortable-table">
@@ -356,7 +356,7 @@
 </div>
 
     </section>
-    <section id="rematch-2" class="card species-section table-card party-panel tier-2">
+    <section id="rematch-2" class="card species-section table-card party-panel" data-variant="rematch-2">
       <h2>Party</h2>
 <p><strong>Battle Type:</strong> Singles</p>      <div class="table-scroll">
   <table class="sortable-table">
@@ -416,7 +416,7 @@
 </div>
 
     </section>
-    <section id="rematch-3" class="card species-section table-card party-panel tier-3">
+    <section id="rematch-3" class="card species-section table-card party-panel" data-variant="rematch-3">
       <h2>Party</h2>
 <p><strong>Battle Type:</strong> Singles</p>      <div class="table-scroll">
   <table class="sortable-table">
@@ -476,7 +476,7 @@
 </div>
 
     </section>
-    <section id="rematch-4" class="card species-section table-card party-panel tier-4">
+    <section id="rematch-4" class="card species-section table-card party-panel" data-variant="rematch-4">
       <h2>Party</h2>
 <p><strong>Battle Type:</strong> Singles</p>      <div class="table-scroll">
   <table class="sortable-table">
@@ -537,39 +537,36 @@
 
     </section>
   <script>
-    // Class-toggle (not :target) so clicking a tab doesn't trigger the browser's scroll-to-anchor; replaceState keeps the hash in sync for refresh/back-forward.
+    // Class-toggle (not :target) so clicking a tab doesn't trigger the browser's scroll-to-anchor; replaceState keeps the hash in sync for refresh/back-forward. The first variant is the default panel and clears the hash.
     (function () {
-      function bindRematchTabs() {
-        var tabs = document.querySelectorAll('.rematch-tab');
-        var panels = document.querySelectorAll('.party-panel');
-        function tierOf(el) { var m = el.className.match(/tier-(\d+)/); return m ? m[1] : null; }
-        function activate(tier) {
-          tabs.forEach(function (t) { t.classList.toggle('is-active', tierOf(t) === tier); });
-          panels.forEach(function (p) { p.classList.toggle('is-active', tierOf(p) === tier); });
+      function bindVariantTabs() {
+        var tabs = [].slice.call(document.querySelectorAll('.rematch-tab'));
+        var panels = [].slice.call(document.querySelectorAll('.party-panel'));
+        if (!tabs.length) return;
+        var def = tabs[0].getAttribute('data-variant');
+        function activate(v) {
+          tabs.forEach(function (t) { t.classList.toggle('is-active', t.getAttribute('data-variant') === v); });
+          panels.forEach(function (p) { p.classList.toggle('is-active', p.getAttribute('data-variant') === v); });
         }
-        function tierFromHash() {
-          var h = location.hash;
-          if (h === '#first-fight' || h === '') return '0';
-          var m = h.match(/^#rematch-(\d+)$/);
-          return m ? m[1] : '0';
+        function fromHash() {
+          var h = location.hash.replace(/^#/, '');
+          return tabs.some(function (t) { return t.getAttribute('data-variant') === h; }) ? h : def;
         }
-        activate(tierFromHash());
+        activate(fromHash());
         tabs.forEach(function (tab) {
           tab.addEventListener('click', function (e) {
             e.preventDefault();
-            var t = tierOf(tab);
-            if (t === null) return;
-            var newUrl = t === '0' ? (location.pathname + location.search) : ('#rematch-' + t);
-            history.replaceState(null, '', newUrl);
-            activate(t);
+            var v = tab.getAttribute('data-variant');
+            history.replaceState(null, '', v === def ? (location.pathname + location.search) : ('#' + v));
+            activate(v);
           });
         });
-        window.addEventListener('hashchange', function () { activate(tierFromHash()); });
+        window.addEventListener('hashchange', function () { activate(fromHash()); });
       }
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', bindRematchTabs);
+        document.addEventListener('DOMContentLoaded', bindVariantTabs);
       } else {
-        bindRematchTabs();
+        bindVariantTabs();
       }
     })();
   </script>
@@ -639,7 +636,7 @@
       });
       document.querySelectorAll('.roster-row').forEach((row) => {
         row.addEventListener('click', (e) => {
-          if (e.target.closest('a')) return;
+          if (e.target.closest('a, button')) return;
           const panel = row.querySelector('.roster-expand');
           if (!panel) return;
           // Pin the row's on-screen position across the toggle.
@@ -648,6 +645,15 @@
           if (opening) panel.removeAttribute('hidden'); else panel.setAttribute('hidden', '');
           row.classList.toggle('is-open', opening);
           window.scrollBy(0, row.getBoundingClientRect().top - before);
+        });
+      });
+      // A roster tab shows its variant's preview and team, hiding the other variants in the same row.
+      document.querySelectorAll('.roster-tier-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          const row = tab.closest('.roster-row');
+          const idx = tab.getAttribute('data-tier');
+          row.querySelectorAll('.roster-tier-tab').forEach((t) => t.classList.toggle('is-active', t === tab));
+          row.querySelectorAll('.roster-tier-compact, .roster-tier-team').forEach((p) => p.hidden = (p.getAttribute('data-tier') !== idx));
         });
       });
     }

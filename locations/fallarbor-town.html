@@ -237,7 +237,7 @@
 </a></li>    </ul>
 </section>
 <section class="card encounter-block" id="fallarbor-town-move-relearners-house">
-<h2>Move Relearners House</h2>    <h3>Items</h3>
+<h2>Move Relearner&#39;s House</h2>    <h3>Items</h3>
     <h4>NPC <span class="muted small-text">1</span></h4>
     <ul class="cross-link-grid">
 <li><a href="../itemdex/tm-energy-ball.html">
@@ -342,7 +342,7 @@
       });
       document.querySelectorAll('.roster-row').forEach((row) => {
         row.addEventListener('click', (e) => {
-          if (e.target.closest('a')) return;
+          if (e.target.closest('a, button')) return;
           const panel = row.querySelector('.roster-expand');
           if (!panel) return;
           // Pin the row's on-screen position across the toggle.
@@ -351,6 +351,15 @@
           if (opening) panel.removeAttribute('hidden'); else panel.setAttribute('hidden', '');
           row.classList.toggle('is-open', opening);
           window.scrollBy(0, row.getBoundingClientRect().top - before);
+        });
+      });
+      // A roster tab shows its variant's preview and team, hiding the other variants in the same row.
+      document.querySelectorAll('.roster-tier-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          const row = tab.closest('.roster-row');
+          const idx = tab.getAttribute('data-tier');
+          row.querySelectorAll('.roster-tier-tab').forEach((t) => t.classList.toggle('is-active', t === tab));
+          row.querySelectorAll('.roster-tier-compact, .roster-tier-team').forEach((p) => p.hidden = (p.getAttribute('data-tier') !== idx));
         });
       });
     }

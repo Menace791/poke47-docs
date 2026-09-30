@@ -232,12 +232,12 @@
   <h2>Sources</h2>
     <h3 class="item-source-heading">Overworld:</h3>
     <ul class="item-source-list">
-      <li><a href="../locations/aqua-hideout.html#aqua-hideout-b1f">Aqua Hideout · B1F</a></li>
-      <li><a href="../locations/magma-hideout.html#magma-hideout-2f-2r">Magma Hideout · 2F 2R</a></li>
+      <li><a href="../locations/aqua-hideout.html#aqua-hideout-b1f">Aqua Hideout - B1F</a></li>
+      <li><a href="../locations/magma-hideout.html#magma-hideout-2f-2r">Magma Hideout - 2F 2R</a></li>
     </ul>
     <h3 class="item-source-heading">Hidden Item:</h3>
     <ul class="item-source-list">
-      <li><a href="../locations/victory-road.html#victory-road-1f">Victory Road · 1F</a></li>
+      <li><a href="../locations/victory-road.html#victory-road-1f">Victory Road - 1F</a></li>
     </ul>
     <h3 class="item-source-heading"><a href="../abilities/pickup.html">Pickup</a>:</h3>
     <ul class="item-source-list">
@@ -312,7 +312,7 @@
       });
       document.querySelectorAll('.roster-row').forEach((row) => {
         row.addEventListener('click', (e) => {
-          if (e.target.closest('a')) return;
+          if (e.target.closest('a, button')) return;
           const panel = row.querySelector('.roster-expand');
           if (!panel) return;
           // Pin the row's on-screen position across the toggle.
@@ -321,6 +321,15 @@
           if (opening) panel.removeAttribute('hidden'); else panel.setAttribute('hidden', '');
           row.classList.toggle('is-open', opening);
           window.scrollBy(0, row.getBoundingClientRect().top - before);
+        });
+      });
+      // A roster tab shows its variant's preview and team, hiding the other variants in the same row.
+      document.querySelectorAll('.roster-tier-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          const row = tab.closest('.roster-row');
+          const idx = tab.getAttribute('data-tier');
+          row.querySelectorAll('.roster-tier-tab').forEach((t) => t.classList.toggle('is-active', t === tab));
+          row.querySelectorAll('.roster-tier-compact, .roster-tier-team').forEach((p) => p.hidden = (p.getAttribute('data-tier') !== idx));
         });
       });
     }

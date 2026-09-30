@@ -232,8 +232,8 @@
   <h2>Sources</h2>
     <h3 class="item-source-heading">Shop <span class="item-price">(₽10,000)</span>:</h3>
     <ul class="item-source-list">
-      <li><a href="../locations/battle-frontier.html#battle-frontier-mart">Battle Frontier · Poké Mart</a></li>
-      <li><a href="../locations/lilycove-city.html#lilycove-city-department-store-3f">Lilycove City · Department Store 3F</a></li>
+      <li><a href="../locations/battle-frontier.html#battle-frontier-mart">Battle Frontier - Poké Mart</a></li>
+      <li><a href="../locations/lilycove-city.html#lilycove-city-department-store-3f">Lilycove City - Department Store 3F</a></li>
       <li><a href="../locations/slateport-city.html#slateport-city">Slateport City</a></li>
     </ul>
     <h3 class="item-source-heading">Overworld:</h3>
@@ -244,11 +244,11 @@
     </ul>
     <h3 class="item-source-heading">Hidden Item:</h3>
     <ul class="item-source-list">
-      <li><a href="../locations/artisan-cave.html#artisan-cave-b1f">Artisan Cave · B1F</a></li>
-      <li><a href="../locations/mt-pyre.html#mt-pyre-summit">Mt. Pyre · Mt Pyre - Summit</a></li>
+      <li><a href="../locations/artisan-cave.html#artisan-cave-b1f">Artisan Cave - B1F</a></li>
+      <li><a href="../locations/mt-pyre.html#mt-pyre-summit">Mt. Pyre - Mt Pyre - Summit</a></li>
       <li><a href="../locations/route-106.html#route106">Route 106</a></li>
       <li><a href="../locations/route-120.html#route120">Route 120</a></li>
-      <li><a href="../locations/safari-zone.html#safari-zone-northeast">Safari Zone · Northeast</a></li>
+      <li><a href="../locations/safari-zone.html#safari-zone-northeast">Safari Zone - Northeast</a></li>
     </ul>
 </section>
   </main>
@@ -317,7 +317,7 @@
       });
       document.querySelectorAll('.roster-row').forEach((row) => {
         row.addEventListener('click', (e) => {
-          if (e.target.closest('a')) return;
+          if (e.target.closest('a, button')) return;
           const panel = row.querySelector('.roster-expand');
           if (!panel) return;
           // Pin the row's on-screen position across the toggle.
@@ -326,6 +326,15 @@
           if (opening) panel.removeAttribute('hidden'); else panel.setAttribute('hidden', '');
           row.classList.toggle('is-open', opening);
           window.scrollBy(0, row.getBoundingClientRect().top - before);
+        });
+      });
+      // A roster tab shows its variant's preview and team, hiding the other variants in the same row.
+      document.querySelectorAll('.roster-tier-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          const row = tab.closest('.roster-row');
+          const idx = tab.getAttribute('data-tier');
+          row.querySelectorAll('.roster-tier-tab').forEach((t) => t.classList.toggle('is-active', t === tab));
+          row.querySelectorAll('.roster-tier-compact, .roster-tier-team').forEach((p) => p.hidden = (p.getAttribute('data-tier') !== idx));
         });
       });
     }

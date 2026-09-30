@@ -233,30 +233,30 @@
     <h3 class="item-source-heading">NPC:</h3>
     <ul class="item-source-list">
       <li><a href="../locations/slateport-city.html#slateport-city">Slateport City</a></li>
-      <li><a href="../locations/victory-road.html#victory-road-1f">Victory Road · 1F</a></li>
+      <li><a href="../locations/victory-road.html#victory-road-1f">Victory Road - 1F</a></li>
     </ul>
     <h3 class="item-source-heading">Overworld:</h3>
     <ul class="item-source-list">
-      <li><a href="../locations/ever-grande-city.html#ever-grande-city-hall1">Ever Grande City · Hall 1</a> <span class="muted small-text">(Repeatable)</span></li>
-      <li><a href="../locations/ever-grande-city.html#ever-grande-city-hall2">Ever Grande City · Hall 2</a> <span class="muted small-text">(Repeatable)</span></li>
-      <li><a href="../locations/ever-grande-city.html#ever-grande-city-hall3">Ever Grande City · Hall 3</a> <span class="muted small-text">(Repeatable)</span></li>
-      <li><a href="../locations/ever-grande-city.html#ever-grande-city-hall4">Ever Grande City · Hall 4</a> <span class="muted small-text">(Repeatable)</span></li>
-      <li><a href="../locations/magma-hideout.html#magma-hideout-1f">Magma Hideout · 1F</a></li>
+      <li><a href="../locations/ever-grande-city.html#ever-grande-city-hall1">Ever Grande City - Hall 1</a> <span class="muted small-text">(Repeatable)</span></li>
+      <li><a href="../locations/ever-grande-city.html#ever-grande-city-hall2">Ever Grande City - Hall 2</a> <span class="muted small-text">(Repeatable)</span></li>
+      <li><a href="../locations/ever-grande-city.html#ever-grande-city-hall3">Ever Grande City - Hall 3</a> <span class="muted small-text">(Repeatable)</span></li>
+      <li><a href="../locations/ever-grande-city.html#ever-grande-city-hall4">Ever Grande City - Hall 4</a> <span class="muted small-text">(Repeatable)</span></li>
+      <li><a href="../locations/magma-hideout.html#magma-hideout-1f">Magma Hideout - 1F</a></li>
       <li><a href="../locations/route-114.html#route114">Route 114</a></li>
       <li><a href="../locations/route-127.html#route127">Route 127</a></li>
       <li><a href="../locations/route-132.html#route132">Route 132</a></li>
       <li><a href="../locations/route-136.html#route136">Route 136</a></li>
-      <li><a href="../locations/shoal-cave.html#shoal-cave-low-tide-inner-room">Shoal Cave · Low Tide Inner Room</a></li>
+      <li><a href="../locations/shoal-cave.html#shoal-cave-low-tide-inner-room">Shoal Cave - Low Tide Inner Room</a></li>
     </ul>
     <h3 class="item-source-heading">Hidden Item:</h3>
     <ul class="item-source-list">
-      <li><a href="../locations/mt-pyre.html#mt-pyre-summit">Mt. Pyre · Mt Pyre - Summit</a></li>
+      <li><a href="../locations/mt-pyre.html#mt-pyre-summit">Mt. Pyre - Mt Pyre - Summit</a></li>
       <li><a href="../locations/petalburg-city.html#petalburg-city">Petalburg City</a></li>
       <li><a href="../locations/route-108.html#route108">Route 108</a></li>
       <li><a href="../locations/route-111.html#route111">Route 111</a></li>
       <li><a href="../locations/route-120.html#route120">Route 120</a></li>
       <li><a href="../locations/route-123.html#route123">Route 123</a></li>
-      <li><a href="../locations/safari-zone.html#safari-zone-northeast">Safari Zone · Northeast</a></li>
+      <li><a href="../locations/safari-zone.html#safari-zone-northeast">Safari Zone - Northeast</a></li>
     </ul>
     <h3 class="item-source-heading"><a href="../abilities/pickup.html">Pickup</a>:</h3>
     <ul class="item-source-list">
@@ -337,7 +337,7 @@
       });
       document.querySelectorAll('.roster-row').forEach((row) => {
         row.addEventListener('click', (e) => {
-          if (e.target.closest('a')) return;
+          if (e.target.closest('a, button')) return;
           const panel = row.querySelector('.roster-expand');
           if (!panel) return;
           // Pin the row's on-screen position across the toggle.
@@ -346,6 +346,15 @@
           if (opening) panel.removeAttribute('hidden'); else panel.setAttribute('hidden', '');
           row.classList.toggle('is-open', opening);
           window.scrollBy(0, row.getBoundingClientRect().top - before);
+        });
+      });
+      // A roster tab shows its variant's preview and team, hiding the other variants in the same row.
+      document.querySelectorAll('.roster-tier-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          const row = tab.closest('.roster-row');
+          const idx = tab.getAttribute('data-tier');
+          row.querySelectorAll('.roster-tier-tab').forEach((t) => t.classList.toggle('is-active', t === tab));
+          row.querySelectorAll('.roster-tier-compact, .roster-tier-team').forEach((p) => p.hidden = (p.getAttribute('data-tier') !== idx));
         });
       });
     }
