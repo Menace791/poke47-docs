@@ -44,11 +44,25 @@
       if (saved.search) input.value = saved.search;
       let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
       let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
+      const view = opts.view || null;
+      let currentView = null;
+      if (view) {
+        let v;
+        try { v = JSON.parse(sessionStorage.getItem('obstagoon:' + opts.stateKey) || '{}').view; } catch (e) {}
+        currentView = ['hoenn', 'all'].includes(v) ? v : view.default;
+      }
       const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
       const persist = () => obstagoonSaveState(opts.stateKey, {
         search: input.value, chips,
         ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
+        ...(view ? {view: currentView} : {}),
       });
+      const applyView = () => {
+        if (!view) return;
+        rows.forEach((el) => { el.cells[view.numberCol].textContent = (currentView === 'hoenn' ? el.dataset.hoennDex : el.dataset.natDex) || ''; });
+        const header = view.headerId ? document.getElementById(view.headerId) : null;
+        if (header) header.textContent = view.labels[currentView];
+      };
 
       const formCellTargets = ['spriteHtml', 'nameHtml', 'typesHtml', 'abilitiesHtml'];
       const formMatchesChips = (form) => chips.every((c) => {
@@ -74,6 +88,7 @@
               }
             }
           }
+          if (view && currentView === 'hoenn' && !el.dataset.hoennDex) show = false;
           el.classList.toggle('filter-hidden', !show);
           if (show) visible += 1;
           if (show && el.dataset.forms) applyFormSwap(el, target);
@@ -163,6 +178,7 @@
       });
       document.addEventListener('click', (e) => { if (!dropdown.contains(e.target) && e.target !== input) dropdown.hidden = true; });
       renderChips();
+      applyView();
       applyFilters();
 
       if (opts.tableSelector) {
@@ -197,6 +213,19 @@
             persist();
           });
         });
+        if (view) {
+          const slider = document.getElementById(view.toggleId);
+          if (slider) {
+            slider.checked = currentView === 'all';
+            slider.addEventListener('change', () => {
+              currentView = slider.checked ? 'all' : 'hoenn';
+              applyView();
+              applyFilters();
+              applySort();
+              persist();
+            });
+          }
+        }
         applySort();
       }
     };
