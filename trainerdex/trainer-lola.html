@@ -27,6 +27,39 @@
       try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
       catch (e) {}
     };
+    // Site-wide Hoenn/National dex preference, shared across the pokédex and forms pages.
+    window.obstagoonDexView = {
+      get: (fallback) => {
+        try { const v = sessionStorage.getItem('obstagoon:dexview'); return (v === 'hoenn' || v === 'all') ? v : fallback; }
+        catch (e) { return fallback; }
+      },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
+    };
+    // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
+    window.obstagoonBindSectionView = (opts) => {
+      const slider = document.getElementById(opts.toggleId);
+      const sections = Array.from(document.querySelectorAll(opts.sectionSelector));
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      let currentView = obstagoonDexView.get(opts.default || 'hoenn');
+      const apply = () => {
+        let count = 0;
+        sections.forEach((el) => {
+          const show = currentView === 'all' || !!el.dataset.hoennDex;
+          el.classList.toggle('filter-hidden', !show);
+          if (show) count += Number(el.dataset.formCount) || 0;
+        });
+        if (countEl) countEl.textContent = count;
+      };
+      if (slider) {
+        slider.checked = currentView === 'all';
+        slider.addEventListener('change', () => {
+          currentView = slider.checked ? 'all' : 'hoenn';
+          obstagoonDexView.set(currentView);
+          apply();
+        });
+      }
+      apply();
+    };
     // Shared search+chips+sort binding for index pages; opts carry the per-page ids and source lists.
     window.obstagoonBindIndexPage = (opts) => {
       const input = document.getElementById(opts.inputId);
@@ -45,17 +78,11 @@
       let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
       let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
       const view = opts.view || null;
-      let currentView = null;
-      if (view) {
-        let v;
-        try { v = JSON.parse(sessionStorage.getItem('obstagoon:' + opts.stateKey) || '{}').view; } catch (e) {}
-        currentView = ['hoenn', 'all'].includes(v) ? v : view.default;
-      }
+      let currentView = view ? obstagoonDexView.get(view.default) : null;
       const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
       const persist = () => obstagoonSaveState(opts.stateKey, {
         search: input.value, chips,
         ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
-        ...(view ? {view: currentView} : {}),
       });
       const applyView = () => {
         if (!view) return;
@@ -219,6 +246,7 @@
             slider.checked = currentView === 'all';
             slider.addEventListener('change', () => {
               currentView = slider.checked ? 'all' : 'hoenn';
+              obstagoonDexView.set(currentView);
               applyView();
               applyFilters();
               applySort();
@@ -299,7 +327,7 @@
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
             </div>
         </td>
-        <td><a href="../abilities/gooey.html">Gooey</a></td>
+        <td><a href="../abilities/storm-drain.html">Storm Drain</a></td>
         <td>—</td>
         <td><span class="stat-pair">1 HP</span><br><span class="stat-pair">1 Atk</span><br><span class="stat-pair">1 Def</span><br><span class="stat-pair">1 SpA</span><br><span class="stat-pair">1 SpD</span><br><span class="stat-pair">1 Spe</span></td>
         <td>—</td>
@@ -344,7 +372,7 @@
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
             </div>
         </td>
-        <td><a href="../abilities/gooey.html">Gooey</a></td>
+        <td><a href="../abilities/storm-drain.html">Storm Drain</a></td>
         <td>—</td>
         <td><span class="stat-pair">1 HP</span><br><span class="stat-pair">1 Atk</span><br><span class="stat-pair">1 Def</span><br><span class="stat-pair">1 SpA</span><br><span class="stat-pair">1 SpD</span><br><span class="stat-pair">1 Spe</span></td>
         <td>—</td>
@@ -389,7 +417,7 @@
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
             </div>
         </td>
-        <td><a href="../abilities/gooey.html">Gooey</a></td>
+        <td><a href="../abilities/storm-drain.html">Storm Drain</a></td>
         <td>—</td>
         <td><span class="stat-pair">2 HP</span><br><span class="stat-pair">2 Atk</span><br><span class="stat-pair">2 Def</span><br><span class="stat-pair">2 SpA</span><br><span class="stat-pair">2 SpD</span><br><span class="stat-pair">2 Spe</span></td>
         <td>—</td>
@@ -434,7 +462,7 @@
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
             </div>
         </td>
-        <td><a href="../abilities/gooey.html">Gooey</a></td>
+        <td><a href="../abilities/storm-drain.html">Storm Drain</a></td>
         <td>—</td>
         <td><span class="stat-pair">3 HP</span><br><span class="stat-pair">3 Atk</span><br><span class="stat-pair">3 Def</span><br><span class="stat-pair">3 SpA</span><br><span class="stat-pair">3 SpD</span><br><span class="stat-pair">3 Spe</span></td>
         <td>—</td>
@@ -479,7 +507,7 @@
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"> <img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon"></div>
             </div>
         </td>
-        <td><a href="../abilities/gooey.html">Gooey</a></td>
+        <td><a href="../abilities/storm-drain.html">Storm Drain</a></td>
         <td>—</td>
         <td><span class="stat-pair">4 HP</span><br><span class="stat-pair">4 Atk</span><br><span class="stat-pair">4 Def</span><br><span class="stat-pair">4 SpA</span><br><span class="stat-pair">4 SpD</span><br><span class="stat-pair">4 Spe</span></td>
         <td>—</td>

@@ -27,6 +27,39 @@
       try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
       catch (e) {}
     };
+    // Site-wide Hoenn/National dex preference, shared across the pokédex and forms pages.
+    window.obstagoonDexView = {
+      get: (fallback) => {
+        try { const v = sessionStorage.getItem('obstagoon:dexview'); return (v === 'hoenn' || v === 'all') ? v : fallback; }
+        catch (e) { return fallback; }
+      },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
+    };
+    // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
+    window.obstagoonBindSectionView = (opts) => {
+      const slider = document.getElementById(opts.toggleId);
+      const sections = Array.from(document.querySelectorAll(opts.sectionSelector));
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      let currentView = obstagoonDexView.get(opts.default || 'hoenn');
+      const apply = () => {
+        let count = 0;
+        sections.forEach((el) => {
+          const show = currentView === 'all' || !!el.dataset.hoennDex;
+          el.classList.toggle('filter-hidden', !show);
+          if (show) count += Number(el.dataset.formCount) || 0;
+        });
+        if (countEl) countEl.textContent = count;
+      };
+      if (slider) {
+        slider.checked = currentView === 'all';
+        slider.addEventListener('change', () => {
+          currentView = slider.checked ? 'all' : 'hoenn';
+          obstagoonDexView.set(currentView);
+          apply();
+        });
+      }
+      apply();
+    };
     // Shared search+chips+sort binding for index pages; opts carry the per-page ids and source lists.
     window.obstagoonBindIndexPage = (opts) => {
       const input = document.getElementById(opts.inputId);
@@ -45,17 +78,11 @@
       let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
       let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
       const view = opts.view || null;
-      let currentView = null;
-      if (view) {
-        let v;
-        try { v = JSON.parse(sessionStorage.getItem('obstagoon:' + opts.stateKey) || '{}').view; } catch (e) {}
-        currentView = ['hoenn', 'all'].includes(v) ? v : view.default;
-      }
+      let currentView = view ? obstagoonDexView.get(view.default) : null;
       const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
       const persist = () => obstagoonSaveState(opts.stateKey, {
         search: input.value, chips,
         ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
-        ...(view ? {view: currentView} : {}),
       });
       const applyView = () => {
         if (!view) return;
@@ -219,6 +246,7 @@
             slider.checked = currentView === 'all';
             slider.addEventListener('change', () => {
               currentView = slider.checked ? 'all' : 'hoenn';
+              obstagoonDexView.set(currentView);
               applyView();
               applyFilters();
               applySort();
@@ -270,7 +298,7 @@
     <p><strong>Overworld Behavior:</strong> Watches Player</p>
     <p><strong>Autobattle Behavior:</strong> Copies Player</p>
     <p><strong>Egg Groups:</strong> Grass</p>
-<p><strong>EV Yield:</strong> 1 Defense</p><p class="wild-items"><strong>Wild Held Items:</strong> <span><a href="../itemdex/psychic-seed.html" class="item-card"><img src="../assets/game/graphics/items/icons/psychic_seed.png" alt="Psychic Seed" class="item-icon">Psychic Seed</a> (5%)</span></p><p><strong>Base Species:</strong>   <a href="exeggcute.html" class="species-inline-link mon-card type-grass type2-psychic mon-dual"><img src="../assets/game/graphics/pokemon/exeggcute/anim_front.png" alt="Exeggcute" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/exeggcute/anim_front__hover.png"><span>Exeggcute</span>
+<p><strong>EV Yield:</strong> 1 Defense</p><p class="wild-items"><strong>Wild Held Items:</strong> <span><a href="../itemdex/psychic-seed.html" class="item-card"><img src="../assets/game/graphics/items/icons/psychic_seed.png" alt="Psychic Seed" class="item-icon">Psychic Seed</a> (5%)</span></p><p><strong>Base Species:</strong>   <a href="exeggcute.html" class="species-inline-link mon-card type-grass type2-psychic mon-dual"><img src="../assets/game/graphics/pokemon/exeggcute/anim_front_gba.png" alt="Exeggcute" class="species-inline-sprite"><span>Exeggcute</span>
   </a>
 </p>  </section>
   <section class="card">
@@ -323,18 +351,13 @@ appear, it is close to evolution.</p>
   <div class="card">
     <h2>Evolutions</h2>
     <ul>
-        <li>Use <a href="../itemdex/leaf-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/leaf_stone.png" alt="" class="item-icon">Leaf Stone</a> (Outside Alola) →   <a href="exeggutor.html" class="species-inline-link mon-card type-grass type2-psychic mon-dual"><img src="../assets/game/graphics/pokemon/exeggutor/anim_front.png" alt="Exeggutor" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/exeggutor/anim_front__hover.png"><span>Exeggutor</span>
-  </a>
-</li>
-        <li>Use <a href="../itemdex/leaf-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/leaf_stone.png" alt="" class="item-icon">Leaf Stone</a> (In Alola) →   <a href="exeggutor-alola.html" class="species-inline-link mon-card type-grass type2-dragon mon-dual"><img src="../assets/game/graphics/pokemon/exeggutor/alola/anim_front.png" alt="Exeggutor (Alolan)" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/exeggutor/alola/anim_front__hover.png"><span>Exeggutor (Alolan)</span>
-  </a>
-</li>
+        <li>Does not evolve.</li>
     </ul>
   </div>
   <div class="card">
     <h2>Forms</h2>
     <ul class="form-list">
-        <li><a href="exeggcute.html" class="form-entry mon-card type-grass type2-psychic mon-dual"><img src="../assets/game/graphics/pokemon/exeggcute/anim_front.png" alt="Exeggcute" class="form-sprite" data-hover="../assets/game/graphics/pokemon/exeggcute/anim_front__hover.png"><span>Exeggcute</span>
+        <li><a href="exeggcute.html" class="form-entry mon-card type-grass type2-psychic mon-dual"><img src="../assets/game/graphics/pokemon/exeggcute/anim_front_gba.png" alt="Exeggcute" class="form-sprite"><span>Exeggcute</span>
         </a></li>
     </ul>
   </div>

@@ -27,6 +27,39 @@
       try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
       catch (e) {}
     };
+    // Site-wide Hoenn/National dex preference, shared across the pokédex and forms pages.
+    window.obstagoonDexView = {
+      get: (fallback) => {
+        try { const v = sessionStorage.getItem('obstagoon:dexview'); return (v === 'hoenn' || v === 'all') ? v : fallback; }
+        catch (e) { return fallback; }
+      },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
+    };
+    // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
+    window.obstagoonBindSectionView = (opts) => {
+      const slider = document.getElementById(opts.toggleId);
+      const sections = Array.from(document.querySelectorAll(opts.sectionSelector));
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      let currentView = obstagoonDexView.get(opts.default || 'hoenn');
+      const apply = () => {
+        let count = 0;
+        sections.forEach((el) => {
+          const show = currentView === 'all' || !!el.dataset.hoennDex;
+          el.classList.toggle('filter-hidden', !show);
+          if (show) count += Number(el.dataset.formCount) || 0;
+        });
+        if (countEl) countEl.textContent = count;
+      };
+      if (slider) {
+        slider.checked = currentView === 'all';
+        slider.addEventListener('change', () => {
+          currentView = slider.checked ? 'all' : 'hoenn';
+          obstagoonDexView.set(currentView);
+          apply();
+        });
+      }
+      apply();
+    };
     // Shared search+chips+sort binding for index pages; opts carry the per-page ids and source lists.
     window.obstagoonBindIndexPage = (opts) => {
       const input = document.getElementById(opts.inputId);
@@ -45,17 +78,11 @@
       let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
       let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
       const view = opts.view || null;
-      let currentView = null;
-      if (view) {
-        let v;
-        try { v = JSON.parse(sessionStorage.getItem('obstagoon:' + opts.stateKey) || '{}').view; } catch (e) {}
-        currentView = ['hoenn', 'all'].includes(v) ? v : view.default;
-      }
+      let currentView = view ? obstagoonDexView.get(view.default) : null;
       const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
       const persist = () => obstagoonSaveState(opts.stateKey, {
         search: input.value, chips,
         ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
-        ...(view ? {view: currentView} : {}),
       });
       const applyView = () => {
         if (!view) return;
@@ -219,6 +246,7 @@
             slider.checked = currentView === 'all';
             slider.addEventListener('change', () => {
               currentView = slider.checked ? 'all' : 'hoenn';
+              obstagoonDexView.set(currentView);
               applyView();
               applyFilters();
               applySort();
@@ -260,32 +288,32 @@
 <section class="card">
   <h2>Evolves <span class="muted small-text">13</span></h2>
   <ul class="cross-link-grid">
-<li><a href="../pokedex/pikachu.html" class="mon-card type-electric">
-<img src="../assets/game/graphics/pokemon/pikachu/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/pikachu/anim_front__hover.png">  <span class="name">Pikachu</span>
-</a></li><li><a href="../pokedex/pikachu.html" class="mon-card type-electric">
-<img src="../assets/game/graphics/pokemon/pikachu/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/pikachu/anim_front__hover.png">  <span class="name">Pikachu</span>
+<li><a href="../pokedex/espeon.html" class="mon-card type-psychic">
+<img src="../assets/game/graphics/pokemon/espeon/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/espeon/anim_front__hover.png">  <span class="name">Espeon</span>
 </a></li><li><a href="../pokedex/magneton.html" class="mon-card type-electric type2-steel mon-dual">
 <img src="../assets/game/graphics/pokemon/magneton/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/magneton/anim_front__hover.png">  <span class="name">Magneton</span>
-</a></li><li><a href="../pokedex/eevee.html" class="mon-card type-normal">
-<img src="../assets/game/graphics/pokemon/eevee/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/eevee/anim_front__hover.png">  <span class="name">Eevee</span>
-</a></li><li><a href="../pokedex/vaporeon.html" class="mon-card type-water">
-<img src="../assets/game/graphics/pokemon/vaporeon/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/vaporeon/anim_front__hover.png">  <span class="name">Vaporeon</span>
-</a></li><li><a href="../pokedex/flareon.html" class="mon-card type-fire">
-<img src="../assets/game/graphics/pokemon/flareon/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/flareon/anim_front__hover.png">  <span class="name">Flareon</span>
-</a></li><li><a href="../pokedex/espeon.html" class="mon-card type-psychic">
-<img src="../assets/game/graphics/pokemon/espeon/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/espeon/anim_front__hover.png">  <span class="name">Espeon</span>
-</a></li><li><a href="../pokedex/umbreon.html" class="mon-card type-dark">
-<img src="../assets/game/graphics/pokemon/umbreon/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/umbreon/anim_front__hover.png">  <span class="name">Umbreon</span>
-</a></li><li><a href="../pokedex/leafeon.html" class="mon-card type-grass">
-<img src="../assets/game/graphics/pokemon/leafeon/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/leafeon/anim_front__hover.png">  <span class="name">Leafeon</span>
-</a></li><li><a href="../pokedex/glaceon.html" class="mon-card type-ice">
-<img src="../assets/game/graphics/pokemon/glaceon/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/glaceon/anim_front__hover.png">  <span class="name">Glaceon</span>
 </a></li><li><a href="../pokedex/sylveon.html" class="mon-card type-fairy">
 <img src="../assets/game/graphics/pokemon/sylveon/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/sylveon/anim_front__hover.png">  <span class="name">Sylveon</span>
+</a></li><li><a href="../pokedex/eevee.html" class="mon-card type-normal">
+<img src="../assets/game/graphics/pokemon/eevee/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/eevee/anim_front__hover.png">  <span class="name">Eevee</span>
+</a></li><li><a href="../pokedex/flareon.html" class="mon-card type-fire">
+<img src="../assets/game/graphics/pokemon/flareon/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/flareon/anim_front__hover.png">  <span class="name">Flareon</span>
 </a></li><li><a href="../pokedex/nosepass.html" class="mon-card type-rock">
 <img src="../assets/game/graphics/pokemon/nosepass/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/nosepass/anim_front__hover.png">  <span class="name">Nosepass</span>
 </a></li><li><a href="../pokedex/eelektrik.html" class="mon-card type-electric">
 <img src="../assets/game/graphics/pokemon/eelektrik/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/eelektrik/anim_front__hover.png">  <span class="name">Eelektrik</span>
+</a></li><li><a href="../pokedex/vaporeon.html" class="mon-card type-water">
+<img src="../assets/game/graphics/pokemon/vaporeon/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/vaporeon/anim_front__hover.png">  <span class="name">Vaporeon</span>
+</a></li><li><a href="../pokedex/leafeon.html" class="mon-card type-grass">
+<img src="../assets/game/graphics/pokemon/leafeon/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/leafeon/anim_front__hover.png">  <span class="name">Leafeon</span>
+</a></li><li><a href="../pokedex/umbreon.html" class="mon-card type-dark">
+<img src="../assets/game/graphics/pokemon/umbreon/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/umbreon/anim_front__hover.png">  <span class="name">Umbreon</span>
+</a></li><li><a href="../pokedex/pikachu.html" class="mon-card type-electric">
+<img src="../assets/game/graphics/pokemon/pikachu/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/pikachu/anim_front__hover.png">  <span class="name">Pikachu</span>
+</a></li><li><a href="../pokedex/pikachu.html" class="mon-card type-electric">
+<img src="../assets/game/graphics/pokemon/pikachu/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/pikachu/anim_front__hover.png">  <span class="name">Pikachu</span>
+</a></li><li><a href="../pokedex/glaceon.html" class="mon-card type-ice">
+<img src="../assets/game/graphics/pokemon/glaceon/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/glaceon/anim_front__hover.png">  <span class="name">Glaceon</span>
 </a></li>  </ul>
 </section>
 <section class="card item-sources-card">

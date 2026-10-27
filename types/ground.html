@@ -27,6 +27,39 @@
       try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
       catch (e) {}
     };
+    // Site-wide Hoenn/National dex preference, shared across the pokédex and forms pages.
+    window.obstagoonDexView = {
+      get: (fallback) => {
+        try { const v = sessionStorage.getItem('obstagoon:dexview'); return (v === 'hoenn' || v === 'all') ? v : fallback; }
+        catch (e) { return fallback; }
+      },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
+    };
+    // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
+    window.obstagoonBindSectionView = (opts) => {
+      const slider = document.getElementById(opts.toggleId);
+      const sections = Array.from(document.querySelectorAll(opts.sectionSelector));
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      let currentView = obstagoonDexView.get(opts.default || 'hoenn');
+      const apply = () => {
+        let count = 0;
+        sections.forEach((el) => {
+          const show = currentView === 'all' || !!el.dataset.hoennDex;
+          el.classList.toggle('filter-hidden', !show);
+          if (show) count += Number(el.dataset.formCount) || 0;
+        });
+        if (countEl) countEl.textContent = count;
+      };
+      if (slider) {
+        slider.checked = currentView === 'all';
+        slider.addEventListener('change', () => {
+          currentView = slider.checked ? 'all' : 'hoenn';
+          obstagoonDexView.set(currentView);
+          apply();
+        });
+      }
+      apply();
+    };
     // Shared search+chips+sort binding for index pages; opts carry the per-page ids and source lists.
     window.obstagoonBindIndexPage = (opts) => {
       const input = document.getElementById(opts.inputId);
@@ -45,17 +78,11 @@
       let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
       let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
       const view = opts.view || null;
-      let currentView = null;
-      if (view) {
-        let v;
-        try { v = JSON.parse(sessionStorage.getItem('obstagoon:' + opts.stateKey) || '{}').view; } catch (e) {}
-        currentView = ['hoenn', 'all'].includes(v) ? v : view.default;
-      }
+      let currentView = view ? obstagoonDexView.get(view.default) : null;
       const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
       const persist = () => obstagoonSaveState(opts.stateKey, {
         search: input.value, chips,
         ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
-        ...(view ? {view: currentView} : {}),
       });
       const applyView = () => {
         if (!view) return;
@@ -219,6 +246,7 @@
             slider.checked = currentView === 'all';
             slider.addEventListener('change', () => {
               currentView = slider.checked ? 'all' : 'hoenn';
+              obstagoonDexView.set(currentView);
               applyView();
               applyFilters();
               applySort();
@@ -250,7 +278,17 @@
 <h1><span class="type-badge type-ground">Ground</span></h1>
 
 <section class="card">
-  <h2>Pokémon <span class="muted small-text" id="type-species-count">27</span></h2>
+  <div class="pokedex-header">
+    <h2>Pokémon <span class="muted small-text" id="type-species-count">27</span></h2>
+<div class="dex-view-toggle">
+  <span class="dex-view-label">Hoenn Dex</span>
+  <label class="dex-toggle-switch">
+    <input type="checkbox" id="type-view-slider" role="switch" aria-label="Show National Dex">
+    <span class="dex-toggle-track"><span class="dex-toggle-thumb"></span></span>
+  </label>
+  <span class="dex-view-label">National Dex</span>
+</div>
+  </div>
   <div class="filter-bar pokedex-filter-bar">
     <label class="filter-label" for="type-species-search">Search Pokémon</label>
     <input id="type-species-search" class="filter-input" type="search" placeholder="Filter by name or dex #" autocomplete="off">
@@ -259,9 +297,11 @@
   <div id="type-species-chips" class="filter-chips"></div>
   <div class="table-scroll">
   <table id="type-species-table" class="sortable-table">
-    <thead><tr><th data-sort="number">Hoenn Dex #</th><th>Sprite</th><th data-sort="text">Name</th><th data-sort="text">Types</th><th>Abilities</th></tr></thead>
+    <thead><tr><th data-sort="number" id="type-dex-header">Hoenn Dex #</th><th>Sprite</th><th data-sort="text">Name</th><th data-sort="text">Types</th><th>Abilities</th></tr></thead>
     <tbody>
-      <tr data-search-text="3 Torterra"
+      <tr data-search-text="3 389 Torterra"
+          data-hoenn-dex="3"
+          data-nat-dex="389"
           data-href="../pokedex/torterra.html">
         <td>3</td>
         <td><img src="../assets/game/graphics/pokemon/torterra/anim_front.png" alt="Torterra front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/torterra/anim_front__hover.png"></td>
@@ -269,7 +309,9 @@
         <td><span class="type-badge type-grass">Grass</span> <span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/overgrow.html">Overgrow</a>, <a href="../abilities/shell-armor.html">Shell Armor</a>, <a href="../abilities/solid-rock.html">Solid Rock</a></td>
       </tr>
-      <tr data-search-text="47 Wormadam (Sandy Cloak)"
+      <tr data-search-text="47 413 Wormadam (Sandy Cloak)"
+          data-hoenn-dex="47"
+          data-nat-dex="413"
           data-href="../pokedex/wormadam-sandy.html">
         <td>47</td>
         <td><img src="../assets/game/graphics/pokemon/wormadam/sandy/anim_front.png" alt="Wormadam (Sandy Cloak) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/wormadam/sandy/anim_front__hover.png"></td>
@@ -277,7 +319,9 @@
         <td><span class="type-badge type-bug">Bug</span> <span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/sand-force.html">Sand Force</a>, <a href="../abilities/overcoat.html">Overcoat</a></td>
       </tr>
-      <tr data-search-text="90 Palpitoad"
+      <tr data-search-text="90 536 Palpitoad"
+          data-hoenn-dex="90"
+          data-nat-dex="536"
           data-href="../pokedex/palpitoad.html">
         <td>90</td>
         <td><img src="../assets/game/graphics/pokemon/palpitoad/anim_front.png" alt="Palpitoad front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/palpitoad/anim_front__hover.png"></td>
@@ -285,7 +329,9 @@
         <td><span class="type-badge type-water">Water</span> <span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/poison-touch.html">Poison Touch</a>, <a href="../abilities/swift-swim.html">Swift Swim</a>, <a href="../abilities/water-absorb.html">Water Absorb</a></td>
       </tr>
-      <tr data-search-text="91 Seismitoad"
+      <tr data-search-text="91 537 Seismitoad"
+          data-hoenn-dex="91"
+          data-nat-dex="537"
           data-href="../pokedex/seismitoad.html">
         <td>91</td>
         <td><img src="../assets/game/graphics/pokemon/seismitoad/anim_front.png" alt="Seismitoad front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/seismitoad/anim_front__hover.png"></td>
@@ -293,7 +339,9 @@
         <td><span class="type-badge type-water">Water</span> <span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/poison-touch.html">Poison Touch</a>, <a href="../abilities/swift-swim.html">Swift Swim</a>, <a href="../abilities/water-absorb.html">Water Absorb</a></td>
       </tr>
-      <tr data-search-text="106 Drilbur"
+      <tr data-search-text="106 529 Drilbur"
+          data-hoenn-dex="106"
+          data-nat-dex="529"
           data-href="../pokedex/drilbur.html">
         <td>106</td>
         <td><img src="../assets/game/graphics/pokemon/drilbur/anim_front.png" alt="Drilbur front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/drilbur/anim_front__hover.png"></td>
@@ -301,7 +349,9 @@
         <td><span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/sand-rush.html">Sand Rush</a>, <a href="../abilities/sand-force.html">Sand Force</a>, <a href="../abilities/mold-breaker.html">Mold Breaker</a></td>
       </tr>
-      <tr data-search-text="107 Excadrill"
+      <tr data-search-text="107 530 Excadrill"
+          data-hoenn-dex="107"
+          data-nat-dex="530"
           data-href="../pokedex/excadrill.html">
         <td>107</td>
         <td><img src="../assets/game/graphics/pokemon/excadrill/anim_front.png" alt="Excadrill front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/excadrill/anim_front__hover.png"></td>
@@ -309,7 +359,9 @@
         <td><span class="type-badge type-ground">Ground</span> <span class="type-badge type-steel">Steel</span></td>
         <td><a href="../abilities/sand-rush.html">Sand Rush</a>, <a href="../abilities/sand-force.html">Sand Force</a>, <a href="../abilities/mold-breaker.html">Mold Breaker</a></td>
       </tr>
-      <tr data-search-text="111 Gible"
+      <tr data-search-text="111 443 Gible"
+          data-hoenn-dex="111"
+          data-nat-dex="443"
           data-href="../pokedex/gible.html">
         <td>111</td>
         <td><img src="../assets/game/graphics/pokemon/gible/anim_front.png" alt="Gible front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/gible/anim_front__hover.png"></td>
@@ -317,7 +369,9 @@
         <td><span class="type-badge type-dragon">Dragon</span> <span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/sand-veil.html">Sand Veil</a>, <a href="../abilities/rough-skin.html">Rough Skin</a></td>
       </tr>
-      <tr data-search-text="112 Gabite"
+      <tr data-search-text="112 444 Gabite"
+          data-hoenn-dex="112"
+          data-nat-dex="444"
           data-href="../pokedex/gabite.html">
         <td>112</td>
         <td><img src="../assets/game/graphics/pokemon/gabite/anim_front.png" alt="Gabite front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/gabite/anim_front__hover.png"></td>
@@ -325,7 +379,9 @@
         <td><span class="type-badge type-dragon">Dragon</span> <span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/sand-veil.html">Sand Veil</a>, <a href="../abilities/rough-skin.html">Rough Skin</a></td>
       </tr>
-      <tr data-search-text="113 Garchomp"
+      <tr data-search-text="113 445 Garchomp"
+          data-hoenn-dex="113"
+          data-nat-dex="445"
           data-href="../pokedex/garchomp.html">
         <td>113</td>
         <td><img src="../assets/game/graphics/pokemon/garchomp/anim_front.png" alt="Garchomp front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/garchomp/anim_front__hover.png"></td>
@@ -333,15 +389,19 @@
         <td><span class="type-badge type-dragon">Dragon</span> <span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/sand-veil.html">Sand Veil</a>, <a href="../abilities/rough-skin.html">Rough Skin</a></td>
       </tr>
-      <tr data-search-text="115 Gastrodon"
+      <tr data-search-text="115 423 Gastrodon"
+          data-hoenn-dex="115"
+          data-nat-dex="423"
           data-href="../pokedex/gastrodon.html">
         <td>115</td>
         <td><img src="../assets/game/graphics/pokemon/gastrodon/anim_front.png" alt="Gastrodon front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/gastrodon/anim_front__hover.png"></td>
         <td><a href="../pokedex/gastrodon.html">Gastrodon</a></td>
         <td><span class="type-badge type-water">Water</span> <span class="type-badge type-ground">Ground</span></td>
-        <td><a href="../abilities/gooey.html">Gooey</a>, <a href="../abilities/storm-drain.html">Storm Drain</a>, <a href="../abilities/sand-force.html">Sand Force</a></td>
+        <td><a href="../abilities/storm-drain.html">Storm Drain</a>, <a href="../abilities/gooey.html">Gooey</a>, <a href="../abilities/sand-force.html">Sand Force</a></td>
       </tr>
-      <tr data-search-text="116 Sandygast"
+      <tr data-search-text="116 769 Sandygast"
+          data-hoenn-dex="116"
+          data-nat-dex="769"
           data-href="../pokedex/sandygast.html">
         <td>116</td>
         <td><img src="../assets/game/graphics/pokemon/sandygast/anim_front.png" alt="Sandygast front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/sandygast/anim_front__hover.png"></td>
@@ -349,7 +409,9 @@
         <td><span class="type-badge type-ghost">Ghost</span> <span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/water-compaction.html">Water Compaction</a>, <a href="../abilities/sand-veil.html">Sand Veil</a>, <a href="../abilities/sand-spit.html">Sand Spit</a></td>
       </tr>
-      <tr data-search-text="117 Palossand"
+      <tr data-search-text="117 770 Palossand"
+          data-hoenn-dex="117"
+          data-nat-dex="770"
           data-href="../pokedex/palossand.html">
         <td>117</td>
         <td><img src="../assets/game/graphics/pokemon/palossand/anim_front.png" alt="Palossand front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/palossand/anim_front__hover.png"></td>
@@ -357,7 +419,9 @@
         <td><span class="type-badge type-ghost">Ghost</span> <span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/water-compaction.html">Water Compaction</a>, <a href="../abilities/sand-veil.html">Sand Veil</a>, <a href="../abilities/sand-spit.html">Sand Spit</a></td>
       </tr>
-      <tr data-search-text="171 Mudbray"
+      <tr data-search-text="171 749 Mudbray"
+          data-hoenn-dex="171"
+          data-nat-dex="749"
           data-href="../pokedex/mudbray.html">
         <td>171</td>
         <td><img src="../assets/game/graphics/pokemon/mudbray/anim_front.png" alt="Mudbray front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/mudbray/anim_front__hover.png"></td>
@@ -365,7 +429,9 @@
         <td><span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/own-tempo.html">Own Tempo</a>, <a href="../abilities/stamina.html">Stamina</a>, <a href="../abilities/inner-focus.html">Inner Focus</a></td>
       </tr>
-      <tr data-search-text="172 Mudsdale"
+      <tr data-search-text="172 750 Mudsdale"
+          data-hoenn-dex="172"
+          data-nat-dex="750"
           data-href="../pokedex/mudsdale.html">
         <td>172</td>
         <td><img src="../assets/game/graphics/pokemon/mudsdale/anim_front.png" alt="Mudsdale front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/mudsdale/anim_front__hover.png"></td>
@@ -373,7 +439,9 @@
         <td><span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/own-tempo.html">Own Tempo</a>, <a href="../abilities/stamina.html">Stamina</a>, <a href="../abilities/inner-focus.html">Inner Focus</a></td>
       </tr>
-      <tr data-search-text="174 Diggersby"
+      <tr data-search-text="174 660 Diggersby"
+          data-hoenn-dex="174"
+          data-nat-dex="660"
           data-href="../pokedex/diggersby.html">
         <td>174</td>
         <td><img src="../assets/game/graphics/pokemon/diggersby/anim_front.png" alt="Diggersby front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/diggersby/anim_front__hover.png"></td>
@@ -381,7 +449,9 @@
         <td><span class="type-badge type-normal">Normal</span> <span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/pickup.html">Pickup</a>, <a href="../abilities/cheek-pouch.html">Cheek Pouch</a>, <a href="../abilities/huge-power.html">Huge Power</a></td>
       </tr>
-      <tr data-search-text="181 Golett"
+      <tr data-search-text="181 622 Golett"
+          data-hoenn-dex="181"
+          data-nat-dex="622"
           data-href="../pokedex/golett.html">
         <td>181</td>
         <td><img src="../assets/game/graphics/pokemon/golett/anim_front.png" alt="Golett front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/golett/anim_front__hover.png"></td>
@@ -389,7 +459,9 @@
         <td><span class="type-badge type-ground">Ground</span> <span class="type-badge type-ghost">Ghost</span></td>
         <td><a href="../abilities/iron-fist.html">Iron Fist</a>, <a href="../abilities/vessel-of-ruin.html">Vessel of Ruin</a>, <a href="../abilities/no-guard.html">No Guard</a></td>
       </tr>
-      <tr data-search-text="182 Golurk"
+      <tr data-search-text="182 623 Golurk"
+          data-hoenn-dex="182"
+          data-nat-dex="623"
           data-href="../pokedex/golurk.html">
         <td>182</td>
         <td><img src="../assets/game/graphics/pokemon/golurk/anim_front.png" alt="Golurk front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/golurk/anim_front__hover.png"></td>
@@ -397,7 +469,9 @@
         <td><span class="type-badge type-ground">Ground</span> <span class="type-badge type-ghost">Ghost</span></td>
         <td><a href="../abilities/iron-fist.html">Iron Fist</a>, <a href="../abilities/vessel-of-ruin.html">Vessel of Ruin</a>, <a href="../abilities/no-guard.html">No Guard</a></td>
       </tr>
-      <tr data-search-text="191 Hippopotas"
+      <tr data-search-text="191 449 Hippopotas"
+          data-hoenn-dex="191"
+          data-nat-dex="449"
           data-href="../pokedex/hippopotas.html">
         <td>191</td>
         <td><img src="../assets/game/graphics/pokemon/hippopotas/anim_front.png" alt="Hippopotas front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/hippopotas/anim_front__hover.png"></td>
@@ -405,7 +479,9 @@
         <td><span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/sand-stream.html">Sand Stream</a>, <a href="../abilities/sand-force.html">Sand Force</a></td>
       </tr>
-      <tr data-search-text="192 Hippowdon"
+      <tr data-search-text="192 450 Hippowdon"
+          data-hoenn-dex="192"
+          data-nat-dex="450"
           data-href="../pokedex/hippowdon.html">
         <td>192</td>
         <td><img src="../assets/game/graphics/pokemon/hippowdon/anim_front.png" alt="Hippowdon front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/hippowdon/anim_front__hover.png"></td>
@@ -413,7 +489,9 @@
         <td><span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/sand-stream.html">Sand Stream</a>, <a href="../abilities/sand-force.html">Sand Force</a></td>
       </tr>
-      <tr data-search-text="193 Sandile"
+      <tr data-search-text="193 551 Sandile"
+          data-hoenn-dex="193"
+          data-nat-dex="551"
           data-href="../pokedex/sandile.html">
         <td>193</td>
         <td><img src="../assets/game/graphics/pokemon/sandile/anim_front.png" alt="Sandile front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/sandile/anim_front__hover.png"></td>
@@ -421,7 +499,9 @@
         <td><span class="type-badge type-ground">Ground</span> <span class="type-badge type-dark">Dark</span></td>
         <td><a href="../abilities/intimidate.html">Intimidate</a>, <a href="../abilities/moxie.html">Moxie</a>, <a href="../abilities/anger-point.html">Anger Point</a></td>
       </tr>
-      <tr data-search-text="194 Krokorok"
+      <tr data-search-text="194 552 Krokorok"
+          data-hoenn-dex="194"
+          data-nat-dex="552"
           data-href="../pokedex/krokorok.html">
         <td>194</td>
         <td><img src="../assets/game/graphics/pokemon/krokorok/anim_front.png" alt="Krokorok front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/krokorok/anim_front__hover.png"></td>
@@ -429,7 +509,9 @@
         <td><span class="type-badge type-ground">Ground</span> <span class="type-badge type-dark">Dark</span></td>
         <td><a href="../abilities/intimidate.html">Intimidate</a>, <a href="../abilities/moxie.html">Moxie</a>, <a href="../abilities/anger-point.html">Anger Point</a></td>
       </tr>
-      <tr data-search-text="195 Krookodile"
+      <tr data-search-text="195 553 Krookodile"
+          data-hoenn-dex="195"
+          data-nat-dex="553"
           data-href="../pokedex/krookodile.html">
         <td>195</td>
         <td><img src="../assets/game/graphics/pokemon/krookodile/anim_front.png" alt="Krookodile front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/krookodile/anim_front__hover.png"></td>
@@ -437,7 +519,9 @@
         <td><span class="type-badge type-ground">Ground</span> <span class="type-badge type-dark">Dark</span></td>
         <td><a href="../abilities/intimidate.html">Intimidate</a>, <a href="../abilities/moxie.html">Moxie</a>, <a href="../abilities/supreme-overlord.html">Supreme Overlord</a></td>
       </tr>
-      <tr data-search-text="196 Yamask (Galarian)"
+      <tr data-search-text="196 562 Yamask (Galarian)"
+          data-hoenn-dex="196"
+          data-nat-dex="562"
           data-href="../pokedex/yamask-galar.html">
         <td>196</td>
         <td><img src="../assets/game/graphics/pokemon/yamask/galar/front.png" alt="Yamask (Galarian) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;"></td>
@@ -445,7 +529,9 @@
         <td><span class="type-badge type-ground">Ground</span> <span class="type-badge type-ghost">Ghost</span></td>
         <td><a href="../abilities/wandering-spirit.html">Wandering Spirit</a>, <a href="../abilities/pressure.html">Pressure</a>, <a href="../abilities/berserk.html">Berserk</a></td>
       </tr>
-      <tr data-search-text="198 Runerigus"
+      <tr data-search-text="198 867 Runerigus"
+          data-hoenn-dex="198"
+          data-nat-dex="867"
           data-href="../pokedex/runerigus.html">
         <td>198</td>
         <td><img src="../assets/game/graphics/pokemon/runerigus/front.png" alt="Runerigus front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;"></td>
@@ -453,7 +539,9 @@
         <td><span class="type-badge type-ground">Ground</span> <span class="type-badge type-ghost">Ghost</span></td>
         <td><a href="../abilities/wandering-spirit.html">Wandering Spirit</a>, <a href="../abilities/power-spot.html">Power Spot</a>, <a href="../abilities/tablets-of-ruin.html">Tablets of Ruin</a></td>
       </tr>
-      <tr data-search-text="208 Stunfisk"
+      <tr data-search-text="208 618 Stunfisk"
+          data-hoenn-dex="208"
+          data-nat-dex="618"
           data-href="../pokedex/stunfisk.html">
         <td>208</td>
         <td><img src="../assets/game/graphics/pokemon/stunfisk/anim_front.png" alt="Stunfisk front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/stunfisk/anim_front__hover.png"></td>
@@ -461,7 +549,9 @@
         <td><span class="type-badge type-ground">Ground</span> <span class="type-badge type-electric">Electric</span></td>
         <td><a href="../abilities/static.html">Static</a>, <a href="../abilities/lightning-rod.html">Lightning Rod</a>, <a href="../abilities/water-absorb.html">Water Absorb</a></td>
       </tr>
-      <tr data-search-text="291 Silvally (Type: Ground)"
+      <tr data-search-text="291 773 Silvally (Type: Ground)"
+          data-hoenn-dex="291"
+          data-nat-dex="773"
           data-href="../pokedex/silvally-ground.html">
         <td>291</td>
         <td><img src="../assets/game/graphics/pokemon/silvally/ground/anim_front.png" alt="Silvally (Type: Ground) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/silvally/ground/anim_front__hover.png"></td>
@@ -469,13 +559,185 @@
         <td><span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/multitype.html">Multitype</a></td>
       </tr>
-      <tr data-search-text="341 Landorus"
+      <tr data-search-text="341 645 Landorus"
+          data-hoenn-dex="341"
+          data-nat-dex="645"
           data-href="../pokedex/landorus.html">
         <td>341</td>
         <td><img src="../assets/game/graphics/pokemon/landorus/anim_front.png" alt="Landorus front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/landorus/anim_front__hover.png"></td>
         <td><a href="../pokedex/landorus.html">Landorus</a></td>
         <td><span class="type-badge type-ground">Ground</span> <span class="type-badge type-flying">Flying</span></td>
         <td><a href="../abilities/sand-force.html">Sand Force</a>, <a href="../abilities/sheer-force.html">Sheer Force</a></td>
+      </tr>
+      <tr data-search-text=" 27 Sandshrew"
+          data-hoenn-dex=""
+          data-nat-dex="27"
+          data-href="../pokedex/sandshrew.html">
+        <td>27</td>
+        <td><img src="../assets/game/graphics/pokemon/sandshrew/anim_front.png" alt="Sandshrew front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/sandshrew/anim_front__hover.png"></td>
+        <td><a href="../pokedex/sandshrew.html">Sandshrew</a></td>
+        <td><span class="type-badge type-ground">Ground</span></td>
+        <td><a href="../abilities/sand-rush.html">Sand Rush</a>, <a href="../abilities/filter.html">Filter</a>, <a href="../abilities/sand-veil.html">Sand Veil</a></td>
+      </tr>
+      <tr data-search-text=" 28 Sandslash"
+          data-hoenn-dex=""
+          data-nat-dex="28"
+          data-href="../pokedex/sandslash.html">
+        <td>28</td>
+        <td><img src="../assets/game/graphics/pokemon/sandslash/anim_front.png" alt="Sandslash front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/sandslash/anim_front__hover.png"></td>
+        <td><a href="../pokedex/sandslash.html">Sandslash</a></td>
+        <td><span class="type-badge type-ground">Ground</span></td>
+        <td><a href="../abilities/sand-rush.html">Sand Rush</a>, <a href="../abilities/solid-rock.html">Solid Rock</a>, <a href="../abilities/sand-stream.html">Sand Stream</a></td>
+      </tr>
+      <tr data-search-text=" 31 Nidoqueen"
+          data-hoenn-dex=""
+          data-nat-dex="31"
+          data-href="../pokedex/nidoqueen.html">
+        <td>31</td>
+        <td><img src="../assets/game/graphics/pokemon/nidoqueen/anim_front.png" alt="Nidoqueen front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/nidoqueen/anim_front__hover.png"></td>
+        <td><a href="../pokedex/nidoqueen.html">Nidoqueen</a></td>
+        <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-ground">Ground</span></td>
+        <td><a href="../abilities/poison-touch.html">Poison Touch</a>, <a href="../abilities/queenly-majesty.html">Queenly Majesty</a>, <a href="../abilities/sheer-force.html">Sheer Force</a></td>
+      </tr>
+      <tr data-search-text=" 50 Diglett"
+          data-hoenn-dex=""
+          data-nat-dex="50"
+          data-href="../pokedex/diglett.html">
+        <td>50</td>
+        <td><img src="../assets/game/graphics/pokemon/diglett/anim_front.png" alt="Diglett front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/diglett/anim_front__hover.png"></td>
+        <td><a href="../pokedex/diglett.html">Diglett</a></td>
+        <td><span class="type-badge type-ground">Ground</span></td>
+        <td><a href="../abilities/sand-veil.html">Sand Veil</a>, <a href="../abilities/arena-trap.html">Arena Trap</a>, <a href="../abilities/sand-force.html">Sand Force</a></td>
+      </tr>
+      <tr data-search-text=" 51 Dugtrio"
+          data-hoenn-dex=""
+          data-nat-dex="51"
+          data-href="../pokedex/dugtrio.html">
+        <td>51</td>
+        <td><img src="../assets/game/graphics/pokemon/dugtrio/anim_front.png" alt="Dugtrio front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/dugtrio/anim_front__hover.png"></td>
+        <td><a href="../pokedex/dugtrio.html">Dugtrio</a></td>
+        <td><span class="type-badge type-ground">Ground</span></td>
+        <td><a href="../abilities/sand-veil.html">Sand Veil</a>, <a href="../abilities/arena-trap.html">Arena Trap</a>, <a href="../abilities/sand-force.html">Sand Force</a></td>
+      </tr>
+      <tr data-search-text=" 74 Geodude"
+          data-hoenn-dex=""
+          data-nat-dex="74"
+          data-href="../pokedex/geodude.html">
+        <td>74</td>
+        <td><img src="../assets/game/graphics/pokemon/geodude/anim_front.png" alt="Geodude front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/geodude/anim_front__hover.png"></td>
+        <td><a href="../pokedex/geodude.html">Geodude</a></td>
+        <td><span class="type-badge type-rock">Rock</span> <span class="type-badge type-ground">Ground</span></td>
+        <td><a href="../abilities/rock-head.html">Rock Head</a>, <a href="../abilities/sturdy.html">Sturdy</a>, <a href="../abilities/sand-veil.html">Sand Veil</a></td>
+      </tr>
+      <tr data-search-text=" 75 Graveler"
+          data-hoenn-dex=""
+          data-nat-dex="75"
+          data-href="../pokedex/graveler.html">
+        <td>75</td>
+        <td><img src="../assets/game/graphics/pokemon/graveler/anim_front.png" alt="Graveler front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/graveler/anim_front__hover.png"></td>
+        <td><a href="../pokedex/graveler.html">Graveler</a></td>
+        <td><span class="type-badge type-rock">Rock</span> <span class="type-badge type-ground">Ground</span></td>
+        <td><a href="../abilities/rock-head.html">Rock Head</a>, <a href="../abilities/sturdy.html">Sturdy</a>, <a href="../abilities/sand-veil.html">Sand Veil</a></td>
+      </tr>
+      <tr data-search-text=" 76 Golem"
+          data-hoenn-dex=""
+          data-nat-dex="76"
+          data-href="../pokedex/golem.html">
+        <td>76</td>
+        <td><img src="../assets/game/graphics/pokemon/golem/anim_front.png" alt="Golem front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/golem/anim_front__hover.png"></td>
+        <td><a href="../pokedex/golem.html">Golem</a></td>
+        <td><span class="type-badge type-rock">Rock</span> <span class="type-badge type-ground">Ground</span></td>
+        <td><a href="../abilities/anger-shell.html">Anger Shell</a>, <a href="../abilities/sand-veil.html">Sand Veil</a></td>
+      </tr>
+      <tr data-search-text=" 104 Cubone"
+          data-hoenn-dex=""
+          data-nat-dex="104"
+          data-href="../pokedex/cubone.html">
+        <td>104</td>
+        <td><img src="../assets/game/graphics/pokemon/cubone/anim_front.png" alt="Cubone front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/cubone/anim_front__hover.png"></td>
+        <td><a href="../pokedex/cubone.html">Cubone</a></td>
+        <td><span class="type-badge type-ground">Ground</span></td>
+        <td><a href="../abilities/rock-head.html">Rock Head</a>, <a href="../abilities/unburden.html">Unburden</a>, <a href="../abilities/battle-armor.html">Battle Armor</a></td>
+      </tr>
+      <tr data-search-text=" 105 Marowak"
+          data-hoenn-dex=""
+          data-nat-dex="105"
+          data-href="../pokedex/marowak.html">
+        <td>105</td>
+        <td><img src="../assets/game/graphics/pokemon/marowak/anim_front.png" alt="Marowak front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/marowak/anim_front__hover.png"></td>
+        <td><a href="../pokedex/marowak.html">Marowak</a></td>
+        <td><span class="type-badge type-ground">Ground</span></td>
+        <td><a href="../abilities/rock-head.html">Rock Head</a>, <a href="../abilities/unburden.html">Unburden</a>, <a href="../abilities/battle-armor.html">Battle Armor</a></td>
+      </tr>
+      <tr data-search-text=" 290 Nincada"
+          data-hoenn-dex=""
+          data-nat-dex="290"
+          data-href="../pokedex/nincada.html">
+        <td>290</td>
+        <td><img src="../assets/game/graphics/pokemon/nincada/anim_front.png" alt="Nincada front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/nincada/anim_front__hover.png"></td>
+        <td><a href="../pokedex/nincada.html">Nincada</a></td>
+        <td><span class="type-badge type-bug">Bug</span> <span class="type-badge type-ground">Ground</span></td>
+        <td><a href="../abilities/compound-eyes.html">Compound Eyes</a>, <a href="../abilities/run-away.html">Run Away</a></td>
+      </tr>
+      <tr data-search-text=" 322 Numel"
+          data-hoenn-dex=""
+          data-nat-dex="322"
+          data-href="../pokedex/numel.html">
+        <td>322</td>
+        <td><img src="../assets/game/graphics/pokemon/numel/anim_front.png" alt="Numel front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/numel/anim_front__hover.png"></td>
+        <td><a href="../pokedex/numel.html">Numel</a></td>
+        <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-ground">Ground</span></td>
+        <td><a href="../abilities/oblivious.html">Oblivious</a>, <a href="../abilities/simple.html">Simple</a>, <a href="../abilities/stamina.html">Stamina</a></td>
+      </tr>
+      <tr data-search-text=" 323 Camerupt"
+          data-hoenn-dex=""
+          data-nat-dex="323"
+          data-href="../pokedex/camerupt.html">
+        <td>323</td>
+        <td><img src="../assets/game/graphics/pokemon/camerupt/anim_front.png" alt="Camerupt front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/camerupt/anim_front__hover.png"></td>
+        <td><a href="../pokedex/camerupt.html">Camerupt</a></td>
+        <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-ground">Ground</span></td>
+        <td><a href="../abilities/magma-armor.html">Magma Armor</a>, <a href="../abilities/solid-rock.html">Solid Rock</a>, <a href="../abilities/stamina.html">Stamina</a></td>
+      </tr>
+      <tr data-search-text=" 343 Baltoy"
+          data-hoenn-dex=""
+          data-nat-dex="343"
+          data-href="../pokedex/baltoy.html">
+        <td>343</td>
+        <td><img src="../assets/game/graphics/pokemon/baltoy/anim_front.png" alt="Baltoy front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/baltoy/anim_front__hover.png"></td>
+        <td><a href="../pokedex/baltoy.html">Baltoy</a></td>
+        <td><span class="type-badge type-ground">Ground</span> <span class="type-badge type-psychic">Psychic</span></td>
+        <td><a href="../abilities/truant.html">Truant</a>, <a href="../abilities/levitate.html">Levitate</a></td>
+      </tr>
+      <tr data-search-text=" 344 Claydol"
+          data-hoenn-dex=""
+          data-nat-dex="344"
+          data-href="../pokedex/claydol.html">
+        <td>344</td>
+        <td><img src="../assets/game/graphics/pokemon/claydol/anim_front.png" alt="Claydol front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/claydol/anim_front__hover.png"></td>
+        <td><a href="../pokedex/claydol.html">Claydol</a></td>
+        <td><span class="type-badge type-ground">Ground</span> <span class="type-badge type-psychic">Psychic</span></td>
+        <td><a href="../abilities/truant.html">Truant</a>, <a href="../abilities/levitate.html">Levitate</a></td>
+      </tr>
+      <tr data-search-text=" 901 Ursaluna"
+          data-hoenn-dex=""
+          data-nat-dex="901"
+          data-href="../pokedex/ursaluna.html">
+        <td>901</td>
+        <td><img src="../assets/game/graphics/pokemon/ursaluna/front.png" alt="Ursaluna front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;"></td>
+        <td><a href="../pokedex/ursaluna.html">Ursaluna</a></td>
+        <td><span class="type-badge type-ground">Ground</span> <span class="type-badge type-normal">Normal</span></td>
+        <td><a href="../abilities/guts.html">Guts</a>, <a href="../abilities/bulletproof.html">Bulletproof</a>, <a href="../abilities/honey-gather.html">Honey Gather</a></td>
+      </tr>
+      <tr data-search-text=" 980 Clodsire"
+          data-hoenn-dex=""
+          data-nat-dex="980"
+          data-href="../pokedex/clodsire.html">
+        <td>980</td>
+        <td><img src="../assets/game/graphics/pokemon/clodsire/anim_front.png" alt="Clodsire front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/clodsire/anim_front__hover.png"></td>
+        <td><a href="../pokedex/clodsire.html">Clodsire</a></td>
+        <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-ground">Ground</span></td>
+        <td><a href="../abilities/poison-point.html">Poison Point</a>, <a href="../abilities/water-absorb.html">Water Absorb</a>, <a href="../abilities/unaware.html">Unaware</a></td>
       </tr>
     </tbody>
   </table>
@@ -804,7 +1066,7 @@
     rowsSelector: '#type-species-table tbody tr',
     haystackByKind: {}, sources: [],
     tableSelector: '#type-species-table',
-  });
+view: {toggleId: 'type-view-slider', headerId: 'type-dex-header', numberCol: 0, default: 'hoenn', labels: {hoenn: "Hoenn Dex #", all: 'National Dex #'}},  });
   obstagoonBindIndexPage({
     stateKey: 'type-ground-moves',
     inputId: 'type-moves-search', dropdownId: 'type-moves-suggestions',

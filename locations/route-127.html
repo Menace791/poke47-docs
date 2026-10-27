@@ -27,6 +27,39 @@
       try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
       catch (e) {}
     };
+    // Site-wide Hoenn/National dex preference, shared across the pokédex and forms pages.
+    window.obstagoonDexView = {
+      get: (fallback) => {
+        try { const v = sessionStorage.getItem('obstagoon:dexview'); return (v === 'hoenn' || v === 'all') ? v : fallback; }
+        catch (e) { return fallback; }
+      },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
+    };
+    // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
+    window.obstagoonBindSectionView = (opts) => {
+      const slider = document.getElementById(opts.toggleId);
+      const sections = Array.from(document.querySelectorAll(opts.sectionSelector));
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      let currentView = obstagoonDexView.get(opts.default || 'hoenn');
+      const apply = () => {
+        let count = 0;
+        sections.forEach((el) => {
+          const show = currentView === 'all' || !!el.dataset.hoennDex;
+          el.classList.toggle('filter-hidden', !show);
+          if (show) count += Number(el.dataset.formCount) || 0;
+        });
+        if (countEl) countEl.textContent = count;
+      };
+      if (slider) {
+        slider.checked = currentView === 'all';
+        slider.addEventListener('change', () => {
+          currentView = slider.checked ? 'all' : 'hoenn';
+          obstagoonDexView.set(currentView);
+          apply();
+        });
+      }
+      apply();
+    };
     // Shared search+chips+sort binding for index pages; opts carry the per-page ids and source lists.
     window.obstagoonBindIndexPage = (opts) => {
       const input = document.getElementById(opts.inputId);
@@ -45,17 +78,11 @@
       let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
       let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
       const view = opts.view || null;
-      let currentView = null;
-      if (view) {
-        let v;
-        try { v = JSON.parse(sessionStorage.getItem('obstagoon:' + opts.stateKey) || '{}').view; } catch (e) {}
-        currentView = ['hoenn', 'all'].includes(v) ? v : view.default;
-      }
+      let currentView = view ? obstagoonDexView.get(view.default) : null;
       const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
       const persist = () => obstagoonSaveState(opts.stateKey, {
         search: input.value, chips,
         ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
-        ...(view ? {view: currentView} : {}),
       });
       const applyView = () => {
         if (!view) return;
@@ -219,6 +246,7 @@
             slider.checked = currentView === 'all';
             slider.addEventListener('change', () => {
               currentView = slider.checked ? 'all' : 'hoenn';
+              obstagoonDexView.set(currentView);
               applyView();
               applyFilters();
               applySort();
@@ -367,7 +395,7 @@
       <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/bruxish/anim_front.png" alt="Bruxish" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/bruxish/anim_front__hover.png"><span class="roster-mon-name">Bruxish</span><span class="roster-mon-form">&nbsp;</span></span>
 <span class="roster-mon-lvl">Lv. 30</span><span class="roster-mon-attr"><a href="../abilities/dazzling.html">Dazzling</a></span><div class="roster-mon-moves"><a href="../moves/power-split.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Power Split</span></a><a href="../moves/psywave.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Psywave</span></a><a href="../moves/crunch.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Crunch</span></a><a href="../moves/signal-beam.html" class="move-card type-bug"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Signal Beam</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/gastrodon-east.html">
       <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/gastrodon/east/anim_front.png" alt="Gastrodon (East Sea)" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/gastrodon/east/anim_front__hover.png"><span class="roster-mon-name">Gastrodon</span><span class="roster-mon-form">(East Sea)</span></span>
-<span class="roster-mon-lvl">Lv. 31</span><span class="roster-mon-attr"><a href="../abilities/sticky-hold.html">Sticky Hold</a></span><div class="roster-mon-moves"><a href="../moves/water-pulse.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Water Pulse</span></a><a href="../moves/mud-bomb.html" class="move-card type-ground"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Mud Bomb</span></a><a href="../moves/endure.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Endure</span></a><a href="../moves/envelop.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Envelop</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/clauncher.html">
+<span class="roster-mon-lvl">Lv. 31</span><span class="roster-mon-attr"><a href="../abilities/storm-drain.html">Storm Drain</a></span><div class="roster-mon-moves"><a href="../moves/water-pulse.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Water Pulse</span></a><a href="../moves/mud-bomb.html" class="move-card type-ground"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Mud Bomb</span></a><a href="../moves/endure.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Endure</span></a><a href="../moves/envelop.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Envelop</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/clauncher.html">
       <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/clauncher/anim_front.png" alt="Clauncher" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/clauncher/anim_front__hover.png"><span class="roster-mon-name">Clauncher</span><span class="roster-mon-form">&nbsp;</span></span>
 <span class="roster-mon-lvl">Lv. 32</span><span class="roster-mon-attr"><a href="../abilities/mega-launcher.html">Mega Launcher</a></span><div class="roster-mon-moves"><a href="../moves/ice-ball.html" class="move-card type-ice"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Ice Ball</span></a><a href="../moves/swords-dance.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Swords Dance</span></a><a href="../moves/snipe-shot.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Snipe Shot</span></a><a href="../moves/aura-sphere.html" class="move-card type-fighting"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Aura Sphere</span></a></div>    </div></div>
 </div></div>

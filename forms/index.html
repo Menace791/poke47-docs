@@ -27,6 +27,39 @@
       try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
       catch (e) {}
     };
+    // Site-wide Hoenn/National dex preference, shared across the pokédex and forms pages.
+    window.obstagoonDexView = {
+      get: (fallback) => {
+        try { const v = sessionStorage.getItem('obstagoon:dexview'); return (v === 'hoenn' || v === 'all') ? v : fallback; }
+        catch (e) { return fallback; }
+      },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
+    };
+    // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
+    window.obstagoonBindSectionView = (opts) => {
+      const slider = document.getElementById(opts.toggleId);
+      const sections = Array.from(document.querySelectorAll(opts.sectionSelector));
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      let currentView = obstagoonDexView.get(opts.default || 'hoenn');
+      const apply = () => {
+        let count = 0;
+        sections.forEach((el) => {
+          const show = currentView === 'all' || !!el.dataset.hoennDex;
+          el.classList.toggle('filter-hidden', !show);
+          if (show) count += Number(el.dataset.formCount) || 0;
+        });
+        if (countEl) countEl.textContent = count;
+      };
+      if (slider) {
+        slider.checked = currentView === 'all';
+        slider.addEventListener('change', () => {
+          currentView = slider.checked ? 'all' : 'hoenn';
+          obstagoonDexView.set(currentView);
+          apply();
+        });
+      }
+      apply();
+    };
     // Shared search+chips+sort binding for index pages; opts carry the per-page ids and source lists.
     window.obstagoonBindIndexPage = (opts) => {
       const input = document.getElementById(opts.inputId);
@@ -45,17 +78,11 @@
       let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
       let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
       const view = opts.view || null;
-      let currentView = null;
-      if (view) {
-        let v;
-        try { v = JSON.parse(sessionStorage.getItem('obstagoon:' + opts.stateKey) || '{}').view; } catch (e) {}
-        currentView = ['hoenn', 'all'].includes(v) ? v : view.default;
-      }
+      let currentView = view ? obstagoonDexView.get(view.default) : null;
       const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
       const persist = () => obstagoonSaveState(opts.stateKey, {
         search: input.value, chips,
         ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
-        ...(view ? {view: currentView} : {}),
       });
       const applyView = () => {
         if (!view) return;
@@ -219,6 +246,7 @@
             slider.checked = currentView === 'all';
             slider.addEventListener('change', () => {
               currentView = slider.checked ? 'all' : 'hoenn';
+              obstagoonDexView.set(currentView);
               applyView();
               applyFilters();
               applySort();
@@ -247,8 +275,19 @@
     </div>
   </header>
   <main class="wrap">
-<h1>Forms <span class="muted small-text">133</span></h1>
-  <section class="card" data-href="../pokedex/aegislash.html">
+<div class="pokedex-header">
+  <h1>Forms <span class="muted small-text" id="forms-count">133</span></h1>
+<div class="dex-view-toggle">
+  <span class="dex-view-label">Hoenn Dex</span>
+  <label class="dex-toggle-switch">
+    <input type="checkbox" id="forms-view-slider" role="switch" aria-label="Show National Dex">
+    <span class="dex-toggle-track"><span class="dex-toggle-thumb"></span></span>
+  </label>
+  <span class="dex-view-label">National Dex</span>
+</div>
+</div>
+  <section class="card form-group" data-href="../pokedex/aegislash.html"
+           data-hoenn-dex="82" data-form-count="1">
     <h2>  <a href="../pokedex/aegislash.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/aegislash/anim_front.png" alt="Aegislash" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/aegislash/anim_front__hover.png">    <span>Aegislash</span>
   </a>
@@ -260,7 +299,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/audino.html">
+  <section class="card form-group" data-href="../pokedex/audino.html"
+           data-hoenn-dex="84" data-form-count="1">
     <h2>  <a href="../pokedex/audino.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/audino/anim_front.png" alt="Audino" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/audino/anim_front__hover.png">    <span>Audino</span>
   </a>
@@ -272,7 +312,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/avalugg.html">
+  <section class="card form-group" data-href="../pokedex/avalugg.html"
+           data-hoenn-dex="226" data-form-count="1">
     <h2>  <a href="../pokedex/avalugg.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="Avalugg" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/avalugg/anim_front__hover.png">    <span>Avalugg</span>
   </a>
@@ -284,7 +325,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/basculegion.html">
+  <section class="card form-group" data-href="../pokedex/basculegion.html"
+           data-hoenn-dex="88" data-form-count="1">
     <h2>  <a href="../pokedex/basculegion.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/basculegion/front.png" alt="Basculegion" class="form-sprite-base">    <span>Basculegion</span>
   </a>
@@ -296,7 +338,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/basculin.html">
+  <section class="card form-group" data-href="../pokedex/basculin.html"
+           data-hoenn-dex="87" data-form-count="2">
     <h2>  <a href="../pokedex/basculin.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/basculin/anim_front.png" alt="Basculin" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/basculin/anim_front__hover.png">    <span>Basculin</span>
   </a>
@@ -312,7 +355,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/braviary.html">
+  <section class="card form-group" data-href="../pokedex/braviary.html"
+           data-hoenn-dex="268" data-form-count="1">
     <h2>  <a href="../pokedex/braviary.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/braviary/anim_front.png" alt="Braviary" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/braviary/anim_front__hover.png">    <span>Braviary</span>
   </a>
@@ -324,7 +368,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/burmy.html">
+  <section class="card form-group" data-href="../pokedex/burmy.html"
+           data-hoenn-dex="46" data-form-count="2">
     <h2>  <a href="../pokedex/burmy.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/burmy/anim_front.png" alt="Burmy" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/burmy/anim_front__hover.png">    <span>Burmy</span>
   </a>
@@ -340,7 +385,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/carbink.html">
+  <section class="card form-group" data-href="../pokedex/carbink.html"
+           data-hoenn-dex="75" data-form-count="1">
     <h2>  <a href="../pokedex/carbink.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/carbink/anim_front.png" alt="Carbink" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/carbink/anim_front__hover.png">    <span>Carbink</span>
   </a>
@@ -352,7 +398,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/cherrim.html">
+  <section class="card form-group" data-href="../pokedex/cherrim.html"
+           data-hoenn-dex="147" data-form-count="1">
     <h2>  <a href="../pokedex/cherrim.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/cherrim/anim_front.png" alt="Cherrim" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/cherrim/anim_front__hover.png">    <span>Cherrim</span>
   </a>
@@ -364,7 +411,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/crustle.html">
+  <section class="card form-group" data-href="../pokedex/crustle.html"
+           data-hoenn-dex="170" data-form-count="1">
     <h2>  <a href="../pokedex/crustle.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/crustle/anim_front.png" alt="Crustle" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/crustle/anim_front__hover.png">    <span>Crustle</span>
   </a>
@@ -376,7 +424,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/darmanitan.html">
+  <section class="card form-group" data-href="../pokedex/darmanitan.html"
+           data-hoenn-dex="139" data-form-count="3">
     <h2>  <a href="../pokedex/darmanitan.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="Darmanitan" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__hover.png">    <span>Darmanitan</span>
   </a>
@@ -396,7 +445,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/darumaka.html">
+  <section class="card form-group" data-href="../pokedex/darumaka.html"
+           data-hoenn-dex="138" data-form-count="1">
     <h2>  <a href="../pokedex/darumaka.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/darumaka/anim_front.png" alt="Darumaka" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/darumaka/anim_front__hover.png">    <span>Darumaka</span>
   </a>
@@ -408,7 +458,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/decidueye.html">
+  <section class="card form-group" data-href="../pokedex/decidueye.html"
+           data-hoenn-dex="357" data-form-count="1">
     <h2>  <a href="../pokedex/decidueye.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/decidueye/anim_front.png" alt="Decidueye" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/decidueye/anim_front__hover.png">    <span>Decidueye</span>
   </a>
@@ -420,7 +471,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/deerling.html">
+  <section class="card form-group" data-href="../pokedex/deerling.html"
+           data-hoenn-dex="234" data-form-count="3">
     <h2>  <a href="../pokedex/deerling.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/deerling/anim_front.png" alt="Deerling" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/deerling/anim_front__hover.png">    <span>Deerling</span>
   </a>
@@ -440,7 +492,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/drifblim.html">
+  <section class="card form-group" data-href="../pokedex/drifblim.html"
+           data-hoenn-dex="258" data-form-count="2">
     <h2>  <a href="../pokedex/drifblim.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/drifblim/anim_front.png" alt="Drifblim" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/drifblim/anim_front__hover.png">    <span>Drifblim</span>
   </a>
@@ -456,7 +509,34 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/flabebe.html">
+  <section class="card form-group" data-href="../pokedex/eevee.html"
+           data-hoenn-dex="" data-form-count="1">
+    <h2>  <a href="../pokedex/eevee.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/eevee/anim_front.png" alt="Eevee" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/eevee/anim_front__hover.png">    <span>Eevee</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/eevee-starter.html" class="form-entry mon-card type-normal">
+<img src="graphics/pokemon/eevee/anim_front.png" alt="Eevee (Starter)" class="form-sprite" data-hover="graphics/pokemon/eevee/anim_front__hover.png">    <span>Eevee (Starter)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card form-group" data-href="../pokedex/exeggcute.html"
+           data-hoenn-dex="" data-form-count="1">
+    <h2>  <a href="../pokedex/exeggcute.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/exeggcute/anim_front_gba.png" alt="Exeggcute" class="form-sprite-base">    <span>Exeggcute</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/exeggcute-school.html" class="form-entry mon-card type-grass type2-psychic mon-dual">
+<img src="../assets/game/graphics/pokemon/exeggcute/anim_front.png" alt="Exeggcute (School)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/exeggcute/anim_front__hover.png">    <span>Exeggcute (School)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card form-group" data-href="../pokedex/flabebe.html"
+           data-hoenn-dex="27" data-form-count="4">
     <h2>  <a href="../pokedex/flabebe.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/flabebe/anim_front.png" alt="Flabébé" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/flabebe/anim_front__hover.png">    <span>Flabébé</span>
   </a>
@@ -480,7 +560,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/floette.html">
+  <section class="card form-group" data-href="../pokedex/floette.html"
+           data-hoenn-dex="28" data-form-count="4">
     <h2>  <a href="../pokedex/floette.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/floette/anim_front.png" alt="Floette" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/floette/anim_front__hover.png">    <span>Floette</span>
   </a>
@@ -504,7 +585,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/florges.html">
+  <section class="card form-group" data-href="../pokedex/florges.html"
+           data-hoenn-dex="29" data-form-count="4">
     <h2>  <a href="../pokedex/florges.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/florges/anim_front.png" alt="Florges" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/florges/anim_front__hover.png">    <span>Florges</span>
   </a>
@@ -528,7 +610,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/furfrou.html">
+  <section class="card form-group" data-href="../pokedex/furfrou.html"
+           data-hoenn-dex="262" data-form-count="9">
     <h2>  <a href="../pokedex/furfrou.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/furfrou/anim_front.png" alt="Furfrou" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/furfrou/anim_front__hover.png">    <span>Furfrou</span>
   </a>
@@ -572,7 +655,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/gastrodon.html">
+  <section class="card form-group" data-href="../pokedex/gastrodon.html"
+           data-hoenn-dex="115" data-form-count="1">
     <h2>  <a href="../pokedex/gastrodon.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/gastrodon/anim_front.png" alt="Gastrodon" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/gastrodon/anim_front__hover.png">    <span>Gastrodon</span>
   </a>
@@ -584,7 +668,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/genesect.html">
+  <section class="card form-group" data-href="../pokedex/genesect.html"
+           data-hoenn-dex="350" data-form-count="4">
     <h2>  <a href="../pokedex/genesect.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/genesect/anim_front.png" alt="Genesect" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/genesect/anim_front__hover.png">    <span>Genesect</span>
   </a>
@@ -608,7 +693,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/goodra.html">
+  <section class="card form-group" data-href="../pokedex/goodra.html"
+           data-hoenn-dex="255" data-form-count="1">
     <h2>  <a href="../pokedex/goodra.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/goodra/anim_front.png" alt="Goodra" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/goodra/anim_front__hover.png">    <span>Goodra</span>
   </a>
@@ -620,7 +706,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/gourgeist.html">
+  <section class="card form-group" data-href="../pokedex/gourgeist.html"
+           data-hoenn-dex="276" data-form-count="3">
     <h2>  <a href="../pokedex/gourgeist.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/gourgeist/anim_front.png" alt="Gourgeist" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/gourgeist/anim_front__hover.png">    <span>Gourgeist</span>
   </a>
@@ -640,7 +727,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/greninja.html">
+  <section class="card form-group" data-href="../pokedex/greninja.html"
+           data-hoenn-dex="338" data-form-count="1">
     <h2>  <a href="../pokedex/greninja.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/greninja/anim_front.png" alt="Greninja" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/greninja/anim_front__hover.png">    <span>Greninja</span>
   </a>
@@ -652,7 +740,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/kyurem.html">
+  <section class="card form-group" data-href="../pokedex/kyurem.html"
+           data-hoenn-dex="352" data-form-count="2">
     <h2>  <a href="../pokedex/kyurem.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/kyurem/anim_front.png" alt="Kyurem" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/kyurem/anim_front__hover.png">    <span>Kyurem</span>
   </a>
@@ -668,7 +757,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/landorus.html">
+  <section class="card form-group" data-href="../pokedex/landorus.html"
+           data-hoenn-dex="341" data-form-count="1">
     <h2>  <a href="../pokedex/landorus.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/landorus/anim_front.png" alt="Landorus" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/landorus/anim_front__hover.png">    <span>Landorus</span>
   </a>
@@ -680,7 +770,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/lilligant.html">
+  <section class="card form-group" data-href="../pokedex/lilligant.html"
+           data-hoenn-dex="42" data-form-count="1">
     <h2>  <a href="../pokedex/lilligant.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/lilligant/anim_front.png" alt="Lilligant" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/lilligant/anim_front__hover.png">    <span>Lilligant</span>
   </a>
@@ -692,7 +783,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/lycanroc.html">
+  <section class="card form-group" data-href="../pokedex/lycanroc.html"
+           data-hoenn-dex="272" data-form-count="2">
     <h2>  <a href="../pokedex/lycanroc.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/lycanroc/anim_front.png" alt="Lycanroc" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/lycanroc/anim_front__hover.png">    <span>Lycanroc</span>
   </a>
@@ -708,7 +800,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/meowstic.html">
+  <section class="card form-group" data-href="../pokedex/meowstic.html"
+           data-hoenn-dex="72" data-form-count="1">
     <h2>  <a href="../pokedex/meowstic.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/meowstic/anim_front.png" alt="Meowstic" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/meowstic/anim_front__hover.png">    <span>Meowstic</span>
   </a>
@@ -720,7 +813,21 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/mimikyu.html">
+  <section class="card form-group" data-href="../pokedex/meowth.html"
+           data-hoenn-dex="" data-form-count="1">
+    <h2>  <a href="../pokedex/meowth.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/meowth/anim_front.png" alt="Meowth" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/meowth/anim_front__hover.png">    <span>Meowth</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/meowth-galar.html" class="form-entry mon-card type-steel">
+<img src="../assets/game/graphics/pokemon/meowth/galar/front.png" alt="Meowth (Galarian)" class="form-sprite">    <span>Meowth (Galarian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card form-group" data-href="../pokedex/mimikyu.html"
+           data-hoenn-dex="83" data-form-count="1">
     <h2>  <a href="../pokedex/mimikyu.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/mimikyu/anim_front.png" alt="Mimikyu" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/mimikyu/anim_front__hover.png">    <span>Mimikyu</span>
   </a>
@@ -732,7 +839,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/minior.html">
+  <section class="card form-group" data-href="../pokedex/minior.html"
+           data-hoenn-dex="183" data-form-count="7">
     <h2>  <a href="../pokedex/minior.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/minior/anim_front.png" alt="Minior" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/minior/anim_front__hover.png">    <span>Minior</span>
   </a>
@@ -768,7 +876,21 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/oricorio.html">
+  <section class="card form-group" data-href="../pokedex/mr-mime.html"
+           data-hoenn-dex="" data-form-count="1">
+    <h2>  <a href="../pokedex/mr-mime.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/mr_mime/anim_front.png" alt="Mr. Mime" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/mr_mime/anim_front__hover.png">    <span>Mr. Mime</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/mr-mime-galar.html" class="form-entry mon-card type-ice type2-psychic mon-dual">
+<img src="../assets/game/graphics/pokemon/mr_mime/galar/front.png" alt="Mr. Mime (Galarian)" class="form-sprite">    <span>Mr. Mime (Galarian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card form-group" data-href="../pokedex/oricorio.html"
+           data-hoenn-dex="131" data-form-count="3">
     <h2>  <a href="../pokedex/oricorio.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/oricorio/anim_front.png" alt="Oricorio" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/oricorio/anim_front__hover.png">    <span>Oricorio</span>
   </a>
@@ -788,7 +910,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/pumpkaboo.html">
+  <section class="card form-group" data-href="../pokedex/pumpkaboo.html"
+           data-hoenn-dex="275" data-form-count="3">
     <h2>  <a href="../pokedex/pumpkaboo.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/pumpkaboo/anim_front.png" alt="Pumpkaboo" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/pumpkaboo/anim_front__hover.png">    <span>Pumpkaboo</span>
   </a>
@@ -808,7 +931,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/rockruff.html">
+  <section class="card form-group" data-href="../pokedex/rockruff.html"
+           data-hoenn-dex="271" data-form-count="1">
     <h2>  <a href="../pokedex/rockruff.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/rockruff/anim_front.png" alt="Rockruff" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/rockruff/anim_front__hover.png">    <span>Rockruff</span>
   </a>
@@ -820,7 +944,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/rotom.html">
+  <section class="card form-group" data-href="../pokedex/rotom.html"
+           data-hoenn-dex="222" data-form-count="5">
     <h2>  <a href="../pokedex/rotom.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/rotom/anim_front.png" alt="Rotom" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/rotom/anim_front__hover.png">    <span>Rotom</span>
   </a>
@@ -848,7 +973,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/samurott.html">
+  <section class="card form-group" data-href="../pokedex/samurott.html"
+           data-hoenn-dex="329" data-form-count="1">
     <h2>  <a href="../pokedex/samurott.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/samurott/anim_front.png" alt="Samurott" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/samurott/anim_front__hover.png">    <span>Samurott</span>
   </a>
@@ -860,7 +986,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/sawsbuck.html">
+  <section class="card form-group" data-href="../pokedex/sawsbuck.html"
+           data-hoenn-dex="235" data-form-count="3">
     <h2>  <a href="../pokedex/sawsbuck.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/sawsbuck/anim_front.png" alt="Sawsbuck" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/sawsbuck/anim_front__hover.png">    <span>Sawsbuck</span>
   </a>
@@ -880,7 +1007,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/shaymin.html">
+  <section class="card form-group" data-href="../pokedex/shaymin.html"
+           data-hoenn-dex="77" data-form-count="1">
     <h2>  <a href="../pokedex/shaymin.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/shaymin/anim_front.png" alt="Shaymin" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/shaymin/anim_front__hover.png">    <span>Shaymin</span>
   </a>
@@ -892,7 +1020,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/shellos.html">
+  <section class="card form-group" data-href="../pokedex/shellos.html"
+           data-hoenn-dex="114" data-form-count="1">
     <h2>  <a href="../pokedex/shellos.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/shellos/anim_front.png" alt="Shellos" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/shellos/anim_front__hover.png">    <span>Shellos</span>
   </a>
@@ -904,7 +1033,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/silvally.html">
+  <section class="card form-group" data-href="../pokedex/silvally.html"
+           data-hoenn-dex="291" data-form-count="17">
     <h2>  <a href="../pokedex/silvally.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/silvally/anim_front.png" alt="Silvally" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/silvally/anim_front__hover.png">    <span>Silvally</span>
   </a>
@@ -980,7 +1110,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/sliggoo.html">
+  <section class="card form-group" data-href="../pokedex/sliggoo.html"
+           data-hoenn-dex="254" data-form-count="1">
     <h2>  <a href="../pokedex/sliggoo.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/sliggoo/anim_front.png" alt="Sliggoo" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/sliggoo/anim_front__hover.png">    <span>Sliggoo</span>
   </a>
@@ -992,7 +1123,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/stunfisk.html">
+  <section class="card form-group" data-href="../pokedex/stunfisk.html"
+           data-hoenn-dex="208" data-form-count="1">
     <h2>  <a href="../pokedex/stunfisk.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/stunfisk/anim_front.png" alt="Stunfisk" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/stunfisk/anim_front__hover.png">    <span>Stunfisk</span>
   </a>
@@ -1004,7 +1136,21 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/thundurus.html">
+  <section class="card form-group" data-href="../pokedex/sudowoodo.html"
+           data-hoenn-dex="" data-form-count="1">
+    <h2>  <a href="../pokedex/sudowoodo.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/sudowoodo/anim_front.png" alt="Sudowoodo" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/sudowoodo/anim_front__hover.png">    <span>Sudowoodo</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/sudowoodo-busted.html" class="form-entry mon-card type-rock">
+<img src="../assets/game/graphics/pokemon/sudowoodo/anim_front_gba.png" alt="Sudowoodo (Busted)" class="form-sprite">    <span>Sudowoodo (Busted)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card form-group" data-href="../pokedex/thundurus.html"
+           data-hoenn-dex="340" data-form-count="1">
     <h2>  <a href="../pokedex/thundurus.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/thundurus/anim_front.png" alt="Thundurus" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/thundurus/anim_front__hover.png">    <span>Thundurus</span>
   </a>
@@ -1016,7 +1162,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/tornadus.html">
+  <section class="card form-group" data-href="../pokedex/tornadus.html"
+           data-hoenn-dex="339" data-form-count="1">
     <h2>  <a href="../pokedex/tornadus.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/tornadus/anim_front.png" alt="Tornadus" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/tornadus/anim_front__hover.png">    <span>Tornadus</span>
   </a>
@@ -1028,7 +1175,21 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/vivillon.html">
+  <section class="card form-group" data-href="../pokedex/ursaluna.html"
+           data-hoenn-dex="" data-form-count="1">
+    <h2>  <a href="../pokedex/ursaluna.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/ursaluna/front.png" alt="Ursaluna" class="form-sprite-base">    <span>Ursaluna</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/ursaluna-bloodmoon.html" class="form-entry mon-card type-ground type2-normal mon-dual">
+<img src="../assets/game/graphics/pokemon/ursaluna/bloodmoon/front.png" alt="Ursaluna (Bloodmoon)" class="form-sprite">    <span>Ursaluna (Bloodmoon)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card form-group" data-href="../pokedex/vivillon.html"
+           data-hoenn-dex="23" data-form-count="19">
     <h2>  <a href="../pokedex/vivillon.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/vivillon/anim_front.png" alt="Vivillon" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/vivillon/anim_front__hover.png">    <span>Vivillon</span>
   </a>
@@ -1112,7 +1273,21 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/wishiwashi.html">
+  <section class="card form-group" data-href="../pokedex/weezing.html"
+           data-hoenn-dex="" data-form-count="1">
+    <h2>  <a href="../pokedex/weezing.html" class="form-entry">
+<img src="../assets/game/graphics/pokemon/weezing/anim_front.png" alt="Weezing" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/weezing/anim_front__hover.png">    <span>Weezing</span>
+  </a>
+</h2>
+    <ul class="form-list">
+        <li>  <a href="../pokedex/weezing-galar.html" class="form-entry mon-card type-poison type2-fairy mon-dual">
+<img src="../assets/game/graphics/pokemon/weezing/galar/front.png" alt="Weezing (Galarian)" class="form-sprite">    <span>Weezing (Galarian)</span>
+  </a>
+</li>
+    </ul>
+  </section>
+  <section class="card form-group" data-href="../pokedex/wishiwashi.html"
+           data-hoenn-dex="207" data-form-count="2">
     <h2>  <a href="../pokedex/wishiwashi.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/wishiwashi/anim_front.png" alt="Wishiwashi" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/wishiwashi/anim_front__hover.png">    <span>Wishiwashi</span>
   </a>
@@ -1128,7 +1303,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/wormadam.html">
+  <section class="card form-group" data-href="../pokedex/wormadam.html"
+           data-hoenn-dex="47" data-form-count="2">
     <h2>  <a href="../pokedex/wormadam.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/wormadam/anim_front.png" alt="Wormadam" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/wormadam/anim_front__hover.png">    <span>Wormadam</span>
   </a>
@@ -1144,7 +1320,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/yamask.html">
+  <section class="card form-group" data-href="../pokedex/yamask.html"
+           data-hoenn-dex="196" data-form-count="1">
     <h2>  <a href="../pokedex/yamask.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/yamask/anim_front.png" alt="Yamask" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/yamask/anim_front__hover.png">    <span>Yamask</span>
   </a>
@@ -1156,7 +1333,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/zoroark.html">
+  <section class="card form-group" data-href="../pokedex/zoroark.html"
+           data-hoenn-dex="164" data-form-count="1">
     <h2>  <a href="../pokedex/zoroark.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/zoroark/anim_front.png" alt="Zoroark" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/zoroark/anim_front__hover.png">    <span>Zoroark</span>
   </a>
@@ -1168,7 +1346,8 @@
 </li>
     </ul>
   </section>
-  <section class="card" data-href="../pokedex/zorua.html">
+  <section class="card form-group" data-href="../pokedex/zorua.html"
+           data-hoenn-dex="163" data-form-count="1">
     <h2>  <a href="../pokedex/zorua.html" class="form-entry">
 <img src="../assets/game/graphics/pokemon/zorua/anim_front.png" alt="Zorua" class="form-sprite-base" data-hover="../assets/game/graphics/pokemon/zorua/anim_front__hover.png">    <span>Zorua</span>
   </a>
@@ -1180,6 +1359,9 @@
 </li>
     </ul>
   </section>
+<script>
+  obstagoonBindSectionView({toggleId: 'forms-view-slider', sectionSelector: '.form-group', countId: 'forms-count', default: 'hoenn'});
+</script>
   </main>
   <script>
     function obstagoonBindFilters() {

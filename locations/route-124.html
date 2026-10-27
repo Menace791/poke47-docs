@@ -27,6 +27,39 @@
       try { sessionStorage.setItem('obstagoon:' + key, JSON.stringify(state)); }
       catch (e) {}
     };
+    // Site-wide Hoenn/National dex preference, shared across the pokédex and forms pages.
+    window.obstagoonDexView = {
+      get: (fallback) => {
+        try { const v = sessionStorage.getItem('obstagoon:dexview'); return (v === 'hoenn' || v === 'all') ? v : fallback; }
+        catch (e) { return fallback; }
+      },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
+    };
+    // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
+    window.obstagoonBindSectionView = (opts) => {
+      const slider = document.getElementById(opts.toggleId);
+      const sections = Array.from(document.querySelectorAll(opts.sectionSelector));
+      const countEl = opts.countId ? document.getElementById(opts.countId) : null;
+      let currentView = obstagoonDexView.get(opts.default || 'hoenn');
+      const apply = () => {
+        let count = 0;
+        sections.forEach((el) => {
+          const show = currentView === 'all' || !!el.dataset.hoennDex;
+          el.classList.toggle('filter-hidden', !show);
+          if (show) count += Number(el.dataset.formCount) || 0;
+        });
+        if (countEl) countEl.textContent = count;
+      };
+      if (slider) {
+        slider.checked = currentView === 'all';
+        slider.addEventListener('change', () => {
+          currentView = slider.checked ? 'all' : 'hoenn';
+          obstagoonDexView.set(currentView);
+          apply();
+        });
+      }
+      apply();
+    };
     // Shared search+chips+sort binding for index pages; opts carry the per-page ids and source lists.
     window.obstagoonBindIndexPage = (opts) => {
       const input = document.getElementById(opts.inputId);
@@ -45,17 +78,11 @@
       let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
       let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
       const view = opts.view || null;
-      let currentView = null;
-      if (view) {
-        let v;
-        try { v = JSON.parse(sessionStorage.getItem('obstagoon:' + opts.stateKey) || '{}').view; } catch (e) {}
-        currentView = ['hoenn', 'all'].includes(v) ? v : view.default;
-      }
+      let currentView = view ? obstagoonDexView.get(view.default) : null;
       const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
       const persist = () => obstagoonSaveState(opts.stateKey, {
         search: input.value, chips,
         ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
-        ...(view ? {view: currentView} : {}),
       });
       const applyView = () => {
         if (!view) return;
@@ -219,6 +246,7 @@
             slider.checked = currentView === 'all';
             slider.addEventListener('change', () => {
               currentView = slider.checked ? 'all' : 'hoenn';
+              obstagoonDexView.set(currentView);
               applyView();
               applyFilters();
               applySort();
@@ -351,10 +379,10 @@
 </div><div class="roster-tier-compact" data-tier="4" hidden>  <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/alomomola.html" title="Alomomola Lv. 45"><img src="../assets/game/graphics/pokemon/alomomola/anim_front.png" alt="Alomomola" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/alomomola/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 45</span></a><a class="roster-cmon" href="../pokedex/jellicent.html" title="Jellicent Lv. 45"><img src="../assets/game/graphics/pokemon/jellicent/anim_front.png" alt="Jellicent" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/jellicent/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 45</span></a><a class="roster-cmon" href="../pokedex/dragalge.html" title="Dragalge Lv. 45"><img src="../assets/game/graphics/pokemon/dragalge/anim_front.png" alt="Dragalge" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/dragalge/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 45</span></a></div>
 </div>          <div class="roster-expand" hidden><div class="roster-tier-team" data-tier="0"><div class="roster-team"><div class="roster-mon" data-href="../pokedex/gastrodon-east.html">
       <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/gastrodon/east/anim_front.png" alt="Gastrodon (East Sea)" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/gastrodon/east/anim_front__hover.png"><span class="roster-mon-name">Gastrodon</span><span class="roster-mon-form">(East Sea)</span></span>
-<span class="roster-mon-lvl">Lv. 34</span><span class="roster-mon-attr"><a href="../abilities/sticky-hold.html">Sticky Hold</a></span><div class="roster-mon-moves"><a href="../moves/mud-bomb.html" class="move-card type-ground"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Mud Bomb</span></a><a href="../moves/endure.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Endure</span></a><a href="../moves/envelop.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Envelop</span></a><a href="../moves/muddy-water.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Muddy Water</span></a></div>    </div></div>
+<span class="roster-mon-lvl">Lv. 34</span><span class="roster-mon-attr"><a href="../abilities/storm-drain.html">Storm Drain</a></span><div class="roster-mon-moves"><a href="../moves/mud-bomb.html" class="move-card type-ground"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Mud Bomb</span></a><a href="../moves/endure.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Endure</span></a><a href="../moves/envelop.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Envelop</span></a><a href="../moves/muddy-water.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Muddy Water</span></a></div>    </div></div>
 </div><div class="roster-tier-team" data-tier="1" hidden><div class="roster-team"><div class="roster-mon" data-href="../pokedex/gastrodon-east.html">
       <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/gastrodon/east/anim_front.png" alt="Gastrodon (East Sea)" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/gastrodon/east/anim_front__hover.png"><span class="roster-mon-name">Gastrodon</span><span class="roster-mon-form">(East Sea)</span></span>
-<span class="roster-mon-lvl">Lv. 38</span><span class="roster-mon-attr"><a href="../abilities/sticky-hold.html">Sticky Hold</a></span><div class="roster-mon-moves"><a href="../moves/endure.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Endure</span></a><a href="../moves/envelop.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Envelop</span></a><a href="../moves/muddy-water.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Muddy Water</span></a><a href="../moves/recover.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Recover</span></a></div>    </div></div>
+<span class="roster-mon-lvl">Lv. 38</span><span class="roster-mon-attr"><a href="../abilities/storm-drain.html">Storm Drain</a></span><div class="roster-mon-moves"><a href="../moves/endure.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Endure</span></a><a href="../moves/envelop.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Envelop</span></a><a href="../moves/muddy-water.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Muddy Water</span></a><a href="../moves/recover.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Recover</span></a></div>    </div></div>
 </div><div class="roster-tier-team" data-tier="2" hidden><div class="roster-team"><div class="roster-mon" data-href="../pokedex/jellicent.html">
       <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/jellicent/anim_front.png" alt="Jellicent" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/jellicent/anim_front__hover.png"><span class="roster-mon-name">Jellicent</span></span>
 <span class="roster-mon-lvl">Lv. 41</span><span class="roster-mon-attr"><a href="../abilities/water-absorb.html">Water Absorb</a></span><div class="roster-mon-moves"><a href="../moves/perish-song.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Perish Song</span></a><a href="../moves/wring-out.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Wring Out</span></a><a href="../moves/shadow-ball.html" class="move-card type-ghost"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Shadow Ball</span></a><a href="../moves/water-spout.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Water Spout</span></a></div>    </div></div>
@@ -415,7 +443,7 @@
 <div class="roster-tier-compact" data-tier="0">  <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/shellos-east.html" title="Shellos (East Sea) Lv. 34"><img src="../assets/game/graphics/pokemon/shellos/east/anim_front.png" alt="Shellos (East Sea)" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/shellos/east/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 34</span></a></div>
 </div>          <div class="roster-expand" hidden><div class="roster-tier-team" data-tier="0"><div class="roster-team"><div class="roster-mon" data-href="../pokedex/shellos-east.html">
       <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/shellos/east/anim_front.png" alt="Shellos (East Sea)" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/shellos/east/anim_front__hover.png"><span class="roster-mon-name">Shellos</span><span class="roster-mon-form">(East Sea)</span></span>
-<span class="roster-mon-lvl">Lv. 34</span><span class="roster-mon-attr"><a href="../abilities/sticky-hold.html">Sticky Hold</a></span><div class="roster-mon-moves"><a href="../moves/mud-bomb.html" class="move-card type-ground"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Mud Bomb</span></a><a href="../moves/endure.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Endure</span></a><a href="../moves/envelop.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Envelop</span></a><a href="../moves/muddy-water.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Muddy Water</span></a></div>    </div></div>
+<span class="roster-mon-lvl">Lv. 34</span><span class="roster-mon-attr"><a href="../abilities/storm-drain.html">Storm Drain</a></span><div class="roster-mon-moves"><a href="../moves/mud-bomb.html" class="move-card type-ground"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Mud Bomb</span></a><a href="../moves/endure.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Endure</span></a><a href="../moves/envelop.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Envelop</span></a><a href="../moves/muddy-water.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Muddy Water</span></a></div>    </div></div>
 </div></div>
         </div>
       </li>
@@ -425,7 +453,7 @@
 <div class="roster-tier-compact" data-tier="0">  <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/shellos-east.html" title="Shellos (East Sea) Lv. 33"><img src="../assets/game/graphics/pokemon/shellos/east/anim_front.png" alt="Shellos (East Sea)" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/shellos/east/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a><a class="roster-cmon" href="../pokedex/frillish.html" title="Frillish Lv. 33"><img src="../assets/game/graphics/pokemon/frillish/anim_front.png" alt="Frillish" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/frillish/anim_front__hover.png"><span class="roster-mon-lvl">Lv. 33</span></a></div>
 </div>          <div class="roster-expand" hidden><div class="roster-tier-team" data-tier="0"><div class="roster-team"><div class="roster-mon" data-href="../pokedex/shellos-east.html">
       <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/shellos/east/anim_front.png" alt="Shellos (East Sea)" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/shellos/east/anim_front__hover.png"><span class="roster-mon-name">Shellos</span><span class="roster-mon-form">(East Sea)</span></span>
-<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/sticky-hold.html">Sticky Hold</a></span><div class="roster-mon-moves"><a href="../moves/mud-bomb.html" class="move-card type-ground"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Mud Bomb</span></a><a href="../moves/endure.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Endure</span></a><a href="../moves/envelop.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Envelop</span></a><a href="../moves/muddy-water.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Muddy Water</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/frillish.html">
+<span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/storm-drain.html">Storm Drain</a></span><div class="roster-mon-moves"><a href="../moves/mud-bomb.html" class="move-card type-ground"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Mud Bomb</span></a><a href="../moves/endure.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Endure</span></a><a href="../moves/envelop.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Envelop</span></a><a href="../moves/muddy-water.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Muddy Water</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/frillish.html">
       <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/frillish/anim_front.png" alt="Frillish" class="roster-mon-sprite" data-hover="../assets/game/graphics/pokemon/frillish/anim_front__hover.png"><span class="roster-mon-name">Frillish</span><span class="roster-mon-form">&nbsp;</span></span>
 <span class="roster-mon-lvl">Lv. 33</span><span class="roster-mon-attr"><a href="../abilities/water-absorb.html">Water Absorb</a></span><div class="roster-mon-moves"><a href="../moves/brine.html" class="move-card type-water"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Brine</span></a><a href="../moves/toxic.html" class="move-card type-poison"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Toxic</span></a><a href="../moves/perish-song.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Perish Song</span></a><a href="../moves/wring-out.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span>Wring Out</span></a></div>    </div></div>
 </div></div>
