@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -306,7 +323,7 @@
       <tr data-href="../pokedex/shinx.html">
         <td><a href="../pokedex/shinx.html">Shinx</a></td>
         <td>17</td>
-        <td><img src="../assets/game/graphics/pokemon/shinx/anim_front.png" alt="Shinx Level 17 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/shinx/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/shinx/anim_front.png" alt="Shinx Level 17 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/shinx/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/shinx/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/shinx/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -321,7 +338,7 @@
       <tr data-href="../pokedex/finneon.html">
         <td><a href="../pokedex/finneon.html">Finneon</a></td>
         <td>17</td>
-        <td><img src="../assets/game/graphics/pokemon/finneon/anim_front.png" alt="Finneon Level 17 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/finneon/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/finneon/anim_front.png" alt="Finneon Level 17 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/finneon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/finneon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/finneon/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
@@ -336,7 +353,7 @@
       <tr data-href="../pokedex/riolu.html">
         <td><a href="../pokedex/riolu.html">Riolu</a></td>
         <td>17</td>
-        <td><img src="../assets/game/graphics/pokemon/riolu/anim_front.png" alt="Riolu Level 17 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/riolu/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/riolu/anim_front.png" alt="Riolu Level 17 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/riolu/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/riolu/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/riolu/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -366,7 +383,7 @@
       <tr data-href="../pokedex/luxio.html">
         <td><a href="../pokedex/luxio.html">Luxio</a></td>
         <td>26</td>
-        <td><img src="../assets/game/graphics/pokemon/luxio/anim_front.png" alt="Luxio Level 26 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/luxio/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/luxio/anim_front.png" alt="Luxio Level 26 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/luxio/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/luxio/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/luxio/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -381,7 +398,7 @@
       <tr data-href="../pokedex/finneon.html">
         <td><a href="../pokedex/finneon.html">Finneon</a></td>
         <td>26</td>
-        <td><img src="../assets/game/graphics/pokemon/finneon/anim_front.png" alt="Finneon Level 26 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/finneon/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/finneon/anim_front.png" alt="Finneon Level 26 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/finneon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/finneon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/finneon/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
@@ -396,7 +413,7 @@
       <tr data-href="../pokedex/riolu.html">
         <td><a href="../pokedex/riolu.html">Riolu</a></td>
         <td>26</td>
-        <td><img src="../assets/game/graphics/pokemon/riolu/anim_front.png" alt="Riolu Level 26 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/riolu/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/riolu/anim_front.png" alt="Riolu Level 26 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/riolu/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/riolu/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/riolu/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -426,7 +443,7 @@
       <tr data-href="../pokedex/luxio.html">
         <td><a href="../pokedex/luxio.html">Luxio</a></td>
         <td>29</td>
-        <td><img src="../assets/game/graphics/pokemon/luxio/anim_front.png" alt="Luxio Level 29 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/luxio/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/luxio/anim_front.png" alt="Luxio Level 29 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/luxio/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/luxio/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/luxio/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -441,7 +458,7 @@
       <tr data-href="../pokedex/lumineon.html">
         <td><a href="../pokedex/lumineon.html">Lumineon</a></td>
         <td>29</td>
-        <td><img src="../assets/game/graphics/pokemon/lumineon/anim_front.png" alt="Lumineon Level 29 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/lumineon/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/lumineon/anim_front.png" alt="Lumineon Level 29 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/lumineon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/lumineon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/lumineon/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
@@ -456,7 +473,7 @@
       <tr data-href="../pokedex/riolu.html">
         <td><a href="../pokedex/riolu.html">Riolu</a></td>
         <td>29</td>
-        <td><img src="../assets/game/graphics/pokemon/riolu/anim_front.png" alt="Riolu Level 29 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/riolu/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/riolu/anim_front.png" alt="Riolu Level 29 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/riolu/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/riolu/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/riolu/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -486,7 +503,7 @@
       <tr data-href="../pokedex/luxray.html">
         <td><a href="../pokedex/luxray.html">Luxray</a></td>
         <td>32</td>
-        <td><img src="../assets/game/graphics/pokemon/luxray/anim_front.png" alt="Luxray Level 32 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/luxray/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/luxray/anim_front.png" alt="Luxray Level 32 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/luxray/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/luxray/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/luxray/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -501,7 +518,7 @@
       <tr data-href="../pokedex/lumineon.html">
         <td><a href="../pokedex/lumineon.html">Lumineon</a></td>
         <td>32</td>
-        <td><img src="../assets/game/graphics/pokemon/lumineon/anim_front.png" alt="Lumineon Level 32 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/lumineon/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/lumineon/anim_front.png" alt="Lumineon Level 32 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/lumineon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/lumineon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/lumineon/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
@@ -516,7 +533,7 @@
       <tr data-href="../pokedex/riolu.html">
         <td><a href="../pokedex/riolu.html">Riolu</a></td>
         <td>32</td>
-        <td><img src="../assets/game/graphics/pokemon/riolu/anim_front.png" alt="Riolu Level 32 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/riolu/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/riolu/anim_front.png" alt="Riolu Level 32 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/riolu/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/riolu/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/riolu/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -546,7 +563,7 @@
       <tr data-href="../pokedex/luxray.html">
         <td><a href="../pokedex/luxray.html">Luxray</a></td>
         <td>35</td>
-        <td><img src="../assets/game/graphics/pokemon/luxray/anim_front.png" alt="Luxray Level 35 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/luxray/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/luxray/anim_front.png" alt="Luxray Level 35 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/luxray/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/luxray/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/luxray/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -561,7 +578,7 @@
       <tr data-href="../pokedex/lumineon.html">
         <td><a href="../pokedex/lumineon.html">Lumineon</a></td>
         <td>35</td>
-        <td><img src="../assets/game/graphics/pokemon/lumineon/anim_front.png" alt="Lumineon Level 35 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/lumineon/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/lumineon/anim_front.png" alt="Lumineon Level 35 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/lumineon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/lumineon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/lumineon/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
@@ -576,7 +593,7 @@
       <tr data-href="../pokedex/lucario.html">
         <td><a href="../pokedex/lucario.html">Lucario</a></td>
         <td>35</td>
-        <td><img src="../assets/game/graphics/pokemon/lucario/anim_front.png" alt="Lucario Level 35 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/lucario/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/lucario/anim_front.png" alt="Lucario Level 35 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/lucario/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/lucario/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/lucario/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"> <img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon"></div>
@@ -772,7 +789,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -780,6 +797,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

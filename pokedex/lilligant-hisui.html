@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/lilligant/hisui/front.png" alt="Lilligant (Hisuian) front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/lilligant/hisui/front__shiny.png" alt="Lilligant (Hisuian) shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/lilligant/hisui/front.png" alt="Lilligant (Hisuian) front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/lilligant/hisui/front__shiny.png">
+<img src="../assets/game/graphics/pokemon/lilligant/hisui/front__shiny.png" alt="Lilligant (Hisuian) shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/lilligant/hisui/front.png">    </div>
     <div>
       <p class="muted">Hoenn Dex #42</p>
       <p><strong>Lilligant (Hisuian)</strong></p>
@@ -299,7 +316,7 @@
     <p><strong>Catch Rate:</strong> 75</p>
     <p><strong>Overworld Behavior:</strong> Ignores Player</p>
     <p><strong>Autobattle Behavior:</strong> Copies Player (Fast)</p>
-<p><strong>EV Yield:</strong> 1 Attack, 1 Speed</p><p class="wild-items"><strong>Wild Held Item:</strong> <span><a href="../itemdex/absorb-bulb.html" class="item-card"><img src="../assets/game/graphics/items/icons/absorb_bulb.png" alt="Absorb Bulb" class="item-icon">Absorb Bulb</a> (5%)</span></p><p><strong>Base Species:</strong>   <a href="lilligant.html" class="species-inline-link mon-card type-grass"><img src="../assets/game/graphics/pokemon/lilligant/anim_front.png" alt="Lilligant" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/lilligant/anim_front__hover.png"><span>Lilligant</span>
+<p><strong>EV Yield:</strong> 1 Attack, 1 Speed</p><p class="wild-items"><strong>Wild Held Item:</strong> <span><a href="../itemdex/absorb-bulb.html" class="item-card"><img src="../assets/game/graphics/items/icons/absorb_bulb.png" alt="Absorb Bulb" class="item-icon">Absorb Bulb</a> (5%)</span></p><p><strong>Base Species:</strong>   <a href="lilligant.html" class="species-inline-link mon-card type-grass"><img src="../assets/game/graphics/pokemon/lilligant/anim_front.png" alt="Lilligant" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/lilligant/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/lilligant/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/lilligant/anim_front__shiny__hover.png"><span>Lilligant</span>
   </a>
 </p>  </section>
   <section class="card">
@@ -352,7 +369,7 @@ crown heartens those in proximity.</p>
   <div class="card">
     <h2>Evolutions</h2>
     <ul>
-        <li>  <a href="petilil.html" class="species-inline-link mon-card type-grass"><img src="../assets/game/graphics/pokemon/petilil/anim_front.png" alt="Petilil" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/petilil/anim_front__hover.png"><span>Petilil</span>
+        <li>  <a href="petilil.html" class="species-inline-link mon-card type-grass"><img src="../assets/game/graphics/pokemon/petilil/anim_front.png" alt="Petilil" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/petilil/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/petilil/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/petilil/anim_front__shiny__hover.png"><span>Petilil</span>
   </a>
  → Use <a href="../itemdex/dawn-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/dawn_stone.png" alt="" class="item-icon">Dawn Stone</a></li>
     </ul>
@@ -360,7 +377,7 @@ crown heartens those in proximity.</p>
   <div class="card">
     <h2>Forms</h2>
     <ul class="form-list">
-        <li><a href="lilligant.html" class="form-entry mon-card type-grass"><img src="../assets/game/graphics/pokemon/lilligant/anim_front.png" alt="Lilligant" class="form-sprite" data-hover="../assets/game/graphics/pokemon/lilligant/anim_front__hover.png"><span>Lilligant</span>
+        <li><a href="lilligant.html" class="form-entry mon-card type-grass"><img src="../assets/game/graphics/pokemon/lilligant/anim_front.png" alt="Lilligant" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/lilligant/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/lilligant/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/lilligant/anim_front__shiny__hover.png"><span>Lilligant</span>
         </a></li>
     </ul>
   </div>
@@ -596,7 +613,7 @@ crown heartens those in proximity.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -604,6 +621,7 @@ crown heartens those in proximity.</p>
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

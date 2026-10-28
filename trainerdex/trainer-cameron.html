@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -306,7 +323,7 @@
       <tr data-href="../pokedex/elgyem.html">
         <td><a href="../pokedex/elgyem.html">Elgyem</a></td>
         <td>31</td>
-        <td><img src="../assets/game/graphics/pokemon/elgyem/anim_front.png" alt="Elgyem Level 31 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/elgyem/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/elgyem/anim_front.png" alt="Elgyem Level 31 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/elgyem/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/elgyem/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/elgyem/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -336,7 +353,7 @@
       <tr data-href="../pokedex/duosion.html">
         <td><a href="../pokedex/duosion.html">Duosion</a></td>
         <td>33</td>
-        <td><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion Level 33 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion Level 33 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/duosion/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/duosion/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -351,7 +368,7 @@
       <tr data-href="../pokedex/elgyem.html">
         <td><a href="../pokedex/elgyem.html">Elgyem</a></td>
         <td>33</td>
-        <td><img src="../assets/game/graphics/pokemon/elgyem/anim_front.png" alt="Elgyem Level 33 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/elgyem/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/elgyem/anim_front.png" alt="Elgyem Level 33 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/elgyem/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/elgyem/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/elgyem/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -381,7 +398,7 @@
       <tr data-href="../pokedex/duosion.html">
         <td><a href="../pokedex/duosion.html">Duosion</a></td>
         <td>38</td>
-        <td><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion Level 38 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion Level 38 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/duosion/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/duosion/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -396,7 +413,7 @@
       <tr data-href="../pokedex/beheeyem.html">
         <td><a href="../pokedex/beheeyem.html">Beheeyem</a></td>
         <td>38</td>
-        <td><img src="../assets/game/graphics/pokemon/beheeyem/anim_front.png" alt="Beheeyem Level 38 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/beheeyem/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/beheeyem/anim_front.png" alt="Beheeyem Level 38 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/beheeyem/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/beheeyem/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/beheeyem/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -426,7 +443,7 @@
       <tr data-href="../pokedex/duosion.html">
         <td><a href="../pokedex/duosion.html">Duosion</a></td>
         <td>41</td>
-        <td><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion Level 41 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion Level 41 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/duosion/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/duosion/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -441,7 +458,7 @@
       <tr data-href="../pokedex/beheeyem.html">
         <td><a href="../pokedex/beheeyem.html">Beheeyem</a></td>
         <td>41</td>
-        <td><img src="../assets/game/graphics/pokemon/beheeyem/anim_front.png" alt="Beheeyem Level 41 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/beheeyem/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/beheeyem/anim_front.png" alt="Beheeyem Level 41 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/beheeyem/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/beheeyem/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/beheeyem/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -471,7 +488,7 @@
       <tr data-href="../pokedex/reuniclus.html">
         <td><a href="../pokedex/reuniclus.html">Reuniclus</a></td>
         <td>45</td>
-        <td><img src="../assets/game/graphics/pokemon/reuniclus/anim_front.png" alt="Reuniclus Level 45 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/reuniclus/anim_front.png" alt="Reuniclus Level 45 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/reuniclus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -486,7 +503,7 @@
       <tr data-href="../pokedex/beheeyem.html">
         <td><a href="../pokedex/beheeyem.html">Beheeyem</a></td>
         <td>45</td>
-        <td><img src="../assets/game/graphics/pokemon/beheeyem/anim_front.png" alt="Beheeyem Level 45 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/beheeyem/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/beheeyem/anim_front.png" alt="Beheeyem Level 45 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/beheeyem/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/beheeyem/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/beheeyem/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -682,7 +699,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -690,6 +707,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

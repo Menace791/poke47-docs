@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/rattata/alola/anim_front.png" alt="Rattata (Alolan) front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/rattata/alola/anim_front__shiny.png" alt="Rattata (Alolan) shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/rattata/alola/anim_front.png" alt="Rattata (Alolan) front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/rattata/alola/anim_front__shiny.png">
+<img src="../assets/game/graphics/pokemon/rattata/alola/anim_front__shiny.png" alt="Rattata (Alolan) shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/rattata/alola/anim_front.png">    </div>
     <div>
       <p class="muted">National Dex #19</p>
       <p><strong>Rattata (Alolan)</strong></p>
@@ -299,7 +316,7 @@
     <p><strong>Catch Rate:</strong> 255</p>
     <p><strong>Overworld Behavior:</strong> Watches Player</p>
     <p><strong>Autobattle Behavior:</strong> Copies Player</p>
-<p><strong>EV Yield:</strong> 1 Speed</p><p class="wild-items"><strong>Wild Held Item:</strong> <span><a href="../itemdex/pecha-berry.html" class="item-card"><img src="../assets/game/graphics/items/icons/pecha_berry.png" alt="Pecha Berry" class="item-icon">Pecha Berry</a> (5%)</span></p><p><strong>Base Species:</strong>   <a href="rattata.html" class="species-inline-link mon-card type-normal"><img src="../assets/game/graphics/pokemon/rattata/anim_front.png" alt="Rattata" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/rattata/anim_front__hover.png"><span>Rattata</span>
+<p><strong>EV Yield:</strong> 1 Speed</p><p class="wild-items"><strong>Wild Held Item:</strong> <span><a href="../itemdex/pecha-berry.html" class="item-card"><img src="../assets/game/graphics/items/icons/pecha_berry.png" alt="Pecha Berry" class="item-icon">Pecha Berry</a> (5%)</span></p><p><strong>Base Species:</strong>   <a href="rattata.html" class="species-inline-link mon-card type-normal"><img src="../assets/game/graphics/pokemon/rattata/anim_front.png" alt="Rattata" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/rattata/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rattata/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rattata/anim_front__shiny__hover.png"><span>Rattata</span>
   </a>
 </p>  </section>
   <section class="card">
@@ -352,7 +369,7 @@ it steals whatever food it finds.</p>
   <div class="card">
     <h2>Evolutions</h2>
     <ul>
-        <li>Level up: 20 (Night) →   <a href="raticate-alola.html" class="species-inline-link mon-card type-dark type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/raticate/alola/anim_front.png" alt="Raticate (Alolan)" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/raticate/alola/anim_front__hover.png"><span>Raticate (Alolan)</span>
+        <li>Level up: 20 (Night) →   <a href="raticate-alola.html" class="species-inline-link mon-card type-dark type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/raticate/alola/anim_front.png" alt="Raticate (Alolan)" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/raticate/alola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/raticate/alola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/raticate/alola/anim_front__shiny__hover.png"><span>Raticate (Alolan)</span>
   </a>
 </li>
     </ul>
@@ -360,7 +377,7 @@ it steals whatever food it finds.</p>
   <div class="card">
     <h2>Forms</h2>
     <ul class="form-list">
-        <li><a href="rattata.html" class="form-entry mon-card type-normal"><img src="../assets/game/graphics/pokemon/rattata/anim_front.png" alt="Rattata" class="form-sprite" data-hover="../assets/game/graphics/pokemon/rattata/anim_front__hover.png"><span>Rattata</span>
+        <li><a href="rattata.html" class="form-entry mon-card type-normal"><img src="../assets/game/graphics/pokemon/rattata/anim_front.png" alt="Rattata" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/rattata/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rattata/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rattata/anim_front__shiny__hover.png"><span>Rattata</span>
         </a></li>
     </ul>
   </div>
@@ -592,7 +609,7 @@ it steals whatever food it finds.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -600,6 +617,7 @@ it steals whatever food it finds.</p>
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

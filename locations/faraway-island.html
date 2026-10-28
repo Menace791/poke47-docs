@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -280,7 +297,7 @@
 <section class="card encounter-block" id="faraway-island-interior">
     <h3>Static Encounter</h3>
         <ul class="encounter-cards">
-<li><a href="../pokedex/marshadow.html" class="encounter-entry mon-card type-fighting type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/marshadow/anim_front.png" alt="Marshadow" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/marshadow/anim_front__hover.png"><span class="encounter-info"><span class="name">Marshadow</span><span class="encounter-meta">Lv. 30</span></span>
+<li><a href="../pokedex/marshadow.html" class="encounter-entry mon-card type-fighting type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/marshadow/anim_front.png" alt="Marshadow" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/marshadow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/marshadow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/marshadow/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Marshadow</span><span class="encounter-meta">Lv. 30</span></span>
     </a></li>    </ul>
 
 </section>
@@ -429,7 +446,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -437,6 +454,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

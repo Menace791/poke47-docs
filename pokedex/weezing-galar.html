@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/weezing/galar/front.png" alt="Weezing (Galarian) front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/weezing/galar/front__shiny.png" alt="Weezing (Galarian) shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/weezing/galar/front.png" alt="Weezing (Galarian) front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/weezing/galar/front__shiny.png">
+<img src="../assets/game/graphics/pokemon/weezing/galar/front__shiny.png" alt="Weezing (Galarian) shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/weezing/galar/front.png">    </div>
     <div>
       <p class="muted">National Dex #110</p>
       <p><strong>Weezing (Galarian)</strong></p>
@@ -299,7 +316,7 @@
     <p><strong>Catch Rate:</strong> 60</p>
     <p><strong>Overworld Behavior:</strong> Watches Player</p>
     <p><strong>Autobattle Behavior:</strong> Copies Player (Slow)</p>
-<p><strong>EV Yield:</strong> 2 Defense</p><p class="wild-items"><strong>Wild Held Item:</strong> <span><a href="../itemdex/misty-seed.html" class="item-card"><img src="../assets/game/graphics/items/icons/misty_seed.png" alt="Misty Seed" class="item-icon">Misty Seed</a> (5%)</span></p><p><strong>Base Species:</strong>   <a href="weezing.html" class="species-inline-link mon-card type-poison"><img src="../assets/game/graphics/pokemon/weezing/anim_front.png" alt="Weezing" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/weezing/anim_front__hover.png"><span>Weezing</span>
+<p><strong>EV Yield:</strong> 2 Defense</p><p class="wild-items"><strong>Wild Held Item:</strong> <span><a href="../itemdex/misty-seed.html" class="item-card"><img src="../assets/game/graphics/items/icons/misty_seed.png" alt="Misty Seed" class="item-icon">Misty Seed</a> (5%)</span></p><p><strong>Base Species:</strong>   <a href="weezing.html" class="species-inline-link mon-card type-poison"><img src="../assets/game/graphics/pokemon/weezing/anim_front.png" alt="Weezing" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/weezing/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/weezing/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/weezing/anim_front__shiny__hover.png"><span>Weezing</span>
   </a>
 </p>  </section>
   <section class="card">
@@ -352,7 +369,7 @@ pollutant particles, expelling clean air.</p>
   <div class="card">
     <h2>Evolutions</h2>
     <ul>
-        <li>  <a href="koffing.html" class="species-inline-link mon-card type-poison"><img src="../assets/game/graphics/pokemon/koffing/anim_front.png" alt="Koffing" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/koffing/anim_front__hover.png"><span>Koffing</span>
+        <li>  <a href="koffing.html" class="species-inline-link mon-card type-poison"><img src="../assets/game/graphics/pokemon/koffing/anim_front.png" alt="Koffing" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/koffing/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/koffing/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/koffing/anim_front__shiny__hover.png"><span>Koffing</span>
   </a>
  → Level up: 35 (In Galar)</li>
     </ul>
@@ -360,7 +377,7 @@ pollutant particles, expelling clean air.</p>
   <div class="card">
     <h2>Forms</h2>
     <ul class="form-list">
-        <li><a href="weezing.html" class="form-entry mon-card type-poison"><img src="../assets/game/graphics/pokemon/weezing/anim_front.png" alt="Weezing" class="form-sprite" data-hover="../assets/game/graphics/pokemon/weezing/anim_front__hover.png"><span>Weezing</span>
+        <li><a href="weezing.html" class="form-entry mon-card type-poison"><img src="../assets/game/graphics/pokemon/weezing/anim_front.png" alt="Weezing" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/weezing/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/weezing/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/weezing/anim_front__shiny__hover.png"><span>Weezing</span>
         </a></li>
     </ul>
   </div>
@@ -598,7 +615,7 @@ pollutant particles, expelling clean air.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -606,6 +623,7 @@ pollutant particles, expelling clean air.</p>
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -306,7 +323,7 @@
       <tr data-href="../pokedex/fletchinder.html">
         <td><a href="../pokedex/fletchinder.html">Fletchinder</a></td>
         <td>29</td>
-        <td><img src="../assets/game/graphics/pokemon/fletchinder/anim_front.png" alt="Fletchinder Level 29 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/fletchinder/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/fletchinder/anim_front.png" alt="Fletchinder Level 29 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/fletchinder/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/fletchinder/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/fletchinder/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -321,7 +338,7 @@
       <tr data-href="../pokedex/drifblim.html">
         <td><a href="../pokedex/drifblim.html">Drifblim</a></td>
         <td>29</td>
-        <td><img src="../assets/game/graphics/pokemon/drifblim/anim_front.png" alt="Drifblim Level 29 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/drifblim/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/drifblim/anim_front.png" alt="Drifblim Level 29 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/drifblim/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/drifblim/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/drifblim/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -336,7 +353,7 @@
       <tr data-href="../pokedex/swanna.html">
         <td><a href="../pokedex/swanna.html">Swanna</a></td>
         <td>30</td>
-        <td><img src="../assets/game/graphics/pokemon/swanna/anim_front.png" alt="Swanna Level 30 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/swanna/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/swanna/anim_front.png" alt="Swanna Level 30 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/swanna/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/swanna/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/swanna/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -351,7 +368,7 @@
       <tr data-href="../pokedex/emolga.html">
         <td><a href="../pokedex/emolga.html">Emolga</a></td>
         <td>31</td>
-        <td><img src="../assets/game/graphics/pokemon/emolga/anim_front.png" alt="Emolga Level 31 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/emolga/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/emolga/anim_front.png" alt="Emolga Level 31 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/emolga/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/emolga/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/emolga/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -366,7 +383,7 @@
       <tr data-href="../pokedex/noivern.html">
         <td><a href="../pokedex/noivern.html">Noivern</a></td>
         <td>33</td>
-        <td><img src="../assets/game/graphics/pokemon/noivern/anim_front.png" alt="Noivern Level 33 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/noivern/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/noivern/anim_front.png" alt="Noivern Level 33 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/noivern/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/noivern/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/noivern/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
@@ -396,7 +413,7 @@
       <tr data-href="../pokedex/emolga.html">
         <td><a href="../pokedex/emolga.html">Emolga</a></td>
         <td>44</td>
-        <td><img src="../assets/game/graphics/pokemon/emolga/anim_front.png" alt="Emolga Level 44 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/emolga/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/emolga/anim_front.png" alt="Emolga Level 44 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/emolga/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/emolga/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/emolga/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -411,7 +428,7 @@
       <tr data-href="../pokedex/swanna.html">
         <td><a href="../pokedex/swanna.html">Swanna</a></td>
         <td>44</td>
-        <td><img src="../assets/game/graphics/pokemon/swanna/anim_front.png" alt="Swanna Level 44 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/swanna/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/swanna/anim_front.png" alt="Swanna Level 44 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/swanna/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/swanna/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/swanna/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -426,7 +443,7 @@
       <tr data-href="../pokedex/drifblim.html">
         <td><a href="../pokedex/drifblim.html">Drifblim</a></td>
         <td>43</td>
-        <td><img src="../assets/game/graphics/pokemon/drifblim/anim_front.png" alt="Drifblim Level 43 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/drifblim/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/drifblim/anim_front.png" alt="Drifblim Level 43 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/drifblim/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/drifblim/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/drifblim/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -441,7 +458,7 @@
       <tr data-href="../pokedex/talonflame.html">
         <td><a href="../pokedex/talonflame.html">Talonflame</a></td>
         <td>42</td>
-        <td><img src="../assets/game/graphics/pokemon/talonflame/anim_front.png" alt="Talonflame Level 42 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/talonflame/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/talonflame/anim_front.png" alt="Talonflame Level 42 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/talonflame/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/talonflame/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/talonflame/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -456,7 +473,7 @@
       <tr data-href="../pokedex/noivern.html">
         <td><a href="../pokedex/noivern.html">Noivern</a></td>
         <td>47</td>
-        <td><img src="../assets/game/graphics/pokemon/noivern/anim_front.png" alt="Noivern Level 47 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/noivern/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/noivern/anim_front.png" alt="Noivern Level 47 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/noivern/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/noivern/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/noivern/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
@@ -486,7 +503,7 @@
       <tr data-href="../pokedex/emolga.html">
         <td><a href="../pokedex/emolga.html">Emolga</a></td>
         <td>49</td>
-        <td><img src="../assets/game/graphics/pokemon/emolga/anim_front.png" alt="Emolga Level 49 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/emolga/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/emolga/anim_front.png" alt="Emolga Level 49 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/emolga/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/emolga/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/emolga/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -501,7 +518,7 @@
       <tr data-href="../pokedex/swanna.html">
         <td><a href="../pokedex/swanna.html">Swanna</a></td>
         <td>49</td>
-        <td><img src="../assets/game/graphics/pokemon/swanna/anim_front.png" alt="Swanna Level 49 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/swanna/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/swanna/anim_front.png" alt="Swanna Level 49 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/swanna/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/swanna/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/swanna/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -516,7 +533,7 @@
       <tr data-href="../pokedex/drifblim.html">
         <td><a href="../pokedex/drifblim.html">Drifblim</a></td>
         <td>48</td>
-        <td><img src="../assets/game/graphics/pokemon/drifblim/anim_front.png" alt="Drifblim Level 48 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/drifblim/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/drifblim/anim_front.png" alt="Drifblim Level 48 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/drifblim/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/drifblim/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/drifblim/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -531,7 +548,7 @@
       <tr data-href="../pokedex/talonflame.html">
         <td><a href="../pokedex/talonflame.html">Talonflame</a></td>
         <td>47</td>
-        <td><img src="../assets/game/graphics/pokemon/talonflame/anim_front.png" alt="Talonflame Level 47 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/talonflame/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/talonflame/anim_front.png" alt="Talonflame Level 47 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/talonflame/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/talonflame/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/talonflame/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -546,7 +563,7 @@
       <tr data-href="../pokedex/noivern.html">
         <td><a href="../pokedex/noivern.html">Noivern</a></td>
         <td>52</td>
-        <td><img src="../assets/game/graphics/pokemon/noivern/anim_front.png" alt="Noivern Level 52 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/noivern/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/noivern/anim_front.png" alt="Noivern Level 52 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/noivern/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/noivern/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/noivern/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
@@ -561,7 +578,7 @@
       <tr data-href="../pokedex/vivillon.html">
         <td><a href="../pokedex/vivillon.html">Vivillon<span class="species-form">(Icy Snow Pattern)</span></a></td>
         <td>47</td>
-        <td><img src="../assets/game/graphics/pokemon/vivillon/anim_front.png" alt="Vivillon Level 47 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/vivillon/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/vivillon/anim_front.png" alt="Vivillon Level 47 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/vivillon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vivillon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vivillon/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -591,7 +608,7 @@
       <tr data-href="../pokedex/emolga.html">
         <td><a href="../pokedex/emolga.html">Emolga</a></td>
         <td>56</td>
-        <td><img src="../assets/game/graphics/pokemon/emolga/anim_front.png" alt="Emolga Level 56 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/emolga/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/emolga/anim_front.png" alt="Emolga Level 56 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/emolga/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/emolga/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/emolga/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -606,7 +623,7 @@
       <tr data-href="../pokedex/swanna.html">
         <td><a href="../pokedex/swanna.html">Swanna</a></td>
         <td>56</td>
-        <td><img src="../assets/game/graphics/pokemon/swanna/anim_front.png" alt="Swanna Level 56 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/swanna/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/swanna/anim_front.png" alt="Swanna Level 56 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/swanna/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/swanna/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/swanna/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -621,7 +638,7 @@
       <tr data-href="../pokedex/drifblim.html">
         <td><a href="../pokedex/drifblim.html">Drifblim</a></td>
         <td>54</td>
-        <td><img src="../assets/game/graphics/pokemon/drifblim/anim_front.png" alt="Drifblim Level 54 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/drifblim/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/drifblim/anim_front.png" alt="Drifblim Level 54 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/drifblim/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/drifblim/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/drifblim/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -636,7 +653,7 @@
       <tr data-href="../pokedex/talonflame.html">
         <td><a href="../pokedex/talonflame.html">Talonflame</a></td>
         <td>54</td>
-        <td><img src="../assets/game/graphics/pokemon/talonflame/anim_front.png" alt="Talonflame Level 54 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/talonflame/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/talonflame/anim_front.png" alt="Talonflame Level 54 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/talonflame/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/talonflame/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/talonflame/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -651,7 +668,7 @@
       <tr data-href="../pokedex/noivern.html">
         <td><a href="../pokedex/noivern.html">Noivern</a></td>
         <td>58</td>
-        <td><img src="../assets/game/graphics/pokemon/noivern/anim_front.png" alt="Noivern Level 58 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/noivern/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/noivern/anim_front.png" alt="Noivern Level 58 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/noivern/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/noivern/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/noivern/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
@@ -666,7 +683,7 @@
       <tr data-href="../pokedex/vivillon.html">
         <td><a href="../pokedex/vivillon.html">Vivillon<span class="species-form">(Icy Snow Pattern)</span></a></td>
         <td>54</td>
-        <td><img src="../assets/game/graphics/pokemon/vivillon/anim_front.png" alt="Vivillon Level 54 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/vivillon/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/vivillon/anim_front.png" alt="Vivillon Level 54 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/vivillon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vivillon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vivillon/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -696,7 +713,7 @@
       <tr data-href="../pokedex/emolga.html">
         <td><a href="../pokedex/emolga.html">Emolga</a></td>
         <td>65</td>
-        <td><img src="../assets/game/graphics/pokemon/emolga/anim_front.png" alt="Emolga Level 65 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/emolga/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/emolga/anim_front.png" alt="Emolga Level 65 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/emolga/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/emolga/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/emolga/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -711,7 +728,7 @@
       <tr data-href="../pokedex/swanna.html">
         <td><a href="../pokedex/swanna.html">Swanna</a></td>
         <td>65</td>
-        <td><img src="../assets/game/graphics/pokemon/swanna/anim_front.png" alt="Swanna Level 65 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/swanna/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/swanna/anim_front.png" alt="Swanna Level 65 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/swanna/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/swanna/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/swanna/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -726,7 +743,7 @@
       <tr data-href="../pokedex/drifblim.html">
         <td><a href="../pokedex/drifblim.html">Drifblim</a></td>
         <td>65</td>
-        <td><img src="../assets/game/graphics/pokemon/drifblim/anim_front.png" alt="Drifblim Level 65 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/drifblim/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/drifblim/anim_front.png" alt="Drifblim Level 65 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/drifblim/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/drifblim/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/drifblim/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -741,7 +758,7 @@
       <tr data-href="../pokedex/talonflame.html">
         <td><a href="../pokedex/talonflame.html">Talonflame</a></td>
         <td>64</td>
-        <td><img src="../assets/game/graphics/pokemon/talonflame/anim_front.png" alt="Talonflame Level 64 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/talonflame/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/talonflame/anim_front.png" alt="Talonflame Level 64 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/talonflame/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/talonflame/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/talonflame/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -756,7 +773,7 @@
       <tr data-href="../pokedex/noivern.html">
         <td><a href="../pokedex/noivern.html">Noivern</a></td>
         <td>66</td>
-        <td><img src="../assets/game/graphics/pokemon/noivern/anim_front.png" alt="Noivern Level 66 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/noivern/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/noivern/anim_front.png" alt="Noivern Level 66 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/noivern/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/noivern/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/noivern/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
@@ -771,7 +788,7 @@
       <tr data-href="../pokedex/vivillon.html">
         <td><a href="../pokedex/vivillon.html">Vivillon<span class="species-form">(Icy Snow Pattern)</span></a></td>
         <td>64</td>
-        <td><img src="../assets/game/graphics/pokemon/vivillon/anim_front.png" alt="Vivillon Level 64 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/vivillon/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/vivillon/anim_front.png" alt="Vivillon Level 64 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/vivillon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vivillon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vivillon/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -967,7 +984,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -975,6 +992,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

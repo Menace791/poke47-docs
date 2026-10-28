@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -289,7 +306,7 @@
   <h2>Transforms Into <span class="muted small-text">1</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/silvally-fire.html" class="mon-card type-fire">
-<img src="../assets/game/graphics/pokemon/silvally/fire/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/silvally/fire/anim_front__hover.png">  <span class="name">Silvally (Type: Fire)</span>
+<img src="../assets/game/graphics/pokemon/silvally/fire/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/silvally/fire/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/fire/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/fire/anim_front__shiny__hover.png">  <span class="name">Silvally (Type: Fire)</span>
 </a></li>  </ul>
 </section>
 <section class="card item-sources-card">
@@ -301,9 +318,9 @@
     <h3 class="item-source-heading">Wild Held Items:</h3>
     <ul class="cross-link-grid">
 <li><a href="../pokedex/turtonator.html" class="mon-card type-fire type2-dragon mon-dual">
-<img src="../assets/game/graphics/pokemon/turtonator/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/turtonator/anim_front__hover.png">  <span class="name">Turtonator <span class="muted small-text">(5%)</span></span>
+<img src="../assets/game/graphics/pokemon/turtonator/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/turtonator/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/turtonator/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/turtonator/anim_front__shiny__hover.png">  <span class="name">Turtonator <span class="muted small-text">(5%)</span></span>
 </a></li><li><a href="../pokedex/vulpix.html" class="mon-card type-fire">
-<img src="../assets/game/graphics/pokemon/vulpix/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/vulpix/anim_front__hover.png">  <span class="name">Vulpix <span class="muted small-text">(5%)</span></span>
+<img src="../assets/game/graphics/pokemon/vulpix/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/vulpix/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vulpix/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vulpix/anim_front__shiny__hover.png">  <span class="name">Vulpix <span class="muted small-text">(5%)</span></span>
 </a></li>    </ul>
 </section>
   </main>
@@ -451,7 +468,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -459,6 +476,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

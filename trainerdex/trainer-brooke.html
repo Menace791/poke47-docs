@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -306,7 +323,7 @@
       <tr data-href="../pokedex/glameow.html">
         <td><a href="../pokedex/glameow.html">Glameow</a></td>
         <td>17</td>
-        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 17 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 17 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/glameow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/glameow/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -321,7 +338,7 @@
       <tr data-href="../pokedex/skorupi.html">
         <td><a href="../pokedex/skorupi.html">Skorupi</a></td>
         <td>17</td>
-        <td><img src="../assets/game/graphics/pokemon/skorupi/anim_front.png" alt="Skorupi Level 17 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/skorupi/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/skorupi/anim_front.png" alt="Skorupi Level 17 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/skorupi/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/skorupi/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/skorupi/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon"> <img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"></div>
@@ -336,7 +353,7 @@
       <tr data-href="../pokedex/munna.html">
         <td><a href="../pokedex/munna.html">Munna</a></td>
         <td>17</td>
-        <td><img src="../assets/game/graphics/pokemon/munna/anim_front.png" alt="Munna Level 17 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/munna/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/munna/anim_front.png" alt="Munna Level 17 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/munna/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/munna/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/munna/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -366,7 +383,7 @@
       <tr data-href="../pokedex/glameow.html">
         <td><a href="../pokedex/glameow.html">Glameow</a></td>
         <td>26</td>
-        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 26 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 26 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/glameow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/glameow/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -381,7 +398,7 @@
       <tr data-href="../pokedex/skorupi.html">
         <td><a href="../pokedex/skorupi.html">Skorupi</a></td>
         <td>26</td>
-        <td><img src="../assets/game/graphics/pokemon/skorupi/anim_front.png" alt="Skorupi Level 26 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/skorupi/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/skorupi/anim_front.png" alt="Skorupi Level 26 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/skorupi/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/skorupi/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/skorupi/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon"> <img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"></div>
@@ -396,7 +413,7 @@
       <tr data-href="../pokedex/munna.html">
         <td><a href="../pokedex/munna.html">Munna</a></td>
         <td>26</td>
-        <td><img src="../assets/game/graphics/pokemon/munna/anim_front.png" alt="Munna Level 26 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/munna/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/munna/anim_front.png" alt="Munna Level 26 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/munna/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/munna/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/munna/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -426,7 +443,7 @@
       <tr data-href="../pokedex/glameow.html">
         <td><a href="../pokedex/glameow.html">Glameow</a></td>
         <td>29</td>
-        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 29 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 29 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/glameow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/glameow/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -441,7 +458,7 @@
       <tr data-href="../pokedex/skorupi.html">
         <td><a href="../pokedex/skorupi.html">Skorupi</a></td>
         <td>29</td>
-        <td><img src="../assets/game/graphics/pokemon/skorupi/anim_front.png" alt="Skorupi Level 29 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/skorupi/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/skorupi/anim_front.png" alt="Skorupi Level 29 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/skorupi/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/skorupi/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/skorupi/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon"> <img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"></div>
@@ -456,7 +473,7 @@
       <tr data-href="../pokedex/munna.html">
         <td><a href="../pokedex/munna.html">Munna</a></td>
         <td>29</td>
-        <td><img src="../assets/game/graphics/pokemon/munna/anim_front.png" alt="Munna Level 29 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/munna/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/munna/anim_front.png" alt="Munna Level 29 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/munna/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/munna/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/munna/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -486,7 +503,7 @@
       <tr data-href="../pokedex/purugly.html">
         <td><a href="../pokedex/purugly.html">Purugly</a></td>
         <td>32</td>
-        <td><img src="../assets/game/graphics/pokemon/purugly/anim_front.png" alt="Purugly Level 32 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/purugly/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/purugly/anim_front.png" alt="Purugly Level 32 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/purugly/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/purugly/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/purugly/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -501,7 +518,7 @@
       <tr data-href="../pokedex/skorupi.html">
         <td><a href="../pokedex/skorupi.html">Skorupi</a></td>
         <td>32</td>
-        <td><img src="../assets/game/graphics/pokemon/skorupi/anim_front.png" alt="Skorupi Level 32 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/skorupi/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/skorupi/anim_front.png" alt="Skorupi Level 32 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/skorupi/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/skorupi/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/skorupi/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon"> <img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"></div>
@@ -516,7 +533,7 @@
       <tr data-href="../pokedex/munna.html">
         <td><a href="../pokedex/munna.html">Munna</a></td>
         <td>32</td>
-        <td><img src="../assets/game/graphics/pokemon/munna/anim_front.png" alt="Munna Level 32 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/munna/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/munna/anim_front.png" alt="Munna Level 32 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/munna/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/munna/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/munna/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -546,7 +563,7 @@
       <tr data-href="../pokedex/glameow.html">
         <td><a href="../pokedex/glameow.html">Glameow</a></td>
         <td>34</td>
-        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 34 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 34 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/glameow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/glameow/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -561,7 +578,7 @@
       <tr data-href="../pokedex/drapion.html">
         <td><a href="../pokedex/drapion.html">Drapion</a></td>
         <td>34</td>
-        <td><img src="../assets/game/graphics/pokemon/drapion/anim_front.png" alt="Drapion Level 34 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/drapion/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/drapion/anim_front.png" alt="Drapion Level 34 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/drapion/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/drapion/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/drapion/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon"> <img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon"></div>
@@ -576,7 +593,7 @@
       <tr data-href="../pokedex/musharna.html">
         <td><a href="../pokedex/musharna.html">Musharna</a></td>
         <td>34</td>
-        <td><img src="../assets/game/graphics/pokemon/musharna/anim_front.png" alt="Musharna Level 34 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/musharna/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/musharna/anim_front.png" alt="Musharna Level 34 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/musharna/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/musharna/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/musharna/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -772,7 +789,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -780,6 +797,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

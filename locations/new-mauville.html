@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -280,26 +297,26 @@
 <section class="card encounter-block" id="new-mauville-entrance">
 <h2>Entrance</h2>    <h3>Land</h3>
         <ul class="encounter-cards">
-<li><a href="../pokedex/tynamo.html" class="encounter-entry mon-card type-electric"><img src="../assets/game/graphics/pokemon/tynamo/anim_front.png" alt="Tynamo" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/tynamo/anim_front__hover.png"><span class="encounter-info"><span class="name">Tynamo</span><span class="encounter-meta">Lv. 22-26 · 55%</span></span>
-    </a></li><li><a href="../pokedex/solosis.html" class="encounter-entry mon-card type-psychic"><img src="../assets/game/graphics/pokemon/solosis/anim_front.png" alt="Solosis" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/solosis/anim_front__hover.png"><span class="encounter-info"><span class="name">Solosis</span><span class="encounter-meta">Lv. 24-26 · 35%</span></span>
-    </a></li><li><a href="../pokedex/joltik.html" class="encounter-entry mon-card type-bug type2-electric mon-dual"><img src="../assets/game/graphics/pokemon/joltik/anim_front.png" alt="Joltik" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/joltik/anim_front__hover.png"><span class="encounter-info"><span class="name">Joltik</span><span class="encounter-meta">Lv. 23 · 10%</span></span>
+<li><a href="../pokedex/tynamo.html" class="encounter-entry mon-card type-electric"><img src="../assets/game/graphics/pokemon/tynamo/anim_front.png" alt="Tynamo" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/tynamo/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/tynamo/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/tynamo/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Tynamo</span><span class="encounter-meta">Lv. 22-26 · 55%</span></span>
+    </a></li><li><a href="../pokedex/solosis.html" class="encounter-entry mon-card type-psychic"><img src="../assets/game/graphics/pokemon/solosis/anim_front.png" alt="Solosis" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/solosis/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/solosis/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/solosis/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Solosis</span><span class="encounter-meta">Lv. 24-26 · 35%</span></span>
+    </a></li><li><a href="../pokedex/joltik.html" class="encounter-entry mon-card type-bug type2-electric mon-dual"><img src="../assets/game/graphics/pokemon/joltik/anim_front.png" alt="Joltik" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/joltik/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/joltik/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/joltik/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Joltik</span><span class="encounter-meta">Lv. 23 · 10%</span></span>
     </a></li>    </ul>
 
 </section>
 <section class="card encounter-block" id="new-mauville-inside">
 <h2>Inside</h2>    <h3>Land</h3>
         <ul class="encounter-cards">
-<li><a href="../pokedex/tynamo.html" class="encounter-entry mon-card type-electric"><img src="../assets/game/graphics/pokemon/tynamo/anim_front.png" alt="Tynamo" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/tynamo/anim_front__hover.png"><span class="encounter-info"><span class="name">Tynamo</span><span class="encounter-meta">Lv. 25-27 · 45%</span></span>
-    </a></li><li><a href="../pokedex/solosis.html" class="encounter-entry mon-card type-psychic"><img src="../assets/game/graphics/pokemon/solosis/anim_front.png" alt="Solosis" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/solosis/anim_front__hover.png"><span class="encounter-info"><span class="name">Solosis</span><span class="encounter-meta">Lv. 25-27 · 20%</span></span>
-    </a></li><li><a href="../pokedex/joltik.html" class="encounter-entry mon-card type-bug type2-electric mon-dual"><img src="../assets/game/graphics/pokemon/joltik/anim_front.png" alt="Joltik" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/joltik/anim_front__hover.png"><span class="encounter-info"><span class="name">Joltik</span><span class="encounter-meta">Lv. 24-26 · 19%</span></span>
-    </a></li><li><a href="../pokedex/togedemaru.html" class="encounter-entry mon-card type-electric type2-steel mon-dual"><img src="../assets/game/graphics/pokemon/togedemaru/anim_front.png" alt="Togedemaru" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/togedemaru/anim_front__hover.png"><span class="encounter-info"><span class="name">Togedemaru</span><span class="encounter-meta">Lv. 26 · 10%</span></span>
-    </a></li><li><a href="../pokedex/duosion.html" class="encounter-entry mon-card type-psychic"><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png"><span class="encounter-info"><span class="name">Duosion</span><span class="encounter-meta">Lv. 24-27 · 5%</span></span>
-    </a></li><li><a href="../pokedex/eelektrik.html" class="encounter-entry mon-card type-electric"><img src="../assets/game/graphics/pokemon/eelektrik/anim_front.png" alt="Eelektrik" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/eelektrik/anim_front__hover.png"><span class="encounter-info"><span class="name">Eelektrik</span><span class="encounter-meta">Lv. 27 · 1%</span></span>
+<li><a href="../pokedex/tynamo.html" class="encounter-entry mon-card type-electric"><img src="../assets/game/graphics/pokemon/tynamo/anim_front.png" alt="Tynamo" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/tynamo/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/tynamo/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/tynamo/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Tynamo</span><span class="encounter-meta">Lv. 25-27 · 45%</span></span>
+    </a></li><li><a href="../pokedex/solosis.html" class="encounter-entry mon-card type-psychic"><img src="../assets/game/graphics/pokemon/solosis/anim_front.png" alt="Solosis" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/solosis/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/solosis/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/solosis/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Solosis</span><span class="encounter-meta">Lv. 25-27 · 20%</span></span>
+    </a></li><li><a href="../pokedex/joltik.html" class="encounter-entry mon-card type-bug type2-electric mon-dual"><img src="../assets/game/graphics/pokemon/joltik/anim_front.png" alt="Joltik" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/joltik/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/joltik/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/joltik/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Joltik</span><span class="encounter-meta">Lv. 24-26 · 19%</span></span>
+    </a></li><li><a href="../pokedex/togedemaru.html" class="encounter-entry mon-card type-electric type2-steel mon-dual"><img src="../assets/game/graphics/pokemon/togedemaru/anim_front.png" alt="Togedemaru" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/togedemaru/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/togedemaru/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/togedemaru/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Togedemaru</span><span class="encounter-meta">Lv. 26 · 10%</span></span>
+    </a></li><li><a href="../pokedex/duosion.html" class="encounter-entry mon-card type-psychic"><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/duosion/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/duosion/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Duosion</span><span class="encounter-meta">Lv. 24-27 · 5%</span></span>
+    </a></li><li><a href="../pokedex/eelektrik.html" class="encounter-entry mon-card type-electric"><img src="../assets/game/graphics/pokemon/eelektrik/anim_front.png" alt="Eelektrik" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/eelektrik/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/eelektrik/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/eelektrik/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Eelektrik</span><span class="encounter-meta">Lv. 27 · 1%</span></span>
     </a></li>    </ul>
 
     <h3>Static Encounter</h3>
         <ul class="encounter-cards">
-<li><a href="../pokedex/rotom.html" class="encounter-entry mon-card type-electric type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/rotom/anim_front.png" alt="Rotom" class="encounter-sprite" data-hover="../assets/game/graphics/pokemon/rotom/anim_front__hover.png"><span class="encounter-info"><span class="name">Rotom</span><span class="encounter-meta">Lv. 25</span></span>
+<li><a href="../pokedex/rotom.html" class="encounter-entry mon-card type-electric type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/rotom/anim_front.png" alt="Rotom" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/rotom/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rotom/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rotom/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Rotom</span><span class="encounter-meta">Lv. 25</span></span>
     </a></li>    </ul>
 
     <h3>Items</h3>
@@ -462,7 +479,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -470,6 +487,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

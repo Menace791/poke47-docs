@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/florges/white/anim_front.png" alt="Florges (White Flower) front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/florges/white/anim_front__shiny.png" alt="Florges (White Flower) shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/florges/white/anim_front.png" alt="Florges (White Flower) front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/florges/white/anim_front__shiny.png">
+<img src="../assets/game/graphics/pokemon/florges/white/anim_front__shiny.png" alt="Florges (White Flower) shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/florges/white/anim_front.png">    </div>
     <div>
       <p class="muted">Hoenn Dex #29</p>
       <p><strong>Florges (White Flower)</strong></p>
@@ -299,7 +316,7 @@
     <p><strong>Catch Rate:</strong> 45</p>
     <p><strong>Overworld Behavior:</strong> Ignores Player</p>
     <p><strong>Autobattle Behavior:</strong> Copies Player</p>
-<p><strong>EV Yield:</strong> 3 Sp. Def</p><p><strong>Base Species:</strong>   <a href="florges.html" class="species-inline-link mon-card type-fairy"><img src="../assets/game/graphics/pokemon/florges/anim_front.png" alt="Florges (Red Flower)" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/florges/anim_front__hover.png"><span>Florges (Red Flower)</span>
+<p><strong>EV Yield:</strong> 3 Sp. Def</p><p><strong>Base Species:</strong>   <a href="florges.html" class="species-inline-link mon-card type-fairy"><img src="../assets/game/graphics/pokemon/florges/anim_front.png" alt="Florges (Red Flower)" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/florges/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/florges/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/florges/anim_front__shiny__hover.png"><span>Florges (Red Flower)</span>
   </a>
 </p>  </section>
   <section class="card">
@@ -352,7 +369,7 @@ many different colors.</p>
   <div class="card">
     <h2>Evolutions</h2>
     <ul>
-        <li>  <a href="floette-white.html" class="species-inline-link mon-card type-fairy"><img src="../assets/game/graphics/pokemon/floette/white/anim_front.png" alt="Floette (White Flower)" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/floette/white/anim_front__hover.png"><span>Floette (White Flower)</span>
+        <li>  <a href="floette-white.html" class="species-inline-link mon-card type-fairy"><img src="../assets/game/graphics/pokemon/floette/white/anim_front.png" alt="Floette (White Flower)" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/floette/white/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/floette/white/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/floette/white/anim_front__shiny__hover.png"><span>Floette (White Flower)</span>
   </a>
  → Use <a href="../itemdex/shiny-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/shiny_stone.png" alt="" class="item-icon">Shiny Stone</a></li>
     </ul>
@@ -360,13 +377,13 @@ many different colors.</p>
   <div class="card">
     <h2>Forms</h2>
     <ul class="form-list">
-        <li><a href="florges.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/florges/anim_front.png" alt="Florges (Red Flower)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/florges/anim_front__hover.png"><span>Florges (Red Flower)</span>
+        <li><a href="florges.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/florges/anim_front.png" alt="Florges (Red Flower)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/florges/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/florges/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/florges/anim_front__shiny__hover.png"><span>Florges (Red Flower)</span>
         </a></li>
-        <li><a href="florges-yellow.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/florges/yellow/anim_front.png" alt="Florges (Yellow Flower)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/florges/yellow/anim_front__hover.png"><span>Florges (Yellow Flower)</span>
+        <li><a href="florges-yellow.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/florges/yellow/anim_front.png" alt="Florges (Yellow Flower)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/florges/yellow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/florges/yellow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/florges/yellow/anim_front__shiny__hover.png"><span>Florges (Yellow Flower)</span>
         </a></li>
-        <li><a href="florges-orange.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/florges/orange/anim_front.png" alt="Florges (Orange Flower)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/florges/orange/anim_front__hover.png"><span>Florges (Orange Flower)</span>
+        <li><a href="florges-orange.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/florges/orange/anim_front.png" alt="Florges (Orange Flower)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/florges/orange/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/florges/orange/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/florges/orange/anim_front__shiny__hover.png"><span>Florges (Orange Flower)</span>
         </a></li>
-        <li><a href="florges-blue.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/florges/blue/anim_front.png" alt="Florges (Blue Flower)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/florges/blue/anim_front__hover.png"><span>Florges (Blue Flower)</span>
+        <li><a href="florges-blue.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/florges/blue/anim_front.png" alt="Florges (Blue Flower)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/florges/blue/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/florges/blue/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/florges/blue/anim_front__shiny__hover.png"><span>Florges (Blue Flower)</span>
         </a></li>
     </ul>
   </div>
@@ -600,7 +617,7 @@ many different colors.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -608,6 +625,7 @@ many different colors.</p>
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

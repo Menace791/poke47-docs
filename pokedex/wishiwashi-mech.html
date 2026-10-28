@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/wishiwashi/mech/front.png" alt="Wishiwashi (Mech) front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/wishiwashi/mech/front__shiny.png" alt="Wishiwashi (Mech) shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/wishiwashi/mech/front.png" alt="Wishiwashi (Mech) front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/wishiwashi/mech/front__shiny.png">
+<img src="../assets/game/graphics/pokemon/wishiwashi/mech/front__shiny.png" alt="Wishiwashi (Mech) shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/wishiwashi/mech/front.png">    </div>
     <div>
       <p class="muted">Hoenn Dex #207</p>
       <p><strong>Wishiwashi (Mech)</strong></p>
@@ -299,7 +316,7 @@
     <p><strong>Catch Rate:</strong> 60</p>
     <p><strong>Overworld Behavior:</strong> Ignores Player</p>
     <p><strong>Autobattle Behavior:</strong> Copies Player</p>
-<p><strong>EV Yield:</strong> 1 HP</p><p><strong>Base Species:</strong>   <a href="wishiwashi.html" class="species-inline-link mon-card type-water"><img src="../assets/game/graphics/pokemon/wishiwashi/anim_front.png" alt="Wishiwashi (Solo)" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/wishiwashi/anim_front__hover.png"><span>Wishiwashi (Solo)</span>
+<p><strong>EV Yield:</strong> 1 HP</p><p><strong>Base Species:</strong>   <a href="wishiwashi.html" class="species-inline-link mon-card type-water"><img src="../assets/game/graphics/pokemon/wishiwashi/anim_front.png" alt="Wishiwashi (Solo)" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/wishiwashi/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny__hover.png"><span>Wishiwashi (Solo)</span>
   </a>
 </p>  </section>
   <section class="card">
@@ -357,9 +374,9 @@ fists actually do have fish fingers.</p>
   <div class="card">
     <h2>Forms</h2>
     <ul class="form-list">
-        <li><a href="wishiwashi.html" class="form-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/wishiwashi/anim_front.png" alt="Wishiwashi (Solo)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/wishiwashi/anim_front__hover.png"><span>Wishiwashi (Solo)</span>
+        <li><a href="wishiwashi.html" class="form-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/wishiwashi/anim_front.png" alt="Wishiwashi (Solo)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/wishiwashi/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny__hover.png"><span>Wishiwashi (Solo)</span>
         </a></li>
-        <li><a href="wishiwashi-school.html" class="form-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/wishiwashi/school/anim_front.png" alt="Wishiwashi (School)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/wishiwashi/school/anim_front__hover.png"><span>Wishiwashi (School)</span>
+        <li><a href="wishiwashi-school.html" class="form-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/wishiwashi/school/anim_front.png" alt="Wishiwashi (School)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/wishiwashi/school/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/wishiwashi/school/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/wishiwashi/school/anim_front__shiny__hover.png"><span>Wishiwashi (School)</span>
         </a></li>
     </ul>
   </div>
@@ -577,7 +594,7 @@ fists actually do have fish fingers.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -585,6 +602,7 @@ fists actually do have fish fingers.</p>
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

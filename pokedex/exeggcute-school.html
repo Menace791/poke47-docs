@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/exeggcute/anim_front.png" alt="Exeggcute (School) front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/exeggcute/anim_front__shiny.png" alt="Exeggcute (School) shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/exeggcute/anim_front.png" alt="Exeggcute (School) front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/exeggcute/anim_front__shiny.png">
+<img src="../assets/game/graphics/pokemon/exeggcute/anim_front__shiny.png" alt="Exeggcute (School) shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/exeggcute/anim_front.png">    </div>
     <div>
       <p class="muted">National Dex #102</p>
       <p><strong>Exeggcute (School)</strong></p>
@@ -299,7 +316,7 @@
     <p><strong>Catch Rate:</strong> 90</p>
     <p><strong>Overworld Behavior:</strong> Watches Player</p>
     <p><strong>Autobattle Behavior:</strong> Copies Player</p>
-<p><strong>EV Yield:</strong> 1 Defense</p><p class="wild-items"><strong>Wild Held Item:</strong> <span><a href="../itemdex/psychic-seed.html" class="item-card"><img src="../assets/game/graphics/items/icons/psychic_seed.png" alt="Psychic Seed" class="item-icon">Psychic Seed</a> (5%)</span></p><p><strong>Base Species:</strong>   <a href="exeggcute.html" class="species-inline-link mon-card type-grass type2-psychic mon-dual"><img src="../assets/game/graphics/pokemon/exeggcute/anim_front_gba.png" alt="Exeggcute" class="species-inline-sprite"><span>Exeggcute</span>
+<p><strong>EV Yield:</strong> 1 Defense</p><p class="wild-items"><strong>Wild Held Item:</strong> <span><a href="../itemdex/psychic-seed.html" class="item-card"><img src="../assets/game/graphics/items/icons/psychic_seed.png" alt="Psychic Seed" class="item-icon">Psychic Seed</a> (5%)</span></p><p><strong>Base Species:</strong>   <a href="exeggcute.html" class="species-inline-link mon-card type-grass type2-psychic mon-dual"><img src="../assets/game/graphics/pokemon/exeggcute/anim_front_gba.png" alt="Exeggcute" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/exeggcute/anim_front_gba__shiny.png"><span>Exeggcute</span>
   </a>
 </p>  </section>
   <section class="card">
@@ -358,7 +375,7 @@ appear, it is close to evolution.</p>
   <div class="card">
     <h2>Forms</h2>
     <ul class="form-list">
-        <li><a href="exeggcute.html" class="form-entry mon-card type-grass type2-psychic mon-dual"><img src="../assets/game/graphics/pokemon/exeggcute/anim_front_gba.png" alt="Exeggcute" class="form-sprite"><span>Exeggcute</span>
+        <li><a href="exeggcute.html" class="form-entry mon-card type-grass type2-psychic mon-dual"><img src="../assets/game/graphics/pokemon/exeggcute/anim_front_gba.png" alt="Exeggcute" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/exeggcute/anim_front_gba__shiny.png"><span>Exeggcute</span>
         </a></li>
     </ul>
   </div>
@@ -587,7 +604,7 @@ appear, it is close to evolution.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -595,6 +612,7 @@ appear, it is close to evolution.</p>
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

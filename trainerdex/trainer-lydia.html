@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -306,7 +323,7 @@
       <tr data-href="../pokedex/skiddo.html">
         <td><a href="../pokedex/skiddo.html">Skiddo</a></td>
         <td>11</td>
-        <td><img src="../assets/game/graphics/pokemon/skiddo/anim_front.png" alt="Skiddo Level 11 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/skiddo/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/skiddo/anim_front.png" alt="Skiddo Level 11 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/skiddo/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/skiddo/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/skiddo/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"></div>
@@ -321,7 +338,7 @@
       <tr data-href="../pokedex/foongus.html">
         <td><a href="../pokedex/foongus.html">Foongus</a></td>
         <td>11</td>
-        <td><img src="../assets/game/graphics/pokemon/foongus/anim_front.png" alt="Foongus Level 11 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/foongus/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/foongus/anim_front.png" alt="Foongus Level 11 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/foongus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/foongus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/foongus/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon"></div>
@@ -336,7 +353,7 @@
       <tr data-href="../pokedex/finneon.html">
         <td><a href="../pokedex/finneon.html">Finneon</a></td>
         <td>11</td>
-        <td><img src="../assets/game/graphics/pokemon/finneon/anim_front.png" alt="Finneon Level 11 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/finneon/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/finneon/anim_front.png" alt="Finneon Level 11 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/finneon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/finneon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/finneon/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
@@ -351,7 +368,7 @@
       <tr data-href="../pokedex/budew.html">
         <td><a href="../pokedex/budew.html">Budew</a></td>
         <td>11</td>
-        <td><img src="../assets/game/graphics/pokemon/budew/anim_front.png" alt="Budew Level 11 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/budew/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/budew/anim_front.png" alt="Budew Level 11 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/budew/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/budew/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/budew/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon"></div>
@@ -366,7 +383,7 @@
       <tr data-href="../pokedex/glameow.html">
         <td><a href="../pokedex/glameow.html">Glameow</a></td>
         <td>11</td>
-        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 11 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 11 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/glameow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/glameow/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -381,7 +398,7 @@
       <tr data-href="../pokedex/tympole.html">
         <td><a href="../pokedex/tympole.html">Tympole</a></td>
         <td>11</td>
-        <td><img src="../assets/game/graphics/pokemon/tympole/anim_front.png" alt="Tympole Level 11 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/tympole/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/tympole/anim_front.png" alt="Tympole Level 11 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/tympole/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/tympole/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/tympole/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
@@ -411,7 +428,7 @@
       <tr data-href="../pokedex/skiddo.html">
         <td><a href="../pokedex/skiddo.html">Skiddo</a></td>
         <td>22</td>
-        <td><img src="../assets/game/graphics/pokemon/skiddo/anim_front.png" alt="Skiddo Level 22 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/skiddo/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/skiddo/anim_front.png" alt="Skiddo Level 22 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/skiddo/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/skiddo/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/skiddo/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"></div>
@@ -426,7 +443,7 @@
       <tr data-href="../pokedex/foongus.html">
         <td><a href="../pokedex/foongus.html">Foongus</a></td>
         <td>22</td>
-        <td><img src="../assets/game/graphics/pokemon/foongus/anim_front.png" alt="Foongus Level 22 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/foongus/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/foongus/anim_front.png" alt="Foongus Level 22 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/foongus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/foongus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/foongus/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon"></div>
@@ -441,7 +458,7 @@
       <tr data-href="../pokedex/finneon.html">
         <td><a href="../pokedex/finneon.html">Finneon</a></td>
         <td>22</td>
-        <td><img src="../assets/game/graphics/pokemon/finneon/anim_front.png" alt="Finneon Level 22 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/finneon/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/finneon/anim_front.png" alt="Finneon Level 22 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/finneon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/finneon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/finneon/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
@@ -456,7 +473,7 @@
       <tr data-href="../pokedex/roselia.html">
         <td><a href="../pokedex/roselia.html">Roselia</a></td>
         <td>22</td>
-        <td><img src="../assets/game/graphics/pokemon/roselia/anim_front.png" alt="Roselia Level 22 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/roselia/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/roselia/anim_front.png" alt="Roselia Level 22 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/roselia/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roselia/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roselia/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon"></div>
@@ -471,7 +488,7 @@
       <tr data-href="../pokedex/glameow.html">
         <td><a href="../pokedex/glameow.html">Glameow</a></td>
         <td>22</td>
-        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 22 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 22 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/glameow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/glameow/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -486,7 +503,7 @@
       <tr data-href="../pokedex/palpitoad.html">
         <td><a href="../pokedex/palpitoad.html">Palpitoad</a></td>
         <td>22</td>
-        <td><img src="../assets/game/graphics/pokemon/palpitoad/anim_front.png" alt="Palpitoad Level 22 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/palpitoad/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/palpitoad/anim_front.png" alt="Palpitoad Level 22 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/palpitoad/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/palpitoad/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/palpitoad/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"> <img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon"></div>
@@ -516,7 +533,7 @@
       <tr data-href="../pokedex/skiddo.html">
         <td><a href="../pokedex/skiddo.html">Skiddo</a></td>
         <td>25</td>
-        <td><img src="../assets/game/graphics/pokemon/skiddo/anim_front.png" alt="Skiddo Level 25 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/skiddo/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/skiddo/anim_front.png" alt="Skiddo Level 25 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/skiddo/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/skiddo/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/skiddo/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"></div>
@@ -531,7 +548,7 @@
       <tr data-href="../pokedex/foongus.html">
         <td><a href="../pokedex/foongus.html">Foongus</a></td>
         <td>25</td>
-        <td><img src="../assets/game/graphics/pokemon/foongus/anim_front.png" alt="Foongus Level 25 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/foongus/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/foongus/anim_front.png" alt="Foongus Level 25 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/foongus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/foongus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/foongus/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon"></div>
@@ -546,7 +563,7 @@
       <tr data-href="../pokedex/finneon.html">
         <td><a href="../pokedex/finneon.html">Finneon</a></td>
         <td>25</td>
-        <td><img src="../assets/game/graphics/pokemon/finneon/anim_front.png" alt="Finneon Level 25 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/finneon/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/finneon/anim_front.png" alt="Finneon Level 25 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/finneon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/finneon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/finneon/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
@@ -561,7 +578,7 @@
       <tr data-href="../pokedex/roselia.html">
         <td><a href="../pokedex/roselia.html">Roselia</a></td>
         <td>25</td>
-        <td><img src="../assets/game/graphics/pokemon/roselia/anim_front.png" alt="Roselia Level 25 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/roselia/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/roselia/anim_front.png" alt="Roselia Level 25 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/roselia/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roselia/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roselia/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon"></div>
@@ -576,7 +593,7 @@
       <tr data-href="../pokedex/glameow.html">
         <td><a href="../pokedex/glameow.html">Glameow</a></td>
         <td>25</td>
-        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 25 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 25 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/glameow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/glameow/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -591,7 +608,7 @@
       <tr data-href="../pokedex/palpitoad.html">
         <td><a href="../pokedex/palpitoad.html">Palpitoad</a></td>
         <td>25</td>
-        <td><img src="../assets/game/graphics/pokemon/palpitoad/anim_front.png" alt="Palpitoad Level 25 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/palpitoad/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/palpitoad/anim_front.png" alt="Palpitoad Level 25 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/palpitoad/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/palpitoad/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/palpitoad/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"> <img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon"></div>
@@ -621,7 +638,7 @@
       <tr data-href="../pokedex/gogoat.html">
         <td><a href="../pokedex/gogoat.html">Gogoat</a></td>
         <td>28</td>
-        <td><img src="../assets/game/graphics/pokemon/gogoat/anim_front.png" alt="Gogoat Level 28 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/gogoat/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/gogoat/anim_front.png" alt="Gogoat Level 28 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/gogoat/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/gogoat/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/gogoat/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"></div>
@@ -636,7 +653,7 @@
       <tr data-href="../pokedex/foongus.html">
         <td><a href="../pokedex/foongus.html">Foongus</a></td>
         <td>28</td>
-        <td><img src="../assets/game/graphics/pokemon/foongus/anim_front.png" alt="Foongus Level 28 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/foongus/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/foongus/anim_front.png" alt="Foongus Level 28 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/foongus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/foongus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/foongus/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon"></div>
@@ -651,7 +668,7 @@
       <tr data-href="../pokedex/lumineon.html">
         <td><a href="../pokedex/lumineon.html">Lumineon</a></td>
         <td>28</td>
-        <td><img src="../assets/game/graphics/pokemon/lumineon/anim_front.png" alt="Lumineon Level 28 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/lumineon/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/lumineon/anim_front.png" alt="Lumineon Level 28 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/lumineon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/lumineon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/lumineon/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
@@ -666,7 +683,7 @@
       <tr data-href="../pokedex/roselia.html">
         <td><a href="../pokedex/roselia.html">Roselia</a></td>
         <td>28</td>
-        <td><img src="../assets/game/graphics/pokemon/roselia/anim_front.png" alt="Roselia Level 28 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/roselia/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/roselia/anim_front.png" alt="Roselia Level 28 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/roselia/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roselia/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roselia/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon"></div>
@@ -681,7 +698,7 @@
       <tr data-href="../pokedex/glameow.html">
         <td><a href="../pokedex/glameow.html">Glameow</a></td>
         <td>28</td>
-        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 28 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 28 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/glameow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/glameow/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -696,7 +713,7 @@
       <tr data-href="../pokedex/palpitoad.html">
         <td><a href="../pokedex/palpitoad.html">Palpitoad</a></td>
         <td>28</td>
-        <td><img src="../assets/game/graphics/pokemon/palpitoad/anim_front.png" alt="Palpitoad Level 28 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/palpitoad/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/palpitoad/anim_front.png" alt="Palpitoad Level 28 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/palpitoad/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/palpitoad/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/palpitoad/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"> <img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon"></div>
@@ -726,7 +743,7 @@
       <tr data-href="../pokedex/gogoat.html">
         <td><a href="../pokedex/gogoat.html">Gogoat</a></td>
         <td>31</td>
-        <td><img src="../assets/game/graphics/pokemon/gogoat/anim_front.png" alt="Gogoat Level 31 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/gogoat/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/gogoat/anim_front.png" alt="Gogoat Level 31 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/gogoat/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/gogoat/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/gogoat/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"></div>
@@ -741,7 +758,7 @@
       <tr data-href="../pokedex/amoonguss.html">
         <td><a href="../pokedex/amoonguss.html">Amoonguss</a></td>
         <td>31</td>
-        <td><img src="../assets/game/graphics/pokemon/amoonguss/anim_front.png" alt="Amoonguss Level 31 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/amoonguss/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/amoonguss/anim_front.png" alt="Amoonguss Level 31 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/amoonguss/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/amoonguss/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/amoonguss/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon"></div>
@@ -756,7 +773,7 @@
       <tr data-href="../pokedex/finneon.html">
         <td><a href="../pokedex/finneon.html">Finneon</a></td>
         <td>31</td>
-        <td><img src="../assets/game/graphics/pokemon/finneon/anim_front.png" alt="Finneon Level 31 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/finneon/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/finneon/anim_front.png" alt="Finneon Level 31 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/finneon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/finneon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/finneon/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
@@ -771,7 +788,7 @@
       <tr data-href="../pokedex/roselia.html">
         <td><a href="../pokedex/roselia.html">Roselia</a></td>
         <td>31</td>
-        <td><img src="../assets/game/graphics/pokemon/roselia/anim_front.png" alt="Roselia Level 31 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/roselia/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/roselia/anim_front.png" alt="Roselia Level 31 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/roselia/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roselia/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roselia/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/poison.svg" alt="Poison type" class="type-icon"></div>
@@ -786,7 +803,7 @@
       <tr data-href="../pokedex/glameow.html">
         <td><a href="../pokedex/glameow.html">Glameow</a></td>
         <td>31</td>
-        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 31 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/glameow/anim_front.png" alt="Glameow Level 31 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/glameow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/glameow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/glameow/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -801,7 +818,7 @@
       <tr data-href="../pokedex/palpitoad.html">
         <td><a href="../pokedex/palpitoad.html">Palpitoad</a></td>
         <td>31</td>
-        <td><img src="../assets/game/graphics/pokemon/palpitoad/anim_front.png" alt="Palpitoad Level 31 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/palpitoad/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/palpitoad/anim_front.png" alt="Palpitoad Level 31 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/palpitoad/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/palpitoad/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/palpitoad/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"> <img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon"></div>
@@ -997,7 +1014,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -1005,6 +1022,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

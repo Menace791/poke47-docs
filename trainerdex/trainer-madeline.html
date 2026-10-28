@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -306,7 +323,7 @@
       <tr data-href="../pokedex/litleo.html">
         <td><a href="../pokedex/litleo.html">Litleo</a></td>
         <td>19</td>
-        <td><img src="../assets/game/graphics/pokemon/litleo/anim_front.png" alt="Litleo Level 19 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/litleo/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/litleo/anim_front.png" alt="Litleo Level 19 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/litleo/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/litleo/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/litleo/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -336,7 +353,7 @@
       <tr data-href="../pokedex/litleo.html">
         <td><a href="../pokedex/litleo.html">Litleo</a></td>
         <td>29</td>
-        <td><img src="../assets/game/graphics/pokemon/litleo/anim_front.png" alt="Litleo Level 29 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/litleo/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/litleo/anim_front.png" alt="Litleo Level 29 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/litleo/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/litleo/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/litleo/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -366,7 +383,7 @@
       <tr data-href="../pokedex/litleo.html">
         <td><a href="../pokedex/litleo.html">Litleo</a></td>
         <td>32</td>
-        <td><img src="../assets/game/graphics/pokemon/litleo/anim_front.png" alt="Litleo Level 32 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/litleo/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/litleo/anim_front.png" alt="Litleo Level 32 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/litleo/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/litleo/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/litleo/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -396,7 +413,7 @@
       <tr data-href="../pokedex/fomantis.html">
         <td><a href="../pokedex/fomantis.html">Fomantis</a></td>
         <td>34</td>
-        <td><img src="../assets/game/graphics/pokemon/fomantis/anim_front.png" alt="Fomantis Level 34 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/fomantis/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/fomantis/anim_front.png" alt="Fomantis Level 34 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/fomantis/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/fomantis/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/fomantis/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"></div>
@@ -411,7 +428,7 @@
       <tr data-href="../pokedex/pyroar.html">
         <td><a href="../pokedex/pyroar.html">Pyroar</a></td>
         <td>34</td>
-        <td><img src="../assets/game/graphics/pokemon/pyroar/anim_front.png" alt="Pyroar Level 34 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/pyroar/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/pyroar/anim_front.png" alt="Pyroar Level 34 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/pyroar/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pyroar/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pyroar/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -441,7 +458,7 @@
       <tr data-href="../pokedex/lurantis.html">
         <td><a href="../pokedex/lurantis.html">Lurantis</a></td>
         <td>37</td>
-        <td><img src="../assets/game/graphics/pokemon/lurantis/anim_front.png" alt="Lurantis Level 37 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/lurantis/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/lurantis/anim_front.png" alt="Lurantis Level 37 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/lurantis/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/lurantis/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/lurantis/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"></div>
@@ -456,7 +473,7 @@
       <tr data-href="../pokedex/pyroar.html">
         <td><a href="../pokedex/pyroar.html">Pyroar</a></td>
         <td>37</td>
-        <td><img src="../assets/game/graphics/pokemon/pyroar/anim_front.png" alt="Pyroar Level 37 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/pyroar/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/pyroar/anim_front.png" alt="Pyroar Level 37 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/pyroar/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pyroar/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pyroar/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -652,7 +669,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -660,6 +677,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

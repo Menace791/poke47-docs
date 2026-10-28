@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -299,7 +316,7 @@
       <tr data-href="../pokedex/melmetal.html">
         <td><a href="../pokedex/melmetal.html">Melmetal</a></td>
         <td>76</td>
-        <td><img src="../assets/game/graphics/pokemon/melmetal/anim_front.png" alt="Melmetal Level 76 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/melmetal/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/melmetal/anim_front.png" alt="Melmetal Level 76 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/melmetal/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/melmetal/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/melmetal/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon"></div>
@@ -314,7 +331,7 @@
       <tr data-href="../pokedex/bronzong.html">
         <td><a href="../pokedex/bronzong.html">Bronzong</a></td>
         <td>77</td>
-        <td><img src="../assets/game/graphics/pokemon/bronzong/anim_front.png" alt="Bronzong Level 77 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/bronzong/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/bronzong/anim_front.png" alt="Bronzong Level 77 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/bronzong/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/bronzong/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/bronzong/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon"> <img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -329,7 +346,7 @@
       <tr data-href="../pokedex/aegislash.html">
         <td><a href="../pokedex/aegislash.html">Aegislash</a></td>
         <td>77</td>
-        <td><img src="../assets/game/graphics/pokemon/aegislash/anim_front.png" alt="Aegislash Level 77 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/aegislash/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/aegislash/anim_front.png" alt="Aegislash Level 77 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/aegislash/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/aegislash/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/aegislash/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon"> <img src="../assets/generated/types/ghost.svg" alt="Ghost type" class="type-icon"></div>
@@ -344,7 +361,7 @@
       <tr data-href="../pokedex/lucario.html">
         <td><a href="../pokedex/lucario.html">Lucario</a></td>
         <td>76</td>
-        <td><img src="../assets/game/graphics/pokemon/lucario/anim_front.png" alt="Lucario Level 76 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/lucario/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/lucario/anim_front.png" alt="Lucario Level 76 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/lucario/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/lucario/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/lucario/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"> <img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon"></div>
@@ -359,7 +376,7 @@
       <tr data-href="../pokedex/escavalier.html">
         <td><a href="../pokedex/escavalier.html">Escavalier</a></td>
         <td>76</td>
-        <td><img src="../assets/game/graphics/pokemon/escavalier/anim_front.png" alt="Escavalier Level 76 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/escavalier/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/escavalier/anim_front.png" alt="Escavalier Level 76 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/escavalier/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/escavalier/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/escavalier/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"> <img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon"></div>
@@ -374,7 +391,7 @@
       <tr data-href="../pokedex/silvally-steel.html">
         <td><a href="../pokedex/silvally-steel.html">Silvally<span class="species-form">(Type: Steel)</span></a></td>
         <td>78</td>
-        <td><img src="../assets/game/graphics/pokemon/silvally/steel/anim_front.png" alt="Silvally Level 78 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/silvally/steel/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/silvally/steel/anim_front.png" alt="Silvally Level 78 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/steel/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/steel/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/steel/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon"></div>
@@ -536,7 +553,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -544,6 +561,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

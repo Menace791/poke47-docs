@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/rotom/heat/anim_front.png" alt="Rotom (Heat) front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/rotom/heat/anim_front__shiny.png" alt="Rotom (Heat) shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/rotom/heat/anim_front.png" alt="Rotom (Heat) front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/rotom/heat/anim_front__shiny.png">
+<img src="../assets/game/graphics/pokemon/rotom/heat/anim_front__shiny.png" alt="Rotom (Heat) shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/rotom/heat/anim_front.png">    </div>
     <div>
       <p class="muted">Hoenn Dex #222</p>
       <p><strong>Rotom (Heat)</strong></p>
@@ -299,7 +316,7 @@
     <p><strong>Catch Rate:</strong> 45</p>
     <p><strong>Overworld Behavior:</strong> Ignores Player</p>
     <p><strong>Autobattle Behavior:</strong> Copies Player</p>
-<p><strong>EV Yield:</strong> 1 Sp. Atk, 1 Speed</p><p><strong>Base Species:</strong>   <a href="rotom.html" class="species-inline-link mon-card type-electric type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/rotom/anim_front.png" alt="Rotom" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/rotom/anim_front__hover.png"><span>Rotom</span>
+<p><strong>EV Yield:</strong> 1 Sp. Atk, 1 Speed</p><p><strong>Base Species:</strong>   <a href="rotom.html" class="species-inline-link mon-card type-electric type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/rotom/anim_front.png" alt="Rotom" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/rotom/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rotom/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rotom/anim_front__shiny__hover.png"><span>Rotom</span>
   </a>
 </p><p class="wild-items"><strong>Form Item:</strong> <span><a href="../itemdex/rotom-catalog.html" class="item-card"><img src="../assets/game/graphics/items/icons/rotom_catalog.png" alt="Rotom Catalog" class="item-icon">Rotom Catalog</a></span></p>  </section>
   <section class="card">
@@ -358,15 +375,15 @@ makes mischief by turning up the heat.</p>
   <div class="card">
     <h2>Forms</h2>
     <ul class="form-list">
-        <li><a href="rotom.html" class="form-entry mon-card type-electric type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/rotom/anim_front.png" alt="Rotom" class="form-sprite" data-hover="../assets/game/graphics/pokemon/rotom/anim_front__hover.png"><span>Rotom</span>
+        <li><a href="rotom.html" class="form-entry mon-card type-electric type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/rotom/anim_front.png" alt="Rotom" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/rotom/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rotom/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rotom/anim_front__shiny__hover.png"><span>Rotom</span>
         </a></li>
-        <li><a href="rotom-wash.html" class="form-entry mon-card type-electric type2-water mon-dual"><img src="../assets/game/graphics/pokemon/rotom/wash/anim_front.png" alt="Rotom (Wash)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/rotom/wash/anim_front__hover.png"><span>Rotom (Wash)</span>
+        <li><a href="rotom-wash.html" class="form-entry mon-card type-electric type2-water mon-dual"><img src="../assets/game/graphics/pokemon/rotom/wash/anim_front.png" alt="Rotom (Wash)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/rotom/wash/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rotom/wash/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rotom/wash/anim_front__shiny__hover.png"><span>Rotom (Wash)</span>
         </a></li>
-        <li><a href="rotom-frost.html" class="form-entry mon-card type-electric type2-ice mon-dual"><img src="../assets/game/graphics/pokemon/rotom/frost/anim_front.png" alt="Rotom (Frost)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/rotom/frost/anim_front__hover.png"><span>Rotom (Frost)</span>
+        <li><a href="rotom-frost.html" class="form-entry mon-card type-electric type2-ice mon-dual"><img src="../assets/game/graphics/pokemon/rotom/frost/anim_front.png" alt="Rotom (Frost)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/rotom/frost/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rotom/frost/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rotom/frost/anim_front__shiny__hover.png"><span>Rotom (Frost)</span>
         </a></li>
-        <li><a href="rotom-fan.html" class="form-entry mon-card type-electric type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/rotom/fan/anim_front.png" alt="Rotom (Fan)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/rotom/fan/anim_front__hover.png"><span>Rotom (Fan)</span>
+        <li><a href="rotom-fan.html" class="form-entry mon-card type-electric type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/rotom/fan/anim_front.png" alt="Rotom (Fan)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/rotom/fan/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rotom/fan/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rotom/fan/anim_front__shiny__hover.png"><span>Rotom (Fan)</span>
         </a></li>
-        <li><a href="rotom-mow.html" class="form-entry mon-card type-electric type2-grass mon-dual"><img src="../assets/game/graphics/pokemon/rotom/mow/anim_front.png" alt="Rotom (Mow)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/rotom/mow/anim_front__hover.png"><span>Rotom (Mow)</span>
+        <li><a href="rotom-mow.html" class="form-entry mon-card type-electric type2-grass mon-dual"><img src="../assets/game/graphics/pokemon/rotom/mow/anim_front.png" alt="Rotom (Mow)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/rotom/mow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rotom/mow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rotom/mow/anim_front__shiny__hover.png"><span>Rotom (Mow)</span>
         </a></li>
     </ul>
   </div>
@@ -605,7 +622,7 @@ makes mischief by turning up the heat.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -613,6 +630,7 @@ makes mischief by turning up the heat.</p>
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

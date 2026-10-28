@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/furfrou/la_reine/anim_front.png" alt="Furfrou (La Reine Trim) front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/furfrou/la_reine/anim_front__shiny.png" alt="Furfrou (La Reine Trim) shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/furfrou/la_reine/anim_front.png" alt="Furfrou (La Reine Trim) front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/furfrou/la_reine/anim_front__shiny.png">
+<img src="../assets/game/graphics/pokemon/furfrou/la_reine/anim_front__shiny.png" alt="Furfrou (La Reine Trim) shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/furfrou/la_reine/anim_front.png">    </div>
     <div>
       <p class="muted">Hoenn Dex #262</p>
       <p><strong>Furfrou (La Reine Trim)</strong></p>
@@ -299,7 +316,7 @@
     <p><strong>Catch Rate:</strong> 160</p>
     <p><strong>Overworld Behavior:</strong> Ignores Player</p>
     <p><strong>Autobattle Behavior:</strong> Copies Player</p>
-<p><strong>EV Yield:</strong> 1 Speed</p><p><strong>Base Species:</strong>   <a href="furfrou.html" class="species-inline-link mon-card type-normal"><img src="../assets/game/graphics/pokemon/furfrou/anim_front.png" alt="Furfrou" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/furfrou/anim_front__hover.png"><span>Furfrou</span>
+<p><strong>EV Yield:</strong> 1 Speed</p><p><strong>Base Species:</strong>   <a href="furfrou.html" class="species-inline-link mon-card type-normal"><img src="../assets/game/graphics/pokemon/furfrou/anim_front.png" alt="Furfrou" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/furfrou/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/furfrou/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/furfrou/anim_front__shiny__hover.png"><span>Furfrou</span>
   </a>
 </p>  </section>
   <section class="card">
@@ -355,23 +372,23 @@
   <div class="card">
     <h2>Forms</h2>
     <ul class="form-list">
-        <li><a href="furfrou.html" class="form-entry mon-card type-normal"><img src="../assets/game/graphics/pokemon/furfrou/anim_front.png" alt="Furfrou" class="form-sprite" data-hover="../assets/game/graphics/pokemon/furfrou/anim_front__hover.png"><span>Furfrou</span>
+        <li><a href="furfrou.html" class="form-entry mon-card type-normal"><img src="../assets/game/graphics/pokemon/furfrou/anim_front.png" alt="Furfrou" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/furfrou/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/furfrou/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/furfrou/anim_front__shiny__hover.png"><span>Furfrou</span>
         </a></li>
-        <li><a href="furfrou-heart.html" class="form-entry mon-card type-fairy type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/furfrou/heart/anim_front.png" alt="Furfrou (Heart Trim)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/furfrou/heart/anim_front__hover.png"><span>Furfrou (Heart Trim)</span>
+        <li><a href="furfrou-heart.html" class="form-entry mon-card type-fairy type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/furfrou/heart/anim_front.png" alt="Furfrou (Heart Trim)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/furfrou/heart/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/furfrou/heart/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/furfrou/heart/anim_front__shiny__hover.png"><span>Furfrou (Heart Trim)</span>
         </a></li>
-        <li><a href="furfrou-star.html" class="form-entry mon-card type-steel type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/furfrou/star/anim_front.png" alt="Furfrou (Star Trim)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/furfrou/star/anim_front__hover.png"><span>Furfrou (Star Trim)</span>
+        <li><a href="furfrou-star.html" class="form-entry mon-card type-steel type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/furfrou/star/anim_front.png" alt="Furfrou (Star Trim)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/furfrou/star/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/furfrou/star/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/furfrou/star/anim_front__shiny__hover.png"><span>Furfrou (Star Trim)</span>
         </a></li>
-        <li><a href="furfrou-diamond.html" class="form-entry mon-card type-rock type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/furfrou/diamond/anim_front.png" alt="Furfrou (Diamond Trim)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/furfrou/diamond/anim_front__hover.png"><span>Furfrou (Diamond Trim)</span>
+        <li><a href="furfrou-diamond.html" class="form-entry mon-card type-rock type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/furfrou/diamond/anim_front.png" alt="Furfrou (Diamond Trim)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/furfrou/diamond/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/furfrou/diamond/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/furfrou/diamond/anim_front__shiny__hover.png"><span>Furfrou (Diamond Trim)</span>
         </a></li>
-        <li><a href="furfrou-debutante.html" class="form-entry mon-card type-electric type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/furfrou/debutante/anim_front.png" alt="Furfrou (Debutante Trim)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/furfrou/debutante/anim_front__hover.png"><span>Furfrou (Debutante Trim)</span>
+        <li><a href="furfrou-debutante.html" class="form-entry mon-card type-electric type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/furfrou/debutante/anim_front.png" alt="Furfrou (Debutante Trim)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/furfrou/debutante/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/furfrou/debutante/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/furfrou/debutante/anim_front__shiny__hover.png"><span>Furfrou (Debutante Trim)</span>
         </a></li>
-        <li><a href="furfrou-matron.html" class="form-entry mon-card type-psychic type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/furfrou/matron/anim_front.png" alt="Furfrou (Matron Trim)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/furfrou/matron/anim_front__hover.png"><span>Furfrou (Matron Trim)</span>
+        <li><a href="furfrou-matron.html" class="form-entry mon-card type-psychic type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/furfrou/matron/anim_front.png" alt="Furfrou (Matron Trim)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/furfrou/matron/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/furfrou/matron/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/furfrou/matron/anim_front__shiny__hover.png"><span>Furfrou (Matron Trim)</span>
         </a></li>
-        <li><a href="furfrou-dandy.html" class="form-entry mon-card type-flying type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/furfrou/dandy/anim_front.png" alt="Furfrou (Dandy Trim)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/furfrou/dandy/anim_front__hover.png"><span>Furfrou (Dandy Trim)</span>
+        <li><a href="furfrou-dandy.html" class="form-entry mon-card type-flying type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/furfrou/dandy/anim_front.png" alt="Furfrou (Dandy Trim)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/furfrou/dandy/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/furfrou/dandy/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/furfrou/dandy/anim_front__shiny__hover.png"><span>Furfrou (Dandy Trim)</span>
         </a></li>
-        <li><a href="furfrou-kabuki.html" class="form-entry mon-card type-fighting type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/furfrou/kabuki/anim_front.png" alt="Furfrou (Kabuki Trim)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/furfrou/kabuki/anim_front__hover.png"><span>Furfrou (Kabuki Trim)</span>
+        <li><a href="furfrou-kabuki.html" class="form-entry mon-card type-fighting type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/furfrou/kabuki/anim_front.png" alt="Furfrou (Kabuki Trim)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/furfrou/kabuki/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/furfrou/kabuki/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/furfrou/kabuki/anim_front__shiny__hover.png"><span>Furfrou (Kabuki Trim)</span>
         </a></li>
-        <li><a href="furfrou-pharaoh.html" class="form-entry mon-card type-dragon type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/furfrou/pharaoh/anim_front.png" alt="Furfrou (Pharaoh Trim)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/furfrou/pharaoh/anim_front__hover.png"><span>Furfrou (Pharaoh Trim)</span>
+        <li><a href="furfrou-pharaoh.html" class="form-entry mon-card type-dragon type2-normal mon-dual"><img src="../assets/game/graphics/pokemon/furfrou/pharaoh/anim_front.png" alt="Furfrou (Pharaoh Trim)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/furfrou/pharaoh/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/furfrou/pharaoh/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/furfrou/pharaoh/anim_front__shiny__hover.png"><span>Furfrou (Pharaoh Trim)</span>
         </a></li>
     </ul>
   </div>
@@ -603,7 +620,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -611,6 +628,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

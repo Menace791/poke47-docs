@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -284,21 +301,21 @@
   <h2>Pokémon with this Ability <span class="muted small-text">8</span></h2>
   <ul class="cross-link-grid">
 <li><a href="../pokedex/braviary-hisui.html" class="mon-card type-psychic type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/braviary/hisui/front.png" alt="" class="sprite">  <span class="name">Braviary (Hisuian)<sup class="muted">HA</sup></span>
+<img src="../assets/game/graphics/pokemon/braviary/hisui/front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/braviary/hisui/front__shiny.png">  <span class="name">Braviary (Hisuian)<sup class="muted">HA</sup></span>
 </a></li><li><a href="../pokedex/dartrix.html" class="mon-card type-grass type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/dartrix/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/dartrix/anim_front__hover.png">  <span class="name">Dartrix<sup class="muted">HA</sup></span>
+<img src="../assets/game/graphics/pokemon/dartrix/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/dartrix/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/dartrix/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/dartrix/anim_front__shiny__hover.png">  <span class="name">Dartrix<sup class="muted">HA</sup></span>
 </a></li><li><a href="../pokedex/decidueye.html" class="mon-card type-grass type2-ghost mon-dual">
-<img src="../assets/game/graphics/pokemon/decidueye/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/decidueye/anim_front__hover.png">  <span class="name">Decidueye<sup class="muted">HA</sup></span>
+<img src="../assets/game/graphics/pokemon/decidueye/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/decidueye/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/decidueye/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/decidueye/anim_front__shiny__hover.png">  <span class="name">Decidueye<sup class="muted">HA</sup></span>
 </a></li><li><a href="../pokedex/illumise.html" class="mon-card type-bug">
-<img src="../assets/game/graphics/pokemon/illumise/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/illumise/anim_front__hover.png">  <span class="name">Illumise</span>
+<img src="../assets/game/graphics/pokemon/illumise/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/illumise/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/illumise/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/illumise/anim_front__shiny__hover.png">  <span class="name">Illumise</span>
 </a></li><li><a href="../pokedex/mothim.html" class="mon-card type-bug type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/mothim/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/mothim/anim_front__hover.png">  <span class="name">Mothim<sup class="muted">HA</sup></span>
+<img src="../assets/game/graphics/pokemon/mothim/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/mothim/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/mothim/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/mothim/anim_front__shiny__hover.png">  <span class="name">Mothim<sup class="muted">HA</sup></span>
 </a></li><li><a href="../pokedex/rowlet.html" class="mon-card type-grass type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/rowlet/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/rowlet/anim_front__hover.png">  <span class="name">Rowlet<sup class="muted">HA</sup></span>
+<img src="../assets/game/graphics/pokemon/rowlet/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/rowlet/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rowlet/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rowlet/anim_front__shiny__hover.png">  <span class="name">Rowlet<sup class="muted">HA</sup></span>
 </a></li><li><a href="../pokedex/venomoth.html" class="mon-card type-bug type2-poison mon-dual">
-<img src="../assets/game/graphics/pokemon/venomoth/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/venomoth/anim_front__hover.png">  <span class="name">Venomoth</span>
+<img src="../assets/game/graphics/pokemon/venomoth/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/venomoth/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/venomoth/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/venomoth/anim_front__shiny__hover.png">  <span class="name">Venomoth</span>
 </a></li><li><a href="../pokedex/venonat.html" class="mon-card type-bug type2-poison mon-dual">
-<img src="../assets/game/graphics/pokemon/venonat/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/venonat/anim_front__hover.png">  <span class="name">Venonat</span>
+<img src="../assets/game/graphics/pokemon/venonat/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/venonat/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/venonat/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/venonat/anim_front__shiny__hover.png">  <span class="name">Venonat</span>
 </a></li>  </ul>
 </section>
   </main>
@@ -446,7 +463,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -454,6 +471,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

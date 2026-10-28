@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -291,15 +308,15 @@
     <h3>Level-Up <span class="muted small-text">5</span></h3>
     <ul class="cross-link-grid">
 <li><a href="../pokedex/altaria.html" class="mon-card type-dragon type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/altaria/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/altaria/anim_front__hover.png">  <span class="name">Altaria</span>
+<img src="../assets/game/graphics/pokemon/altaria/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/altaria/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/altaria/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/altaria/anim_front__shiny__hover.png">  <span class="name">Altaria</span>
 </a></li><li><a href="../pokedex/floette.html" class="mon-card type-fairy">
-<img src="../assets/game/graphics/pokemon/floette/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/floette/anim_front__hover.png">  <span class="name">Floette</span>
+<img src="../assets/game/graphics/pokemon/floette/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/floette/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/floette/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/floette/anim_front__shiny__hover.png">  <span class="name">Floette</span>
 </a></li><li><a href="../pokedex/florges.html" class="mon-card type-fairy">
-<img src="../assets/game/graphics/pokemon/florges/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/florges/anim_front__hover.png">  <span class="name">Florges</span>
+<img src="../assets/game/graphics/pokemon/florges/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/florges/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/florges/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/florges/anim_front__shiny__hover.png">  <span class="name">Florges</span>
 </a></li><li><a href="../pokedex/shaymin.html" class="mon-card type-grass">
-<img src="../assets/game/graphics/pokemon/shaymin/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/shaymin/anim_front__hover.png">  <span class="name">Shaymin (Land)</span>
+<img src="../assets/game/graphics/pokemon/shaymin/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/shaymin/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/shaymin/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/shaymin/anim_front__shiny__hover.png">  <span class="name">Shaymin (Land)</span>
 </a></li><li><a href="../pokedex/shaymin-sky.html" class="mon-card type-grass type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/shaymin/sky/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/shaymin/sky/anim_front__hover.png">  <span class="name">Shaymin (Sky)</span>
+<img src="../assets/game/graphics/pokemon/shaymin/sky/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/shaymin/sky/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/shaymin/sky/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/shaymin/sky/anim_front__shiny__hover.png">  <span class="name">Shaymin (Sky)</span>
 </a></li>    </ul>
 </section>
   </main>
@@ -447,7 +464,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -455,6 +472,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

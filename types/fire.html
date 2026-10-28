@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -304,7 +321,7 @@
           data-nat-dex="390"
           data-href="../pokedex/chimchar.html">
         <td>4</td>
-        <td><img src="../assets/game/graphics/pokemon/chimchar/anim_front.png" alt="Chimchar front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/chimchar/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/chimchar/anim_front.png" alt="Chimchar front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/chimchar/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/chimchar/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/chimchar/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/chimchar.html">Chimchar</a></td>
         <td><span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/blaze.html">Blaze</a>, <a href="../abilities/iron-fist.html">Iron Fist</a>, <a href="../abilities/libero.html">Libero</a></td>
@@ -314,7 +331,7 @@
           data-nat-dex="391"
           data-href="../pokedex/monferno.html">
         <td>5</td>
-        <td><img src="../assets/game/graphics/pokemon/monferno/anim_front.png" alt="Monferno front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/monferno/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/monferno/anim_front.png" alt="Monferno front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/monferno/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/monferno/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/monferno/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/monferno.html">Monferno</a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-fighting">Fighting</span></td>
         <td><a href="../abilities/blaze.html">Blaze</a>, <a href="../abilities/iron-fist.html">Iron Fist</a>, <a href="../abilities/libero.html">Libero</a></td>
@@ -324,7 +341,7 @@
           data-nat-dex="392"
           data-href="../pokedex/infernape.html">
         <td>6</td>
-        <td><img src="../assets/game/graphics/pokemon/infernape/anim_front.png" alt="Infernape front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/infernape/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/infernape/anim_front.png" alt="Infernape front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/infernape/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/infernape/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/infernape/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/infernape.html">Infernape</a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-fighting">Fighting</span></td>
         <td><a href="../abilities/blaze.html">Blaze</a>, <a href="../abilities/iron-fist.html">Iron Fist</a>, <a href="../abilities/libero.html">Libero</a></td>
@@ -334,7 +351,7 @@
           data-nat-dex="513"
           data-href="../pokedex/pansear.html">
         <td>56</td>
-        <td><img src="../assets/game/graphics/pokemon/pansear/anim_front.png" alt="Pansear front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/pansear/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/pansear/anim_front.png" alt="Pansear front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/pansear/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pansear/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pansear/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/pansear.html">Pansear</a></td>
         <td><span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/pickup.html">Pickup</a>, <a href="../abilities/receiver.html">Receiver</a>, <a href="../abilities/flash-fire.html">Flash Fire</a></td>
@@ -344,7 +361,7 @@
           data-nat-dex="514"
           data-href="../pokedex/simisear.html">
         <td>57</td>
-        <td><img src="../assets/game/graphics/pokemon/simisear/anim_front.png" alt="Simisear front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/simisear/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/simisear/anim_front.png" alt="Simisear front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/simisear/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/simisear/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/simisear/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/simisear.html">Simisear</a></td>
         <td><span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/hunger-switch.html">Hunger Switch</a>, <a href="../abilities/receiver.html">Receiver</a>, <a href="../abilities/flash-fire.html">Flash Fire</a></td>
@@ -354,7 +371,7 @@
           data-nat-dex="741"
           data-href="../pokedex/oricorio.html">
         <td>131</td>
-        <td><img src="../assets/game/graphics/pokemon/oricorio/anim_front.png" alt="Oricorio front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/oricorio/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/oricorio/anim_front.png" alt="Oricorio front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/oricorio/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/oricorio/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/oricorio/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/oricorio.html">Oricorio</a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-flying">Flying</span></td>
         <td><a href="../abilities/dancer.html">Dancer</a>, <a href="../abilities/parrot.html">Echo</a></td>
@@ -364,7 +381,7 @@
           data-nat-dex="554"
           data-href="../pokedex/darumaka.html">
         <td>138</td>
-        <td><img src="../assets/game/graphics/pokemon/darumaka/anim_front.png" alt="Darumaka front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/darumaka/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/darumaka/anim_front.png" alt="Darumaka front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/darumaka/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/darumaka/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/darumaka/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/darumaka.html">Darumaka</a></td>
         <td><span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/hustle.html">Hustle</a>, <a href="../abilities/anger-point.html">Anger Point</a>, <a href="../abilities/inner-focus.html">Inner Focus</a></td>
@@ -374,7 +391,7 @@
           data-nat-dex="555"
           data-href="../pokedex/darmanitan.html">
         <td>139</td>
-        <td><img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="Darmanitan front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="Darmanitan front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/darmanitan/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/darmanitan.html">Darmanitan</a></td>
         <td><span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/sheer-force.html">Sheer Force</a>, <a href="../abilities/gorilla-tactics.html">Gorilla Tactics</a>, <a href="../abilities/zen-mode.html">Zen Mode</a></td>
@@ -384,7 +401,7 @@
           data-nat-dex="667"
           data-href="../pokedex/litleo.html">
         <td>150</td>
-        <td><img src="../assets/game/graphics/pokemon/litleo/anim_front.png" alt="Litleo front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/litleo/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/litleo/anim_front.png" alt="Litleo front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/litleo/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/litleo/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/litleo/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/litleo.html">Litleo</a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-normal">Normal</span></td>
         <td><a href="../abilities/rivalry.html">Rivalry</a>, <a href="../abilities/moxie.html">Moxie</a>, <a href="../abilities/competitive.html">Competitive</a></td>
@@ -394,7 +411,7 @@
           data-nat-dex="668"
           data-href="../pokedex/pyroar.html">
         <td>151</td>
-        <td><img src="../assets/game/graphics/pokemon/pyroar/anim_front.png" alt="Pyroar front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/pyroar/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/pyroar/anim_front.png" alt="Pyroar front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/pyroar/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pyroar/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pyroar/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/pyroar.html">Pyroar</a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-normal">Normal</span></td>
         <td><a href="../abilities/rivalry.html">Rivalry</a>, <a href="../abilities/as-one-ice-rider.html">As One (Ice Rider)</a>, <a href="../abilities/competitive.html">Competitive</a></td>
@@ -404,7 +421,7 @@
           data-nat-dex="662"
           data-href="../pokedex/fletchinder.html">
         <td>153</td>
-        <td><img src="../assets/game/graphics/pokemon/fletchinder/anim_front.png" alt="Fletchinder front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/fletchinder/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/fletchinder/anim_front.png" alt="Fletchinder front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/fletchinder/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/fletchinder/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/fletchinder/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/fletchinder.html">Fletchinder</a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-flying">Flying</span></td>
         <td><a href="../abilities/flame-body.html">Flame Body</a>, <a href="../abilities/gale-wings.html">Gale Wings</a></td>
@@ -414,7 +431,7 @@
           data-nat-dex="663"
           data-href="../pokedex/talonflame.html">
         <td>154</td>
-        <td><img src="../assets/game/graphics/pokemon/talonflame/anim_front.png" alt="Talonflame front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/talonflame/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/talonflame/anim_front.png" alt="Talonflame front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/talonflame/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/talonflame/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/talonflame/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/talonflame.html">Talonflame</a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-flying">Flying</span></td>
         <td><a href="../abilities/flame-body.html">Flame Body</a>, <a href="../abilities/gale-wings.html">Gale Wings</a></td>
@@ -424,7 +441,7 @@
           data-nat-dex="631"
           data-href="../pokedex/heatmor.html">
         <td>157</td>
-        <td><img src="../assets/game/graphics/pokemon/heatmor/anim_front.png" alt="Heatmor front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/heatmor/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/heatmor/anim_front.png" alt="Heatmor front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/heatmor/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/heatmor/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/heatmor/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/heatmor.html">Heatmor</a></td>
         <td><span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/earth-eater.html">Earth Eater</a>, <a href="../abilities/flash-fire.html">Flash Fire</a>, <a href="../abilities/white-smoke.html">White Smoke</a></td>
@@ -434,7 +451,7 @@
           data-nat-dex="776"
           data-href="../pokedex/turtonator.html">
         <td>158</td>
-        <td><img src="../assets/game/graphics/pokemon/turtonator/anim_front.png" alt="Turtonator front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/turtonator/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/turtonator/anim_front.png" alt="Turtonator front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/turtonator/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/turtonator/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/turtonator/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/turtonator.html">Turtonator</a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-dragon">Dragon</span></td>
         <td><a href="../abilities/dauntless-shield.html">Dauntless Shield</a>, <a href="../abilities/incendiary.html">Incendiary</a></td>
@@ -444,7 +461,7 @@
           data-nat-dex="757"
           data-href="../pokedex/salandit.html">
         <td>159</td>
-        <td><img src="../assets/game/graphics/pokemon/salandit/anim_front.png" alt="Salandit front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/salandit/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/salandit/anim_front.png" alt="Salandit front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/salandit/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/salandit/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/salandit/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/salandit.html">Salandit</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/corrosion.html">Corrosion</a>, <a href="../abilities/white-smoke.html">White Smoke</a>, <a href="../abilities/oblivious.html">Oblivious</a></td>
@@ -454,7 +471,7 @@
           data-nat-dex="758"
           data-href="../pokedex/salazzle.html">
         <td>160</td>
-        <td><img src="../assets/game/graphics/pokemon/salazzle/anim_front.png" alt="Salazzle front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/salazzle/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/salazzle/anim_front.png" alt="Salazzle front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/salazzle/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/salazzle/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/salazzle/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/salazzle.html">Salazzle</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/corrosion.html">Corrosion</a>, <a href="../abilities/white-smoke.html">White Smoke</a>, <a href="../abilities/oblivious.html">Oblivious</a></td>
@@ -464,7 +481,7 @@
           data-nat-dex="636"
           data-href="../pokedex/larvesta.html">
         <td>187</td>
-        <td><img src="../assets/game/graphics/pokemon/larvesta/anim_front.png" alt="Larvesta front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/larvesta/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/larvesta/anim_front.png" alt="Larvesta front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/larvesta/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/larvesta/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/larvesta/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/larvesta.html">Larvesta</a></td>
         <td><span class="type-badge type-bug">Bug</span> <span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/flame-body.html">Flame Body</a>, <a href="../abilities/mega-sol.html">Mega Sol</a>, <a href="../abilities/swarm.html">Swarm</a></td>
@@ -474,7 +491,7 @@
           data-nat-dex="637"
           data-href="../pokedex/volcarona.html">
         <td>188</td>
-        <td><img src="../assets/game/graphics/pokemon/volcarona/anim_front.png" alt="Volcarona front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/volcarona/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/volcarona/anim_front.png" alt="Volcarona front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/volcarona/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/volcarona/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/volcarona/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/volcarona.html">Volcarona</a></td>
         <td><span class="type-badge type-bug">Bug</span> <span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/flame-body.html">Flame Body</a>, <a href="../abilities/illuminate.html">Illuminate</a>, <a href="../abilities/swarm.html">Swarm</a></td>
@@ -484,7 +501,7 @@
           data-nat-dex="479"
           data-href="../pokedex/rotom-heat.html">
         <td>222</td>
-        <td><img src="../assets/game/graphics/pokemon/rotom/heat/anim_front.png" alt="Rotom (Heat) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/rotom/heat/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/rotom/heat/anim_front.png" alt="Rotom (Heat) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/rotom/heat/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rotom/heat/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rotom/heat/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/rotom-heat.html">Rotom<span class="species-form">(Heat)</span></a></td>
         <td><span class="type-badge type-electric">Electric</span> <span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/levitate.html">Levitate</a></td>
@@ -494,7 +511,7 @@
           data-nat-dex="585"
           data-href="../pokedex/deerling-summer.html">
         <td>234</td>
-        <td><img src="../assets/game/graphics/pokemon/deerling/summer/anim_front.png" alt="Deerling (Summer) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/deerling/summer/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/deerling/summer/anim_front.png" alt="Deerling (Summer) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/deerling/summer/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/deerling/summer/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/deerling/summer/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/deerling-summer.html">Deerling<span class="species-form">(Summer)</span></a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-grass">Grass</span></td>
         <td><a href="../abilities/forecast.html">Forecast</a>, <a href="../abilities/chlorophyll.html">Chlorophyll</a></td>
@@ -504,7 +521,7 @@
           data-nat-dex="586"
           data-href="../pokedex/sawsbuck-summer.html">
         <td>235</td>
-        <td><img src="../assets/game/graphics/pokemon/sawsbuck/summer/anim_front.png" alt="Sawsbuck (Summer) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/sawsbuck/summer/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/sawsbuck/summer/anim_front.png" alt="Sawsbuck (Summer) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/sawsbuck/summer/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sawsbuck/summer/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sawsbuck/summer/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/sawsbuck-summer.html">Sawsbuck<span class="species-form">(Summer)</span></a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-grass">Grass</span></td>
         <td><a href="../abilities/forecast.html">Forecast</a>, <a href="../abilities/chlorophyll.html">Chlorophyll</a></td>
@@ -514,7 +531,7 @@
           data-nat-dex="607"
           data-href="../pokedex/litwick.html">
         <td>259</td>
-        <td><img src="../assets/game/graphics/pokemon/litwick/anim_front.png" alt="Litwick front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/litwick/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/litwick/anim_front.png" alt="Litwick front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/litwick/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/litwick/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/litwick/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/litwick.html">Litwick</a></td>
         <td><span class="type-badge type-ghost">Ghost</span> <span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/flash-fire.html">Flash Fire</a>, <a href="../abilities/soul-heart.html">Soul-Heart</a>, <a href="../abilities/infiltrator.html">Infiltrator</a></td>
@@ -524,7 +541,7 @@
           data-nat-dex="608"
           data-href="../pokedex/lampent.html">
         <td>260</td>
-        <td><img src="../assets/game/graphics/pokemon/lampent/anim_front.png" alt="Lampent front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/lampent/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/lampent/anim_front.png" alt="Lampent front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/lampent/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/lampent/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/lampent/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/lampent.html">Lampent</a></td>
         <td><span class="type-badge type-ghost">Ghost</span> <span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/flash-fire.html">Flash Fire</a>, <a href="../abilities/soul-heart.html">Soul-Heart</a>, <a href="../abilities/infiltrator.html">Infiltrator</a></td>
@@ -534,7 +551,7 @@
           data-nat-dex="609"
           data-href="../pokedex/chandelure.html">
         <td>261</td>
-        <td><img src="../assets/game/graphics/pokemon/chandelure/anim_front.png" alt="Chandelure front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/chandelure/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/chandelure/anim_front.png" alt="Chandelure front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/chandelure/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/chandelure/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/chandelure/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/chandelure.html">Chandelure</a></td>
         <td><span class="type-badge type-ghost">Ghost</span> <span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/spicy-spray.html">Smoldering Air</a>, <a href="../abilities/soul-heart.html">Soul-Heart</a>, <a href="../abilities/infiltrator.html">Infiltrator</a></td>
@@ -544,7 +561,7 @@
           data-nat-dex="773"
           data-href="../pokedex/silvally-fire.html">
         <td>291</td>
-        <td><img src="../assets/game/graphics/pokemon/silvally/fire/anim_front.png" alt="Silvally (Type: Fire) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/silvally/fire/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/silvally/fire/anim_front.png" alt="Silvally (Type: Fire) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/silvally/fire/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/fire/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/fire/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/silvally-fire.html">Silvally<span class="species-form">(Type: Fire)</span></a></td>
         <td><span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/multitype.html">Multitype</a></td>
@@ -554,7 +571,7 @@
           data-nat-dex="498"
           data-href="../pokedex/tepig.html">
         <td>324</td>
-        <td><img src="../assets/game/graphics/pokemon/tepig/anim_front.png" alt="Tepig front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/tepig/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/tepig/anim_front.png" alt="Tepig front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/tepig/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/tepig/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/tepig/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/tepig.html">Tepig</a></td>
         <td><span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/blaze.html">Blaze</a>, <a href="../abilities/reckless.html">Reckless</a>, <a href="../abilities/thick-fat.html">Thick Fat</a></td>
@@ -564,7 +581,7 @@
           data-nat-dex="499"
           data-href="../pokedex/pignite.html">
         <td>325</td>
-        <td><img src="../assets/game/graphics/pokemon/pignite/anim_front.png" alt="Pignite front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/pignite/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/pignite/anim_front.png" alt="Pignite front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/pignite/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pignite/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pignite/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/pignite.html">Pignite</a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-fighting">Fighting</span></td>
         <td><a href="../abilities/blaze.html">Blaze</a>, <a href="../abilities/reckless.html">Reckless</a>, <a href="../abilities/thick-fat.html">Thick Fat</a></td>
@@ -574,7 +591,7 @@
           data-nat-dex="500"
           data-href="../pokedex/emboar.html">
         <td>326</td>
-        <td><img src="../assets/game/graphics/pokemon/emboar/anim_front.png" alt="Emboar front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/emboar/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/emboar/anim_front.png" alt="Emboar front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/emboar/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/emboar/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/emboar/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/emboar.html">Emboar</a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-fighting">Fighting</span></td>
         <td><a href="../abilities/blaze.html">Blaze</a>, <a href="../abilities/reckless.html">Reckless</a>, <a href="../abilities/stamina.html">Stamina</a></td>
@@ -584,7 +601,7 @@
           data-nat-dex="653"
           data-href="../pokedex/fennekin.html">
         <td>333</td>
-        <td><img src="../assets/game/graphics/pokemon/fennekin/anim_front.png" alt="Fennekin front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/fennekin/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/fennekin/anim_front.png" alt="Fennekin front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/fennekin/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/fennekin/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/fennekin/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/fennekin.html">Fennekin</a></td>
         <td><span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/blaze.html">Blaze</a>, <a href="../abilities/magician.html">Magician</a>, <a href="../abilities/magic-guard.html">Magic Guard</a></td>
@@ -594,7 +611,7 @@
           data-nat-dex="654"
           data-href="../pokedex/braixen.html">
         <td>334</td>
-        <td><img src="../assets/game/graphics/pokemon/braixen/anim_front.png" alt="Braixen front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/braixen/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/braixen/anim_front.png" alt="Braixen front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/braixen/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/braixen/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/braixen/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/braixen.html">Braixen</a></td>
         <td><span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/blaze.html">Blaze</a>, <a href="../abilities/magician.html">Magician</a>, <a href="../abilities/magic-guard.html">Magic Guard</a></td>
@@ -604,7 +621,7 @@
           data-nat-dex="655"
           data-href="../pokedex/delphox.html">
         <td>335</td>
-        <td><img src="../assets/game/graphics/pokemon/delphox/anim_front.png" alt="Delphox front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/delphox/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/delphox/anim_front.png" alt="Delphox front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/delphox/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/delphox/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/delphox/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/delphox.html">Delphox</a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-psychic">Psychic</span></td>
         <td><a href="../abilities/blaze.html">Blaze</a>, <a href="../abilities/magician.html">Magician</a>, <a href="../abilities/magic-guard.html">Magic Guard</a></td>
@@ -614,7 +631,7 @@
           data-nat-dex="643"
           data-href="../pokedex/reshiram.html">
         <td>353</td>
-        <td><img src="../assets/game/graphics/pokemon/reshiram/anim_front.png" alt="Reshiram front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/reshiram/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/reshiram/anim_front.png" alt="Reshiram front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/reshiram/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/reshiram/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/reshiram/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/reshiram.html">Reshiram</a></td>
         <td><span class="type-badge type-dragon">Dragon</span> <span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/orichalcum-pulse.html">Orichalcum Pulse</a>, <a href="../abilities/turboblaze.html">Turboblaze</a></td>
@@ -624,7 +641,7 @@
           data-nat-dex="725"
           data-href="../pokedex/litten.html">
         <td>358</td>
-        <td><img src="../assets/game/graphics/pokemon/litten/anim_front.png" alt="Litten front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/litten/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/litten/anim_front.png" alt="Litten front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/litten/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/litten/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/litten/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/litten.html">Litten</a></td>
         <td><span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/blaze.html">Blaze</a>, <a href="../abilities/guts.html">Guts</a>, <a href="../abilities/intimidate.html">Intimidate</a></td>
@@ -634,7 +651,7 @@
           data-nat-dex="726"
           data-href="../pokedex/torracat.html">
         <td>359</td>
-        <td><img src="../assets/game/graphics/pokemon/torracat/anim_front.png" alt="Torracat front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/torracat/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/torracat/anim_front.png" alt="Torracat front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/torracat/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/torracat/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/torracat/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/torracat.html">Torracat</a></td>
         <td><span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/blaze.html">Blaze</a>, <a href="../abilities/guts.html">Guts</a>, <a href="../abilities/intimidate.html">Intimidate</a></td>
@@ -644,7 +661,7 @@
           data-nat-dex="727"
           data-href="../pokedex/incineroar.html">
         <td>360</td>
-        <td><img src="../assets/game/graphics/pokemon/incineroar/anim_front.png" alt="Incineroar front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/incineroar/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/incineroar/anim_front.png" alt="Incineroar front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/incineroar/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/incineroar/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/incineroar/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/incineroar.html">Incineroar</a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-dark">Dark</span></td>
         <td><a href="../abilities/blaze.html">Blaze</a>, <a href="../abilities/spicy-spray.html">Smoldering Air</a>, <a href="../abilities/intimidate.html">Intimidate</a></td>
@@ -654,7 +671,7 @@
           data-nat-dex="37"
           data-href="../pokedex/vulpix.html">
         <td>37</td>
-        <td><img src="../assets/game/graphics/pokemon/vulpix/anim_front.png" alt="Vulpix front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/vulpix/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/vulpix/anim_front.png" alt="Vulpix front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/vulpix/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vulpix/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vulpix/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/vulpix.html">Vulpix</a></td>
         <td><span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/flash-fire.html">Flash Fire</a>, <a href="../abilities/quick-feet.html">Quick Feet</a>, <a href="../abilities/drought.html">Drought</a></td>
@@ -664,7 +681,7 @@
           data-nat-dex="38"
           data-href="../pokedex/ninetales.html">
         <td>38</td>
-        <td><img src="../assets/game/graphics/pokemon/ninetales/anim_front.png" alt="Ninetales front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/ninetales/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/ninetales/anim_front.png" alt="Ninetales front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/ninetales/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/ninetales/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/ninetales/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/ninetales.html">Ninetales</a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-psychic">Psychic</span></td>
         <td><a href="../abilities/flash-fire.html">Flash Fire</a>, <a href="../abilities/quick-feet.html">Quick Feet</a>, <a href="../abilities/drought.html">Drought</a></td>
@@ -674,7 +691,7 @@
           data-nat-dex="105"
           data-href="../pokedex/marowak-alola.html">
         <td>105</td>
-        <td><img src="../assets/game/graphics/pokemon/marowak/alola/anim_front.png" alt="Marowak (Alolan) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/marowak/alola/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/marowak/alola/anim_front.png" alt="Marowak (Alolan) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/marowak/alola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/marowak/alola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/marowak/alola/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/marowak-alola.html">Marowak<span class="species-form">(Alolan)</span></a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-ghost">Ghost</span></td>
         <td><a href="../abilities/cursed-body.html">Cursed Body</a>, <a href="../abilities/unburden.html">Unburden</a>, <a href="../abilities/rock-head.html">Rock Head</a></td>
@@ -684,7 +701,7 @@
           data-nat-dex="136"
           data-href="../pokedex/flareon.html">
         <td>136</td>
-        <td><img src="../assets/game/graphics/pokemon/flareon/anim_front.png" alt="Flareon front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/flareon/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/flareon/anim_front.png" alt="Flareon front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/flareon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/flareon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/flareon/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/flareon.html">Flareon</a></td>
         <td><span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/incendiary.html">Incendiary</a>, <a href="../abilities/flash-fire.html">Flash Fire</a>, <a href="../abilities/guts.html">Guts</a></td>
@@ -694,7 +711,7 @@
           data-nat-dex="322"
           data-href="../pokedex/numel.html">
         <td>322</td>
-        <td><img src="../assets/game/graphics/pokemon/numel/anim_front.png" alt="Numel front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/numel/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/numel/anim_front.png" alt="Numel front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/numel/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/numel/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/numel/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/numel.html">Numel</a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/oblivious.html">Oblivious</a>, <a href="../abilities/simple.html">Simple</a>, <a href="../abilities/stamina.html">Stamina</a></td>
@@ -704,7 +721,7 @@
           data-nat-dex="323"
           data-href="../pokedex/camerupt.html">
         <td>323</td>
-        <td><img src="../assets/game/graphics/pokemon/camerupt/anim_front.png" alt="Camerupt front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/camerupt/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/camerupt/anim_front.png" alt="Camerupt front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/camerupt/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/camerupt/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/camerupt/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/camerupt.html">Camerupt</a></td>
         <td><span class="type-badge type-fire">Fire</span> <span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/magma-armor.html">Magma Armor</a>, <a href="../abilities/solid-rock.html">Solid Rock</a>, <a href="../abilities/stamina.html">Stamina</a></td>
@@ -714,7 +731,7 @@
           data-nat-dex="555"
           data-href="../pokedex/darmanitan.html">
         <td>555</td>
-        <td><img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="Darmanitan front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/darmanitan/anim_front.png" alt="Darmanitan front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/darmanitan/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/darmanitan/anim_front__shiny__hover.png"></td>
         <td><a href="../pokedex/darmanitan.html">Darmanitan</a></td>
         <td><span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/sheer-force.html">Sheer Force</a>, <a href="../abilities/gorilla-tactics.html">Gorilla Tactics</a>, <a href="../abilities/zen-mode.html">Zen Mode</a></td>
@@ -1282,7 +1299,7 @@ view: {toggleId: 'type-view-slider', headerId: 'type-dex-header', numberCol: 0, 
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -1290,6 +1307,7 @@ view: {toggleId: 'type-view-slider', headerId: 'type-dex-header', numberCol: 0, 
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

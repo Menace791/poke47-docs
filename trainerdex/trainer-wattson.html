@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -306,7 +323,7 @@
       <tr data-href="../pokedex/galvantula.html">
         <td><a href="../pokedex/galvantula.html">Galvantula</a></td>
         <td>22</td>
-        <td><img src="../assets/game/graphics/pokemon/galvantula/anim_front.png" alt="Galvantula Level 22 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/galvantula/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/galvantula/anim_front.png" alt="Galvantula Level 22 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/galvantula/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/galvantula/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/galvantula/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"> <img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -321,7 +338,7 @@
       <tr data-href="../pokedex/luxio.html">
         <td><a href="../pokedex/luxio.html">Luxio</a></td>
         <td>20</td>
-        <td><img src="../assets/game/graphics/pokemon/luxio/anim_front.png" alt="Luxio Level 20 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/luxio/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/luxio/anim_front.png" alt="Luxio Level 20 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/luxio/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/luxio/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/luxio/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -336,7 +353,7 @@
       <tr data-href="../pokedex/pachirisu.html">
         <td><a href="../pokedex/pachirisu.html">Pachirisu</a></td>
         <td>20</td>
-        <td><img src="../assets/game/graphics/pokemon/pachirisu/anim_front.png" alt="Pachirisu Level 20 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/pachirisu/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/pachirisu/anim_front.png" alt="Pachirisu Level 20 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/pachirisu/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pachirisu/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pachirisu/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -351,7 +368,7 @@
       <tr data-href="../pokedex/zebstrika.html">
         <td><a href="../pokedex/zebstrika.html">Zebstrika</a></td>
         <td>24</td>
-        <td><img src="../assets/game/graphics/pokemon/zebstrika/anim_front.png" alt="Zebstrika Level 24 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/zebstrika/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/zebstrika/anim_front.png" alt="Zebstrika Level 24 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/zebstrika/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/zebstrika/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/zebstrika/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -381,7 +398,7 @@
       <tr data-href="../pokedex/charjabug.html">
         <td><a href="../pokedex/charjabug.html">Charjabug</a></td>
         <td>36</td>
-        <td><img src="../assets/game/graphics/pokemon/charjabug/anim_front.png" alt="Charjabug Level 36 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/charjabug/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/charjabug/anim_front.png" alt="Charjabug Level 36 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/charjabug/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/charjabug/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/charjabug/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"> <img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -396,7 +413,7 @@
       <tr data-href="../pokedex/galvantula.html">
         <td><a href="../pokedex/galvantula.html">Galvantula</a></td>
         <td>38</td>
-        <td><img src="../assets/game/graphics/pokemon/galvantula/anim_front.png" alt="Galvantula Level 38 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/galvantula/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/galvantula/anim_front.png" alt="Galvantula Level 38 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/galvantula/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/galvantula/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/galvantula/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"> <img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -411,7 +428,7 @@
       <tr data-href="../pokedex/luxray.html">
         <td><a href="../pokedex/luxray.html">Luxray</a></td>
         <td>36</td>
-        <td><img src="../assets/game/graphics/pokemon/luxray/anim_front.png" alt="Luxray Level 36 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/luxray/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/luxray/anim_front.png" alt="Luxray Level 36 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/luxray/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/luxray/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/luxray/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -426,7 +443,7 @@
       <tr data-href="../pokedex/pachirisu.html">
         <td><a href="../pokedex/pachirisu.html">Pachirisu</a></td>
         <td>36</td>
-        <td><img src="../assets/game/graphics/pokemon/pachirisu/anim_front.png" alt="Pachirisu Level 36 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/pachirisu/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/pachirisu/anim_front.png" alt="Pachirisu Level 36 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/pachirisu/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pachirisu/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pachirisu/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -441,7 +458,7 @@
       <tr data-href="../pokedex/zebstrika.html">
         <td><a href="../pokedex/zebstrika.html">Zebstrika</a></td>
         <td>40</td>
-        <td><img src="../assets/game/graphics/pokemon/zebstrika/anim_front.png" alt="Zebstrika Level 40 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/zebstrika/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/zebstrika/anim_front.png" alt="Zebstrika Level 40 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/zebstrika/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/zebstrika/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/zebstrika/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -471,7 +488,7 @@
       <tr data-href="../pokedex/vikavolt.html">
         <td><a href="../pokedex/vikavolt.html">Vikavolt</a></td>
         <td>42</td>
-        <td><img src="../assets/game/graphics/pokemon/vikavolt/anim_front.png" alt="Vikavolt Level 42 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/vikavolt/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/vikavolt/anim_front.png" alt="Vikavolt Level 42 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/vikavolt/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vikavolt/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vikavolt/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"> <img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -486,7 +503,7 @@
       <tr data-href="../pokedex/galvantula.html">
         <td><a href="../pokedex/galvantula.html">Galvantula</a></td>
         <td>44</td>
-        <td><img src="../assets/game/graphics/pokemon/galvantula/anim_front.png" alt="Galvantula Level 44 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/galvantula/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/galvantula/anim_front.png" alt="Galvantula Level 44 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/galvantula/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/galvantula/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/galvantula/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"> <img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -501,7 +518,7 @@
       <tr data-href="../pokedex/luxray.html">
         <td><a href="../pokedex/luxray.html">Luxray</a></td>
         <td>42</td>
-        <td><img src="../assets/game/graphics/pokemon/luxray/anim_front.png" alt="Luxray Level 42 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/luxray/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/luxray/anim_front.png" alt="Luxray Level 42 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/luxray/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/luxray/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/luxray/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -516,7 +533,7 @@
       <tr data-href="../pokedex/pachirisu.html">
         <td><a href="../pokedex/pachirisu.html">Pachirisu</a></td>
         <td>42</td>
-        <td><img src="../assets/game/graphics/pokemon/pachirisu/anim_front.png" alt="Pachirisu Level 42 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/pachirisu/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/pachirisu/anim_front.png" alt="Pachirisu Level 42 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/pachirisu/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pachirisu/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pachirisu/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -531,7 +548,7 @@
       <tr data-href="../pokedex/zebstrika.html">
         <td><a href="../pokedex/zebstrika.html">Zebstrika</a></td>
         <td>46</td>
-        <td><img src="../assets/game/graphics/pokemon/zebstrika/anim_front.png" alt="Zebstrika Level 46 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/zebstrika/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/zebstrika/anim_front.png" alt="Zebstrika Level 46 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/zebstrika/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/zebstrika/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/zebstrika/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -546,7 +563,7 @@
       <tr data-href="../pokedex/togedemaru.html">
         <td><a href="../pokedex/togedemaru.html">Togedemaru</a></td>
         <td>42</td>
-        <td><img src="../assets/game/graphics/pokemon/togedemaru/anim_front.png" alt="Togedemaru Level 42 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/togedemaru/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/togedemaru/anim_front.png" alt="Togedemaru Level 42 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/togedemaru/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/togedemaru/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/togedemaru/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"> <img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon"></div>
@@ -576,7 +593,7 @@
       <tr data-href="../pokedex/vikavolt.html">
         <td><a href="../pokedex/vikavolt.html">Vikavolt</a></td>
         <td>52</td>
-        <td><img src="../assets/game/graphics/pokemon/vikavolt/anim_front.png" alt="Vikavolt Level 52 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/vikavolt/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/vikavolt/anim_front.png" alt="Vikavolt Level 52 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/vikavolt/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vikavolt/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vikavolt/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"> <img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -591,7 +608,7 @@
       <tr data-href="../pokedex/galvantula.html">
         <td><a href="../pokedex/galvantula.html">Galvantula</a></td>
         <td>54</td>
-        <td><img src="../assets/game/graphics/pokemon/galvantula/anim_front.png" alt="Galvantula Level 54 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/galvantula/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/galvantula/anim_front.png" alt="Galvantula Level 54 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/galvantula/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/galvantula/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/galvantula/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"> <img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -606,7 +623,7 @@
       <tr data-href="../pokedex/luxray.html">
         <td><a href="../pokedex/luxray.html">Luxray</a></td>
         <td>52</td>
-        <td><img src="../assets/game/graphics/pokemon/luxray/anim_front.png" alt="Luxray Level 52 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/luxray/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/luxray/anim_front.png" alt="Luxray Level 52 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/luxray/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/luxray/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/luxray/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -621,7 +638,7 @@
       <tr data-href="../pokedex/pachirisu.html">
         <td><a href="../pokedex/pachirisu.html">Pachirisu</a></td>
         <td>52</td>
-        <td><img src="../assets/game/graphics/pokemon/pachirisu/anim_front.png" alt="Pachirisu Level 52 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/pachirisu/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/pachirisu/anim_front.png" alt="Pachirisu Level 52 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/pachirisu/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pachirisu/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pachirisu/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -636,7 +653,7 @@
       <tr data-href="../pokedex/zebstrika.html">
         <td><a href="../pokedex/zebstrika.html">Zebstrika</a></td>
         <td>56</td>
-        <td><img src="../assets/game/graphics/pokemon/zebstrika/anim_front.png" alt="Zebstrika Level 56 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/zebstrika/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/zebstrika/anim_front.png" alt="Zebstrika Level 56 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/zebstrika/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/zebstrika/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/zebstrika/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -651,7 +668,7 @@
       <tr data-href="../pokedex/togedemaru.html">
         <td><a href="../pokedex/togedemaru.html">Togedemaru</a></td>
         <td>52</td>
-        <td><img src="../assets/game/graphics/pokemon/togedemaru/anim_front.png" alt="Togedemaru Level 52 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/togedemaru/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/togedemaru/anim_front.png" alt="Togedemaru Level 52 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/togedemaru/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/togedemaru/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/togedemaru/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"> <img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon"></div>
@@ -681,7 +698,7 @@
       <tr data-href="../pokedex/vikavolt.html">
         <td><a href="../pokedex/vikavolt.html">Vikavolt</a></td>
         <td>62</td>
-        <td><img src="../assets/game/graphics/pokemon/vikavolt/anim_front.png" alt="Vikavolt Level 62 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/vikavolt/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/vikavolt/anim_front.png" alt="Vikavolt Level 62 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/vikavolt/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vikavolt/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vikavolt/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"> <img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -696,7 +713,7 @@
       <tr data-href="../pokedex/galvantula.html">
         <td><a href="../pokedex/galvantula.html">Galvantula</a></td>
         <td>64</td>
-        <td><img src="../assets/game/graphics/pokemon/galvantula/anim_front.png" alt="Galvantula Level 64 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/galvantula/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/galvantula/anim_front.png" alt="Galvantula Level 64 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/galvantula/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/galvantula/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/galvantula/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/bug.svg" alt="Bug type" class="type-icon"> <img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -711,7 +728,7 @@
       <tr data-href="../pokedex/luxray.html">
         <td><a href="../pokedex/luxray.html">Luxray</a></td>
         <td>62</td>
-        <td><img src="../assets/game/graphics/pokemon/luxray/anim_front.png" alt="Luxray Level 62 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/luxray/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/luxray/anim_front.png" alt="Luxray Level 62 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/luxray/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/luxray/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/luxray/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -726,7 +743,7 @@
       <tr data-href="../pokedex/pachirisu.html">
         <td><a href="../pokedex/pachirisu.html">Pachirisu</a></td>
         <td>62</td>
-        <td><img src="../assets/game/graphics/pokemon/pachirisu/anim_front.png" alt="Pachirisu Level 62 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/pachirisu/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/pachirisu/anim_front.png" alt="Pachirisu Level 62 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/pachirisu/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pachirisu/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pachirisu/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -741,7 +758,7 @@
       <tr data-href="../pokedex/zebstrika.html">
         <td><a href="../pokedex/zebstrika.html">Zebstrika</a></td>
         <td>66</td>
-        <td><img src="../assets/game/graphics/pokemon/zebstrika/anim_front.png" alt="Zebstrika Level 66 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/zebstrika/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/zebstrika/anim_front.png" alt="Zebstrika Level 66 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/zebstrika/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/zebstrika/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/zebstrika/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"></div>
@@ -756,7 +773,7 @@
       <tr data-href="../pokedex/togedemaru.html">
         <td><a href="../pokedex/togedemaru.html">Togedemaru</a></td>
         <td>62</td>
-        <td><img src="../assets/game/graphics/pokemon/togedemaru/anim_front.png" alt="Togedemaru Level 62 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/togedemaru/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/togedemaru/anim_front.png" alt="Togedemaru Level 62 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/togedemaru/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/togedemaru/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/togedemaru/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/electric.svg" alt="Electric type" class="type-icon"> <img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon"></div>
@@ -952,7 +969,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -960,6 +977,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

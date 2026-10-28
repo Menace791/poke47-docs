@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -291,78 +308,78 @@
     <h3>Level-Up <span class="muted small-text">18</span></h3>
     <ul class="cross-link-grid">
 <li><a href="../pokedex/braviary.html" class="mon-card type-normal type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/braviary/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/braviary/anim_front__hover.png">  <span class="name">Braviary</span>
+<img src="../assets/game/graphics/pokemon/braviary/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/braviary/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/braviary/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/braviary/anim_front__shiny__hover.png">  <span class="name">Braviary</span>
 </a></li><li><a href="../pokedex/empoleon.html" class="mon-card type-water type2-steel mon-dual">
-<img src="../assets/game/graphics/pokemon/empoleon/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/empoleon/anim_front__hover.png">  <span class="name">Empoleon</span>
+<img src="../assets/game/graphics/pokemon/empoleon/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/empoleon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/empoleon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/empoleon/anim_front__shiny__hover.png">  <span class="name">Empoleon</span>
 </a></li><li><a href="../pokedex/hawlucha.html" class="mon-card type-fighting type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/hawlucha/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__hover.png">  <span class="name">Hawlucha</span>
+<img src="../assets/game/graphics/pokemon/hawlucha/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/hawlucha/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__shiny__hover.png">  <span class="name">Hawlucha</span>
 </a></li><li><a href="../pokedex/lilligant-hisui.html" class="mon-card type-grass type2-fighting mon-dual">
-<img src="../assets/game/graphics/pokemon/lilligant/hisui/front.png" alt="" class="sprite">  <span class="name">Lilligant (Hisuian)</span>
+<img src="../assets/game/graphics/pokemon/lilligant/hisui/front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/lilligant/hisui/front__shiny.png">  <span class="name">Lilligant (Hisuian)</span>
 </a></li><li><a href="../pokedex/mandibuzz.html" class="mon-card type-dark type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/mandibuzz/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/mandibuzz/anim_front__hover.png">  <span class="name">Mandibuzz</span>
+<img src="../assets/game/graphics/pokemon/mandibuzz/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/mandibuzz/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/mandibuzz/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/mandibuzz/anim_front__shiny__hover.png">  <span class="name">Mandibuzz</span>
 </a></li><li><a href="../pokedex/noibat.html" class="mon-card type-flying type2-dragon mon-dual">
-<img src="../assets/game/graphics/pokemon/noibat/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/noibat/anim_front__hover.png">  <span class="name">Noibat</span>
+<img src="../assets/game/graphics/pokemon/noibat/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/noibat/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/noibat/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/noibat/anim_front__shiny__hover.png">  <span class="name">Noibat</span>
 </a></li><li><a href="../pokedex/noivern.html" class="mon-card type-flying type2-dragon mon-dual">
-<img src="../assets/game/graphics/pokemon/noivern/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/noivern/anim_front__hover.png">  <span class="name">Noivern</span>
+<img src="../assets/game/graphics/pokemon/noivern/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/noivern/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/noivern/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/noivern/anim_front__shiny__hover.png">  <span class="name">Noivern</span>
 </a></li><li><a href="../pokedex/pelipper.html" class="mon-card type-water type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/pelipper/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/pelipper/anim_front__hover.png">  <span class="name">Pelipper</span>
+<img src="../assets/game/graphics/pokemon/pelipper/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/pelipper/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pelipper/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pelipper/anim_front__shiny__hover.png">  <span class="name">Pelipper</span>
 </a></li><li><a href="../pokedex/sigilyph.html" class="mon-card type-psychic type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/sigilyph/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/sigilyph/anim_front__hover.png">  <span class="name">Sigilyph</span>
+<img src="../assets/game/graphics/pokemon/sigilyph/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/sigilyph/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sigilyph/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sigilyph/anim_front__shiny__hover.png">  <span class="name">Sigilyph</span>
 </a></li><li><a href="../pokedex/swanna.html" class="mon-card type-water type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/swanna/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/swanna/anim_front__hover.png">  <span class="name">Swanna</span>
+<img src="../assets/game/graphics/pokemon/swanna/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/swanna/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/swanna/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/swanna/anim_front__shiny__hover.png">  <span class="name">Swanna</span>
 </a></li><li><a href="../pokedex/tapu-fini.html" class="mon-card type-water type2-fairy mon-dual">
-<img src="../assets/game/graphics/pokemon/tapu_fini/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/tapu_fini/anim_front__hover.png">  <span class="name">Tapu Fini</span>
+<img src="../assets/game/graphics/pokemon/tapu_fini/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/tapu_fini/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/tapu_fini/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/tapu_fini/anim_front__shiny__hover.png">  <span class="name">Tapu Fini</span>
 </a></li><li><a href="../pokedex/vanillish.html" class="mon-card type-ice">
-<img src="../assets/game/graphics/pokemon/vanillish/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/vanillish/anim_front__hover.png">  <span class="name">Vanillish</span>
+<img src="../assets/game/graphics/pokemon/vanillish/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/vanillish/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vanillish/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vanillish/anim_front__shiny__hover.png">  <span class="name">Vanillish</span>
 </a></li><li><a href="../pokedex/vanillite.html" class="mon-card type-ice">
-<img src="../assets/game/graphics/pokemon/vanillite/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/vanillite/anim_front__hover.png">  <span class="name">Vanillite</span>
+<img src="../assets/game/graphics/pokemon/vanillite/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/vanillite/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vanillite/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vanillite/anim_front__shiny__hover.png">  <span class="name">Vanillite</span>
 </a></li><li><a href="../pokedex/vanilluxe.html" class="mon-card type-ice">
-<img src="../assets/game/graphics/pokemon/vanilluxe/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/vanilluxe/anim_front__hover.png">  <span class="name">Vanilluxe</span>
+<img src="../assets/game/graphics/pokemon/vanilluxe/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/vanilluxe/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vanilluxe/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vanilluxe/anim_front__shiny__hover.png">  <span class="name">Vanilluxe</span>
 </a></li><li><a href="../pokedex/vullaby.html" class="mon-card type-dark type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/vullaby/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/vullaby/anim_front__hover.png">  <span class="name">Vullaby</span>
+<img src="../assets/game/graphics/pokemon/vullaby/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/vullaby/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vullaby/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vullaby/anim_front__shiny__hover.png">  <span class="name">Vullaby</span>
 </a></li><li><a href="../pokedex/weezing.html" class="mon-card type-poison">
-<img src="../assets/game/graphics/pokemon/weezing/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/weezing/anim_front__hover.png">  <span class="name">Weezing</span>
+<img src="../assets/game/graphics/pokemon/weezing/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/weezing/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/weezing/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/weezing/anim_front__shiny__hover.png">  <span class="name">Weezing</span>
 </a></li><li><a href="../pokedex/weezing-galar.html" class="mon-card type-poison type2-fairy mon-dual">
-<img src="../assets/game/graphics/pokemon/weezing/galar/front.png" alt="" class="sprite">  <span class="name">Weezing (Galarian)</span>
+<img src="../assets/game/graphics/pokemon/weezing/galar/front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/weezing/galar/front__shiny.png">  <span class="name">Weezing (Galarian)</span>
 </a></li><li><a href="../pokedex/wingull.html" class="mon-card type-water type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/wingull/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/wingull/anim_front__hover.png">  <span class="name">Wingull</span>
+<img src="../assets/game/graphics/pokemon/wingull/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/wingull/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/wingull/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/wingull/anim_front__shiny__hover.png">  <span class="name">Wingull</span>
 </a></li>    </ul>
     <h3>Egg <span class="muted small-text">17</span></h3>
     <ul class="cross-link-grid">
 <li><a href="../pokedex/archen.html" class="mon-card type-rock type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/archen/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/archen/anim_front__hover.png">  <span class="name">Archen</span>
+<img src="../assets/game/graphics/pokemon/archen/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/archen/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/archen/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/archen/anim_front__shiny__hover.png">  <span class="name">Archen</span>
 </a></li><li><a href="../pokedex/archeops.html" class="mon-card type-rock type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/archeops/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/archeops/anim_front__hover.png">  <span class="name">Archeops</span>
+<img src="../assets/game/graphics/pokemon/archeops/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/archeops/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/archeops/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/archeops/anim_front__shiny__hover.png">  <span class="name">Archeops</span>
 </a></li><li><a href="../pokedex/chatot.html" class="mon-card type-normal type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/chatot/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/chatot/anim_front__hover.png">  <span class="name">Chatot</span>
+<img src="../assets/game/graphics/pokemon/chatot/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/chatot/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/chatot/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/chatot/anim_front__shiny__hover.png">  <span class="name">Chatot</span>
 </a></li><li><a href="../pokedex/crobat.html" class="mon-card type-poison type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/crobat/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/crobat/anim_front__hover.png">  <span class="name">Crobat</span>
+<img src="../assets/game/graphics/pokemon/crobat/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/crobat/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/crobat/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/crobat/anim_front__shiny__hover.png">  <span class="name">Crobat</span>
 </a></li><li><a href="../pokedex/dartrix.html" class="mon-card type-grass type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/dartrix/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/dartrix/anim_front__hover.png">  <span class="name">Dartrix</span>
+<img src="../assets/game/graphics/pokemon/dartrix/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/dartrix/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/dartrix/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/dartrix/anim_front__shiny__hover.png">  <span class="name">Dartrix</span>
 </a></li><li><a href="../pokedex/decidueye.html" class="mon-card type-grass type2-ghost mon-dual">
-<img src="../assets/game/graphics/pokemon/decidueye/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/decidueye/anim_front__hover.png">  <span class="name">Decidueye</span>
+<img src="../assets/game/graphics/pokemon/decidueye/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/decidueye/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/decidueye/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/decidueye/anim_front__shiny__hover.png">  <span class="name">Decidueye</span>
 </a></li><li><a href="../pokedex/decidueye-hisui.html" class="mon-card type-grass type2-fighting mon-dual">
-<img src="../assets/game/graphics/pokemon/decidueye/hisui/front.png" alt="" class="sprite">  <span class="name">Decidueye (Hisuian)</span>
+<img src="../assets/game/graphics/pokemon/decidueye/hisui/front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/decidueye/hisui/front__shiny.png">  <span class="name">Decidueye (Hisuian)</span>
 </a></li><li><a href="../pokedex/drifblim.html" class="mon-card type-ghost type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/drifblim/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/drifblim/anim_front__hover.png">  <span class="name">Drifblim</span>
+<img src="../assets/game/graphics/pokemon/drifblim/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/drifblim/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/drifblim/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/drifblim/anim_front__shiny__hover.png">  <span class="name">Drifblim</span>
 </a></li><li><a href="../pokedex/drifloon.html" class="mon-card type-ghost type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/drifloon/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/drifloon/anim_front__hover.png">  <span class="name">Drifloon</span>
+<img src="../assets/game/graphics/pokemon/drifloon/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/drifloon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/drifloon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/drifloon/anim_front__shiny__hover.png">  <span class="name">Drifloon</span>
 </a></li><li><a href="../pokedex/fomantis.html" class="mon-card type-grass">
-<img src="../assets/game/graphics/pokemon/fomantis/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/fomantis/anim_front__hover.png">  <span class="name">Fomantis</span>
+<img src="../assets/game/graphics/pokemon/fomantis/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/fomantis/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/fomantis/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/fomantis/anim_front__shiny__hover.png">  <span class="name">Fomantis</span>
 </a></li><li><a href="../pokedex/golbat.html" class="mon-card type-poison type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/golbat/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/golbat/anim_front__hover.png">  <span class="name">Golbat</span>
+<img src="../assets/game/graphics/pokemon/golbat/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/golbat/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/golbat/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/golbat/anim_front__shiny__hover.png">  <span class="name">Golbat</span>
 </a></li><li><a href="../pokedex/kleavor.html" class="mon-card type-bug type2-rock mon-dual">
-<img src="../assets/game/graphics/pokemon/kleavor/front.png" alt="" class="sprite">  <span class="name">Kleavor</span>
+<img src="../assets/game/graphics/pokemon/kleavor/front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/kleavor/front__shiny.png">  <span class="name">Kleavor</span>
 </a></li><li><a href="../pokedex/lurantis.html" class="mon-card type-grass">
-<img src="../assets/game/graphics/pokemon/lurantis/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/lurantis/anim_front__hover.png">  <span class="name">Lurantis</span>
+<img src="../assets/game/graphics/pokemon/lurantis/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/lurantis/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/lurantis/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/lurantis/anim_front__shiny__hover.png">  <span class="name">Lurantis</span>
 </a></li><li><a href="../pokedex/rowlet.html" class="mon-card type-grass type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/rowlet/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/rowlet/anim_front__hover.png">  <span class="name">Rowlet</span>
+<img src="../assets/game/graphics/pokemon/rowlet/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/rowlet/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rowlet/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rowlet/anim_front__shiny__hover.png">  <span class="name">Rowlet</span>
 </a></li><li><a href="../pokedex/scizor.html" class="mon-card type-bug type2-steel mon-dual">
-<img src="../assets/game/graphics/pokemon/scizor/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/scizor/anim_front__hover.png">  <span class="name">Scizor</span>
+<img src="../assets/game/graphics/pokemon/scizor/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/scizor/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/scizor/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/scizor/anim_front__shiny__hover.png">  <span class="name">Scizor</span>
 </a></li><li><a href="../pokedex/scyther.html" class="mon-card type-bug type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/scyther/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/scyther/anim_front__hover.png">  <span class="name">Scyther</span>
+<img src="../assets/game/graphics/pokemon/scyther/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/scyther/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/scyther/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/scyther/anim_front__shiny__hover.png">  <span class="name">Scyther</span>
 </a></li><li><a href="../pokedex/zubat.html" class="mon-card type-poison type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/zubat/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/zubat/anim_front__hover.png">  <span class="name">Zubat</span>
+<img src="../assets/game/graphics/pokemon/zubat/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/zubat/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/zubat/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/zubat/anim_front__shiny__hover.png">  <span class="name">Zubat</span>
 </a></li>    </ul>
 </section>
   </main>
@@ -510,7 +527,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -518,6 +535,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

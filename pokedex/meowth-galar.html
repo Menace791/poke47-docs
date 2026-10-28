@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/meowth/galar/front.png" alt="Meowth (Galarian) front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/meowth/galar/front__shiny.png" alt="Meowth (Galarian) shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/meowth/galar/front.png" alt="Meowth (Galarian) front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/meowth/galar/front__shiny.png">
+<img src="../assets/game/graphics/pokemon/meowth/galar/front__shiny.png" alt="Meowth (Galarian) shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/meowth/galar/front.png">    </div>
     <div>
       <p class="muted">National Dex #52</p>
       <p><strong>Meowth (Galarian)</strong></p>
@@ -299,7 +316,7 @@
     <p><strong>Catch Rate:</strong> 255</p>
     <p><strong>Overworld Behavior:</strong> Watches Player</p>
     <p><strong>Autobattle Behavior:</strong> Copies Player</p>
-<p><strong>EV Yield:</strong> 1 Attack</p><p><strong>Base Species:</strong>   <a href="meowth.html" class="species-inline-link mon-card type-normal"><img src="../assets/game/graphics/pokemon/meowth/anim_front.png" alt="Meowth" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/meowth/anim_front__hover.png"><span>Meowth</span>
+<p><strong>EV Yield:</strong> 1 Attack</p><p><strong>Base Species:</strong>   <a href="meowth.html" class="species-inline-link mon-card type-normal"><img src="../assets/game/graphics/pokemon/meowth/anim_front.png" alt="Meowth" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/meowth/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/meowth/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/meowth/anim_front__shiny__hover.png"><span>Meowth</span>
   </a>
 </p>  </section>
   <section class="card">
@@ -352,7 +369,7 @@ and garner more respect among Meowth.</p>
   <div class="card">
     <h2>Evolutions</h2>
     <ul>
-        <li>Level up: 28 →   <a href="perrserker.html" class="species-inline-link mon-card type-steel"><img src="../assets/game/graphics/pokemon/perrserker/front.png" alt="Perrserker" class="species-inline-sprite"><span>Perrserker</span>
+        <li>Level up: 28 →   <a href="perrserker.html" class="species-inline-link mon-card type-steel"><img src="../assets/game/graphics/pokemon/perrserker/front.png" alt="Perrserker" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/perrserker/front__shiny.png"><span>Perrserker</span>
   </a>
 </li>
     </ul>
@@ -360,9 +377,9 @@ and garner more respect among Meowth.</p>
   <div class="card">
     <h2>Forms</h2>
     <ul class="form-list">
-        <li><a href="meowth.html" class="form-entry mon-card type-normal"><img src="../assets/game/graphics/pokemon/meowth/anim_front.png" alt="Meowth" class="form-sprite" data-hover="../assets/game/graphics/pokemon/meowth/anim_front__hover.png"><span>Meowth</span>
+        <li><a href="meowth.html" class="form-entry mon-card type-normal"><img src="../assets/game/graphics/pokemon/meowth/anim_front.png" alt="Meowth" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/meowth/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/meowth/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/meowth/anim_front__shiny__hover.png"><span>Meowth</span>
         </a></li>
-        <li><a href="meowth-alola.html" class="form-entry mon-card type-dark"><img src="../assets/game/graphics/pokemon/meowth/alola/anim_front.png" alt="Meowth (Alolan)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/meowth/alola/anim_front__hover.png"><span>Meowth (Alolan)</span>
+        <li><a href="meowth-alola.html" class="form-entry mon-card type-dark"><img src="../assets/game/graphics/pokemon/meowth/alola/anim_front.png" alt="Meowth (Alolan)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/meowth/alola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/meowth/alola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/meowth/alola/anim_front__shiny__hover.png"><span>Meowth (Alolan)</span>
         </a></li>
     </ul>
   </div>
@@ -451,7 +468,7 @@ and garner more respect among Meowth.</p>
               <li>
                 <span class="encounter-where"><a href="../locations/battle-frontier.html#battle-frontier-lounge6">Lounge 6</a> · In-Game Trade</span>
                 <span class="muted small-text">For <a href="../pokedex/pikachu.html" class="encounter-entry mon-card type-electric">
-      <span>Pikachu</span><img src="../assets/game/graphics/pokemon/pikachu/anim_front.png" alt="Pikachu" class="encounter-sprite"></a></span>
+      <span>Pikachu</span><img src="../assets/game/graphics/pokemon/pikachu/anim_front.png" alt="Pikachu" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/pikachu/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pikachu/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pikachu/anim_front__shiny__hover.png"></a></span>
               </li>
       </ul>
     </div>
@@ -601,7 +618,7 @@ and garner more respect among Meowth.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -609,6 +626,7 @@ and garner more respect among Meowth.</p>
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

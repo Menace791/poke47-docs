@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -291,43 +308,43 @@
     <h3>Level-Up <span class="muted small-text">19</span></h3>
     <ul class="cross-link-grid">
 <li><a href="../pokedex/dhelmise.html" class="mon-card type-ghost type2-grass mon-dual">
-<img src="../assets/game/graphics/pokemon/dhelmise/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/dhelmise/anim_front__hover.png">  <span class="name">Dhelmise</span>
+<img src="../assets/game/graphics/pokemon/dhelmise/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/dhelmise/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/dhelmise/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/dhelmise/anim_front__shiny__hover.png">  <span class="name">Dhelmise</span>
 </a></li><li><a href="../pokedex/electrode.html" class="mon-card type-electric">
-<img src="../assets/game/graphics/pokemon/electrode/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/electrode/anim_front__hover.png">  <span class="name">Electrode</span>
+<img src="../assets/game/graphics/pokemon/electrode/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/electrode/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/electrode/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/electrode/anim_front__shiny__hover.png">  <span class="name">Electrode</span>
 </a></li><li><a href="../pokedex/ferroseed.html" class="mon-card type-grass type2-steel mon-dual">
-<img src="../assets/game/graphics/pokemon/ferroseed/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/ferroseed/anim_front__hover.png">  <span class="name">Ferroseed</span>
+<img src="../assets/game/graphics/pokemon/ferroseed/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/ferroseed/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/ferroseed/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/ferroseed/anim_front__shiny__hover.png">  <span class="name">Ferroseed</span>
 </a></li><li><a href="../pokedex/ferrothorn.html" class="mon-card type-grass type2-steel mon-dual">
-<img src="../assets/game/graphics/pokemon/ferrothorn/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/ferrothorn/anim_front__hover.png">  <span class="name">Ferrothorn</span>
+<img src="../assets/game/graphics/pokemon/ferrothorn/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/ferrothorn/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/ferrothorn/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/ferrothorn/anim_front__shiny__hover.png">  <span class="name">Ferrothorn</span>
 </a></li><li><a href="../pokedex/hitmontop.html" class="mon-card type-fighting">
-<img src="../assets/game/graphics/pokemon/hitmontop/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/hitmontop/anim_front__hover.png">  <span class="name">Hitmontop</span>
+<img src="../assets/game/graphics/pokemon/hitmontop/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/hitmontop/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/hitmontop/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/hitmontop/anim_front__shiny__hover.png">  <span class="name">Hitmontop</span>
 </a></li><li><a href="../pokedex/jigglypuff.html" class="mon-card type-normal type2-fairy mon-dual">
-<img src="../assets/game/graphics/pokemon/jigglypuff/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/jigglypuff/anim_front__hover.png">  <span class="name">Jigglypuff</span>
+<img src="../assets/game/graphics/pokemon/jigglypuff/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/jigglypuff/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/jigglypuff/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/jigglypuff/anim_front__shiny__hover.png">  <span class="name">Jigglypuff</span>
 </a></li><li><a href="../pokedex/koffing.html" class="mon-card type-poison">
-<img src="../assets/game/graphics/pokemon/koffing/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/koffing/anim_front__hover.png">  <span class="name">Koffing</span>
+<img src="../assets/game/graphics/pokemon/koffing/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/koffing/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/koffing/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/koffing/anim_front__shiny__hover.png">  <span class="name">Koffing</span>
 </a></li><li><a href="../pokedex/lickilicky.html" class="mon-card type-normal">
-<img src="../assets/game/graphics/pokemon/lickilicky/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/lickilicky/anim_front__hover.png">  <span class="name">Lickilicky</span>
+<img src="../assets/game/graphics/pokemon/lickilicky/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/lickilicky/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/lickilicky/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/lickilicky/anim_front__shiny__hover.png">  <span class="name">Lickilicky</span>
 </a></li><li><a href="../pokedex/magnemite.html" class="mon-card type-electric type2-steel mon-dual">
-<img src="../assets/game/graphics/pokemon/magnemite/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/magnemite/anim_front__hover.png">  <span class="name">Magnemite</span>
+<img src="../assets/game/graphics/pokemon/magnemite/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/magnemite/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/magnemite/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/magnemite/anim_front__shiny__hover.png">  <span class="name">Magnemite</span>
 </a></li><li><a href="../pokedex/magneton.html" class="mon-card type-electric type2-steel mon-dual">
-<img src="../assets/game/graphics/pokemon/magneton/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/magneton/anim_front__hover.png">  <span class="name">Magneton</span>
+<img src="../assets/game/graphics/pokemon/magneton/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/magneton/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/magneton/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/magneton/anim_front__shiny__hover.png">  <span class="name">Magneton</span>
 </a></li><li><a href="../pokedex/magnezone.html" class="mon-card type-electric type2-steel mon-dual">
-<img src="../assets/game/graphics/pokemon/magnezone/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/magnezone/anim_front__hover.png">  <span class="name">Magnezone</span>
+<img src="../assets/game/graphics/pokemon/magnezone/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/magnezone/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/magnezone/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/magnezone/anim_front__shiny__hover.png">  <span class="name">Magnezone</span>
 </a></li><li><a href="../pokedex/sandshrew.html" class="mon-card type-ground">
-<img src="../assets/game/graphics/pokemon/sandshrew/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/sandshrew/anim_front__hover.png">  <span class="name">Sandshrew</span>
+<img src="../assets/game/graphics/pokemon/sandshrew/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/sandshrew/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sandshrew/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sandshrew/anim_front__shiny__hover.png">  <span class="name">Sandshrew</span>
 </a></li><li><a href="../pokedex/sandshrew-alola.html" class="mon-card type-ice type2-steel mon-dual">
-<img src="../assets/game/graphics/pokemon/sandshrew/alola/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/sandshrew/alola/anim_front__hover.png">  <span class="name">Sandshrew (Alolan)</span>
+<img src="../assets/game/graphics/pokemon/sandshrew/alola/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/sandshrew/alola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sandshrew/alola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sandshrew/alola/anim_front__shiny__hover.png">  <span class="name">Sandshrew (Alolan)</span>
 </a></li><li><a href="../pokedex/sandslash.html" class="mon-card type-ground">
-<img src="../assets/game/graphics/pokemon/sandslash/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/sandslash/anim_front__hover.png">  <span class="name">Sandslash</span>
+<img src="../assets/game/graphics/pokemon/sandslash/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/sandslash/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sandslash/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sandslash/anim_front__shiny__hover.png">  <span class="name">Sandslash</span>
 </a></li><li><a href="../pokedex/sandslash-alola.html" class="mon-card type-ice type2-steel mon-dual">
-<img src="../assets/game/graphics/pokemon/sandslash/alola/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/sandslash/alola/anim_front__hover.png">  <span class="name">Sandslash (Alolan)</span>
+<img src="../assets/game/graphics/pokemon/sandslash/alola/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/sandslash/alola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sandslash/alola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sandslash/alola/anim_front__shiny__hover.png">  <span class="name">Sandslash (Alolan)</span>
 </a></li><li><a href="../pokedex/scolipede.html" class="mon-card type-bug type2-poison mon-dual">
-<img src="../assets/game/graphics/pokemon/scolipede/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/scolipede/anim_front__hover.png">  <span class="name">Scolipede</span>
+<img src="../assets/game/graphics/pokemon/scolipede/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/scolipede/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/scolipede/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/scolipede/anim_front__shiny__hover.png">  <span class="name">Scolipede</span>
 </a></li><li><a href="../pokedex/voltorb.html" class="mon-card type-electric">
-<img src="../assets/game/graphics/pokemon/voltorb/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/voltorb/anim_front__hover.png">  <span class="name">Voltorb</span>
+<img src="../assets/game/graphics/pokemon/voltorb/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/voltorb/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/voltorb/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/voltorb/anim_front__shiny__hover.png">  <span class="name">Voltorb</span>
 </a></li><li><a href="../pokedex/weezing.html" class="mon-card type-poison">
-<img src="../assets/game/graphics/pokemon/weezing/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/weezing/anim_front__hover.png">  <span class="name">Weezing</span>
+<img src="../assets/game/graphics/pokemon/weezing/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/weezing/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/weezing/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/weezing/anim_front__shiny__hover.png">  <span class="name">Weezing</span>
 </a></li><li><a href="../pokedex/whirlipede.html" class="mon-card type-bug type2-poison mon-dual">
-<img src="../assets/game/graphics/pokemon/whirlipede/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/whirlipede/anim_front__hover.png">  <span class="name">Whirlipede</span>
+<img src="../assets/game/graphics/pokemon/whirlipede/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/whirlipede/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/whirlipede/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/whirlipede/anim_front__shiny__hover.png">  <span class="name">Whirlipede</span>
 </a></li>    </ul>
 </section>
   </main>
@@ -475,7 +492,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -483,6 +500,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

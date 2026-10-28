@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -306,7 +323,7 @@
       <tr data-href="../pokedex/abomasnow.html">
         <td><a href="../pokedex/abomasnow.html">Abomasnow</a></td>
         <td>42</td>
-        <td><img src="../assets/game/graphics/pokemon/abomasnow/anim_front.png" alt="Abomasnow Level 42 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/abomasnow/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/abomasnow/anim_front.png" alt="Abomasnow Level 42 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/abomasnow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/abomasnow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/abomasnow/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -321,7 +338,7 @@
       <tr data-href="../pokedex/beartic.html">
         <td><a href="../pokedex/beartic.html">Beartic</a></td>
         <td>42</td>
-        <td><img src="../assets/game/graphics/pokemon/beartic/anim_front.png" alt="Beartic Level 42 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/beartic/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/beartic/anim_front.png" alt="Beartic Level 42 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/beartic/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/beartic/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/beartic/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -336,7 +353,7 @@
       <tr data-href="../pokedex/darmanitan-galar.html">
         <td><a href="../pokedex/darmanitan-galar.html">Darmanitan<span class="species-form">(Galarian)</span></a></td>
         <td>43</td>
-        <td><img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="Darmanitan Level 43 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="Darmanitan Level 43 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/darmanitan/galar_standard/front__shiny.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -351,7 +368,7 @@
       <tr data-href="../pokedex/avalugg.html">
         <td><a href="../pokedex/avalugg.html">Avalugg</a></td>
         <td>43</td>
-        <td><img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="Avalugg Level 43 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/avalugg/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="Avalugg Level 43 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/avalugg/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/avalugg/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/avalugg/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -366,7 +383,7 @@
       <tr data-href="../pokedex/aurorus.html">
         <td><a href="../pokedex/aurorus.html">Aurorus</a></td>
         <td>46</td>
-        <td><img src="../assets/game/graphics/pokemon/aurorus/anim_front.png" alt="Aurorus Level 46 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/aurorus/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/aurorus/anim_front.png" alt="Aurorus Level 46 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/aurorus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/aurorus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/aurorus/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
@@ -396,7 +413,7 @@
       <tr data-href="../pokedex/abomasnow.html">
         <td><a href="../pokedex/abomasnow.html">Abomasnow</a></td>
         <td>46</td>
-        <td><img src="../assets/game/graphics/pokemon/abomasnow/anim_front.png" alt="Abomasnow Level 46 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/abomasnow/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/abomasnow/anim_front.png" alt="Abomasnow Level 46 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/abomasnow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/abomasnow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/abomasnow/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -411,7 +428,7 @@
       <tr data-href="../pokedex/beartic.html">
         <td><a href="../pokedex/beartic.html">Beartic</a></td>
         <td>46</td>
-        <td><img src="../assets/game/graphics/pokemon/beartic/anim_front.png" alt="Beartic Level 46 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/beartic/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/beartic/anim_front.png" alt="Beartic Level 46 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/beartic/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/beartic/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/beartic/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -426,7 +443,7 @@
       <tr data-href="../pokedex/darmanitan-galar.html">
         <td><a href="../pokedex/darmanitan-galar.html">Darmanitan<span class="species-form">(Galarian)</span></a></td>
         <td>48</td>
-        <td><img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="Darmanitan Level 48 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="Darmanitan Level 48 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/darmanitan/galar_standard/front__shiny.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -441,7 +458,7 @@
       <tr data-href="../pokedex/avalugg.html">
         <td><a href="../pokedex/avalugg.html">Avalugg</a></td>
         <td>48</td>
-        <td><img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="Avalugg Level 48 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/avalugg/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="Avalugg Level 48 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/avalugg/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/avalugg/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/avalugg/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -456,7 +473,7 @@
       <tr data-href="../pokedex/aurorus.html">
         <td><a href="../pokedex/aurorus.html">Aurorus</a></td>
         <td>51</td>
-        <td><img src="../assets/game/graphics/pokemon/aurorus/anim_front.png" alt="Aurorus Level 51 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/aurorus/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/aurorus/anim_front.png" alt="Aurorus Level 51 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/aurorus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/aurorus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/aurorus/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
@@ -471,7 +488,7 @@
       <tr data-href="../pokedex/cryogonal.html">
         <td><a href="../pokedex/cryogonal.html">Cryogonal</a></td>
         <td>46</td>
-        <td><img src="../assets/game/graphics/pokemon/cryogonal/anim_front.png" alt="Cryogonal Level 46 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/cryogonal/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/cryogonal/anim_front.png" alt="Cryogonal Level 46 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/cryogonal/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/cryogonal/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/cryogonal/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -501,7 +518,7 @@
       <tr data-href="../pokedex/abomasnow.html">
         <td><a href="../pokedex/abomasnow.html">Abomasnow</a></td>
         <td>52</td>
-        <td><img src="../assets/game/graphics/pokemon/abomasnow/anim_front.png" alt="Abomasnow Level 52 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/abomasnow/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/abomasnow/anim_front.png" alt="Abomasnow Level 52 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/abomasnow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/abomasnow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/abomasnow/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -516,7 +533,7 @@
       <tr data-href="../pokedex/beartic.html">
         <td><a href="../pokedex/beartic.html">Beartic</a></td>
         <td>52</td>
-        <td><img src="../assets/game/graphics/pokemon/beartic/anim_front.png" alt="Beartic Level 52 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/beartic/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/beartic/anim_front.png" alt="Beartic Level 52 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/beartic/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/beartic/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/beartic/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -531,7 +548,7 @@
       <tr data-href="../pokedex/darmanitan-galar.html">
         <td><a href="../pokedex/darmanitan-galar.html">Darmanitan<span class="species-form">(Galarian)</span></a></td>
         <td>53</td>
-        <td><img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="Darmanitan Level 53 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="Darmanitan Level 53 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/darmanitan/galar_standard/front__shiny.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -546,7 +563,7 @@
       <tr data-href="../pokedex/avalugg.html">
         <td><a href="../pokedex/avalugg.html">Avalugg</a></td>
         <td>53</td>
-        <td><img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="Avalugg Level 53 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/avalugg/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="Avalugg Level 53 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/avalugg/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/avalugg/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/avalugg/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -561,7 +578,7 @@
       <tr data-href="../pokedex/aurorus.html">
         <td><a href="../pokedex/aurorus.html">Aurorus</a></td>
         <td>56</td>
-        <td><img src="../assets/game/graphics/pokemon/aurorus/anim_front.png" alt="Aurorus Level 56 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/aurorus/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/aurorus/anim_front.png" alt="Aurorus Level 56 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/aurorus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/aurorus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/aurorus/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
@@ -576,7 +593,7 @@
       <tr data-href="../pokedex/cryogonal.html">
         <td><a href="../pokedex/cryogonal.html">Cryogonal</a></td>
         <td>52</td>
-        <td><img src="../assets/game/graphics/pokemon/cryogonal/anim_front.png" alt="Cryogonal Level 52 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/cryogonal/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/cryogonal/anim_front.png" alt="Cryogonal Level 52 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/cryogonal/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/cryogonal/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/cryogonal/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -606,7 +623,7 @@
       <tr data-href="../pokedex/abomasnow.html">
         <td><a href="../pokedex/abomasnow.html">Abomasnow</a></td>
         <td>56</td>
-        <td><img src="../assets/game/graphics/pokemon/abomasnow/anim_front.png" alt="Abomasnow Level 56 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/abomasnow/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/abomasnow/anim_front.png" alt="Abomasnow Level 56 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/abomasnow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/abomasnow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/abomasnow/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -621,7 +638,7 @@
       <tr data-href="../pokedex/beartic.html">
         <td><a href="../pokedex/beartic.html">Beartic</a></td>
         <td>56</td>
-        <td><img src="../assets/game/graphics/pokemon/beartic/anim_front.png" alt="Beartic Level 56 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/beartic/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/beartic/anim_front.png" alt="Beartic Level 56 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/beartic/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/beartic/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/beartic/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -636,7 +653,7 @@
       <tr data-href="../pokedex/darmanitan-galar.html">
         <td><a href="../pokedex/darmanitan-galar.html">Darmanitan<span class="species-form">(Galarian)</span></a></td>
         <td>58</td>
-        <td><img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="Darmanitan Level 58 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="Darmanitan Level 58 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/darmanitan/galar_standard/front__shiny.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -651,7 +668,7 @@
       <tr data-href="../pokedex/avalugg.html">
         <td><a href="../pokedex/avalugg.html">Avalugg</a></td>
         <td>58</td>
-        <td><img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="Avalugg Level 58 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/avalugg/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="Avalugg Level 58 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/avalugg/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/avalugg/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/avalugg/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -666,7 +683,7 @@
       <tr data-href="../pokedex/aurorus.html">
         <td><a href="../pokedex/aurorus.html">Aurorus</a></td>
         <td>61</td>
-        <td><img src="../assets/game/graphics/pokemon/aurorus/anim_front.png" alt="Aurorus Level 61 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/aurorus/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/aurorus/anim_front.png" alt="Aurorus Level 61 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/aurorus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/aurorus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/aurorus/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
@@ -681,7 +698,7 @@
       <tr data-href="../pokedex/cryogonal.html">
         <td><a href="../pokedex/cryogonal.html">Cryogonal</a></td>
         <td>56</td>
-        <td><img src="../assets/game/graphics/pokemon/cryogonal/anim_front.png" alt="Cryogonal Level 56 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/cryogonal/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/cryogonal/anim_front.png" alt="Cryogonal Level 56 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/cryogonal/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/cryogonal/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/cryogonal/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -711,7 +728,7 @@
       <tr data-href="../pokedex/abomasnow.html">
         <td><a href="../pokedex/abomasnow.html">Abomasnow</a></td>
         <td>64</td>
-        <td><img src="../assets/game/graphics/pokemon/abomasnow/anim_front.png" alt="Abomasnow Level 64 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/abomasnow/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/abomasnow/anim_front.png" alt="Abomasnow Level 64 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/abomasnow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/abomasnow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/abomasnow/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -726,7 +743,7 @@
       <tr data-href="../pokedex/beartic.html">
         <td><a href="../pokedex/beartic.html">Beartic</a></td>
         <td>64</td>
-        <td><img src="../assets/game/graphics/pokemon/beartic/anim_front.png" alt="Beartic Level 64 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/beartic/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/beartic/anim_front.png" alt="Beartic Level 64 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/beartic/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/beartic/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/beartic/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -741,7 +758,7 @@
       <tr data-href="../pokedex/darmanitan-galar.html">
         <td><a href="../pokedex/darmanitan-galar.html">Darmanitan<span class="species-form">(Galarian)</span></a></td>
         <td>65</td>
-        <td><img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="Darmanitan Level 65 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="Darmanitan Level 65 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/darmanitan/galar_standard/front__shiny.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -756,7 +773,7 @@
       <tr data-href="../pokedex/avalugg.html">
         <td><a href="../pokedex/avalugg.html">Avalugg</a></td>
         <td>65</td>
-        <td><img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="Avalugg Level 65 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/avalugg/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="Avalugg Level 65 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/avalugg/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/avalugg/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/avalugg/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -771,7 +788,7 @@
       <tr data-href="../pokedex/aurorus.html">
         <td><a href="../pokedex/aurorus.html">Aurorus</a></td>
         <td>68</td>
-        <td><img src="../assets/game/graphics/pokemon/aurorus/anim_front.png" alt="Aurorus Level 68 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/aurorus/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/aurorus/anim_front.png" alt="Aurorus Level 68 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/aurorus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/aurorus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/aurorus/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
@@ -786,7 +803,7 @@
       <tr data-href="../pokedex/cryogonal.html">
         <td><a href="../pokedex/cryogonal.html">Cryogonal</a></td>
         <td>64</td>
-        <td><img src="../assets/game/graphics/pokemon/cryogonal/anim_front.png" alt="Cryogonal Level 64 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/cryogonal/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/cryogonal/anim_front.png" alt="Cryogonal Level 64 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/cryogonal/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/cryogonal/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/cryogonal/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -982,7 +999,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -990,6 +1007,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/nidorina/anim_front.png" alt="Nidorina front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/nidorina/anim_front__shiny.png" alt="Nidorina shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/nidorina/anim_front.png" alt="Nidorina front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/nidorina/anim_front__shiny.png">
+<img src="../assets/game/graphics/pokemon/nidorina/anim_front__shiny.png" alt="Nidorina shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/nidorina/anim_front.png">    </div>
     <div>
       <p class="muted">National Dex #30</p>
       <p><strong>Nidorina</strong></p>
@@ -350,10 +367,10 @@ nervous if separated from the others.</p>
   <div class="card">
     <h2>Evolutions</h2>
     <ul>
-        <li>  <a href="nidoran-f.html" class="species-inline-link mon-card type-poison"><img src="../assets/game/graphics/pokemon/nidoran_f/anim_front.png" alt="Nidoran♀" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/nidoran_f/anim_front__hover.png"><span>Nidoran♀</span>
+        <li>  <a href="nidoran-f.html" class="species-inline-link mon-card type-poison"><img src="../assets/game/graphics/pokemon/nidoran_f/anim_front.png" alt="Nidoran♀" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/nidoran_f/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/nidoran_f/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/nidoran_f/anim_front__shiny__hover.png"><span>Nidoran♀</span>
   </a>
  → Level up: 16</li>
-        <li>Use <a href="../itemdex/moon-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/moon_stone.png" alt="" class="item-icon">Moon Stone</a> →   <a href="nidoqueen.html" class="species-inline-link mon-card type-poison type2-ground mon-dual"><img src="../assets/game/graphics/pokemon/nidoqueen/anim_front.png" alt="Nidoqueen" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/nidoqueen/anim_front__hover.png"><span>Nidoqueen</span>
+        <li>Use <a href="../itemdex/moon-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/moon_stone.png" alt="" class="item-icon">Moon Stone</a> →   <a href="nidoqueen.html" class="species-inline-link mon-card type-poison type2-ground mon-dual"><img src="../assets/game/graphics/pokemon/nidoqueen/anim_front.png" alt="Nidoqueen" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/nidoqueen/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/nidoqueen/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/nidoqueen/anim_front__shiny__hover.png"><span>Nidoqueen</span>
   </a>
 </li>
     </ul>
@@ -585,7 +602,7 @@ nervous if separated from the others.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -593,6 +610,7 @@ nervous if separated from the others.</p>
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

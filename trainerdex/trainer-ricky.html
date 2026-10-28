@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -306,7 +323,7 @@
       <tr data-href="../pokedex/lillipup.html">
         <td><a href="../pokedex/lillipup.html">Lillipup</a></td>
         <td>13</td>
-        <td><img src="../assets/game/graphics/pokemon/lillipup/anim_front.png" alt="Lillipup Level 13 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/lillipup/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/lillipup/anim_front.png" alt="Lillipup Level 13 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/lillipup/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/lillipup/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/lillipup/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -336,7 +353,7 @@
       <tr data-href="../pokedex/herdier.html">
         <td><a href="../pokedex/herdier.html">Herdier</a></td>
         <td>27</td>
-        <td><img src="../assets/game/graphics/pokemon/herdier/anim_front.png" alt="Herdier Level 27 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/herdier/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/herdier/anim_front.png" alt="Herdier Level 27 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/herdier/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/herdier/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/herdier/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -366,7 +383,7 @@
       <tr data-href="../pokedex/herdier.html">
         <td><a href="../pokedex/herdier.html">Herdier</a></td>
         <td>30</td>
-        <td><img src="../assets/game/graphics/pokemon/herdier/anim_front.png" alt="Herdier Level 30 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/herdier/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/herdier/anim_front.png" alt="Herdier Level 30 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/herdier/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/herdier/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/herdier/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -396,7 +413,7 @@
       <tr data-href="../pokedex/herdier.html">
         <td><a href="../pokedex/herdier.html">Herdier</a></td>
         <td>33</td>
-        <td><img src="../assets/game/graphics/pokemon/herdier/anim_front.png" alt="Herdier Level 33 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/herdier/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/herdier/anim_front.png" alt="Herdier Level 33 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/herdier/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/herdier/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/herdier/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -426,7 +443,7 @@
       <tr data-href="../pokedex/stoutland.html">
         <td><a href="../pokedex/stoutland.html">Stoutland</a></td>
         <td>36</td>
-        <td><img src="../assets/game/graphics/pokemon/stoutland/anim_front.png" alt="Stoutland Level 36 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/stoutland/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/stoutland/anim_front.png" alt="Stoutland Level 36 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/stoutland/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/stoutland/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/stoutland/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -622,7 +639,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -630,6 +647,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

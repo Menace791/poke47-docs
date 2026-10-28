@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/audino/mega/front.png" alt="Audino (Mega) front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/audino/mega/front__shiny.png" alt="Audino (Mega) shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/audino/mega/front.png" alt="Audino (Mega) front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/audino/mega/front__shiny.png">
+<img src="../assets/game/graphics/pokemon/audino/mega/front__shiny.png" alt="Audino (Mega) shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/audino/mega/front.png">    </div>
     <div>
       <p class="muted">Hoenn Dex #84</p>
       <p><strong>Audino (Mega)</strong></p>
@@ -299,7 +316,7 @@
     <p><strong>Catch Rate:</strong> 255</p>
     <p><strong>Overworld Behavior:</strong> Flees</p>
     <p><strong>Autobattle Behavior:</strong> Copies Player</p>
-<p><strong>EV Yield:</strong> 2 HP</p><p class="wild-items"><strong>Wild Held Items:</strong> <span><a href="../itemdex/oran-berry.html" class="item-card"><img src="../assets/game/graphics/items/icons/oran_berry.png" alt="Oran Berry" class="item-icon">Oran Berry</a> (50%)<br><a href="../itemdex/sitrus-berry.html" class="item-card"><img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="Sitrus Berry" class="item-icon">Sitrus Berry</a> (5%)</span></p><p><strong>Base Species:</strong>   <a href="audino.html" class="species-inline-link mon-card type-normal"><img src="../assets/game/graphics/pokemon/audino/anim_front.png" alt="Audino" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/audino/anim_front__hover.png"><span>Audino</span>
+<p><strong>EV Yield:</strong> 2 HP</p><p class="wild-items"><strong>Wild Held Items:</strong> <span><a href="../itemdex/oran-berry.html" class="item-card"><img src="../assets/game/graphics/items/icons/oran_berry.png" alt="Oran Berry" class="item-icon">Oran Berry</a> (50%)<br><a href="../itemdex/sitrus-berry.html" class="item-card"><img src="../assets/game/graphics/items/icons/sitrus_berry.png" alt="Sitrus Berry" class="item-icon">Sitrus Berry</a> (5%)</span></p><p><strong>Base Species:</strong>   <a href="audino.html" class="species-inline-link mon-card type-normal"><img src="../assets/game/graphics/pokemon/audino/anim_front.png" alt="Audino" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/audino/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/audino/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/audino/anim_front__shiny__hover.png"><span>Audino</span>
   </a>
 </p>  </section>
   <section class="card">
@@ -358,7 +375,7 @@ second feelers will fall into a deep sleep.</p>
   <div class="card">
     <h2>Forms</h2>
     <ul class="form-list">
-        <li><a href="audino.html" class="form-entry mon-card type-normal"><img src="../assets/game/graphics/pokemon/audino/anim_front.png" alt="Audino" class="form-sprite" data-hover="../assets/game/graphics/pokemon/audino/anim_front__hover.png"><span>Audino</span>
+        <li><a href="audino.html" class="form-entry mon-card type-normal"><img src="../assets/game/graphics/pokemon/audino/anim_front.png" alt="Audino" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/audino/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/audino/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/audino/anim_front__shiny__hover.png"><span>Audino</span>
         </a></li>
     </ul>
   </div>
@@ -602,7 +619,7 @@ second feelers will fall into a deep sleep.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -610,6 +627,7 @@ second feelers will fall into a deep sleep.</p>
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

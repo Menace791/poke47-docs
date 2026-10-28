@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -306,7 +323,7 @@
       <tr data-href="../pokedex/litleo.html">
         <td><a href="../pokedex/litleo.html">Litleo</a></td>
         <td>24</td>
-        <td><img src="../assets/game/graphics/pokemon/litleo/anim_front.png" alt="Litleo Level 24 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/litleo/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/litleo/anim_front.png" alt="Litleo Level 24 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/litleo/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/litleo/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/litleo/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -321,7 +338,7 @@
       <tr data-href="../pokedex/braixen.html">
         <td><a href="../pokedex/braixen.html">Braixen</a></td>
         <td>24</td>
-        <td><img src="../assets/game/graphics/pokemon/braixen/anim_front.png" alt="Braixen Level 24 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/braixen/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/braixen/anim_front.png" alt="Braixen Level 24 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/braixen/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/braixen/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/braixen/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"></div>
@@ -336,7 +353,7 @@
       <tr data-href="../pokedex/pyroar.html">
         <td><a href="../pokedex/pyroar.html">Pyroar</a></td>
         <td>26</td>
-        <td><img src="../assets/game/graphics/pokemon/pyroar/anim_front.png" alt="Pyroar Level 26 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/pyroar/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/pyroar/anim_front.png" alt="Pyroar Level 26 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/pyroar/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pyroar/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pyroar/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -351,7 +368,7 @@
       <tr data-href="../pokedex/heatmor.html">
         <td><a href="../pokedex/heatmor.html">Heatmor</a></td>
         <td>29</td>
-        <td><img src="../assets/game/graphics/pokemon/heatmor/anim_front.png" alt="Heatmor Level 29 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/heatmor/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/heatmor/anim_front.png" alt="Heatmor Level 29 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/heatmor/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/heatmor/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/heatmor/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"></div>
@@ -381,7 +398,7 @@
       <tr data-href="../pokedex/turtonator.html">
         <td><a href="../pokedex/turtonator.html">Turtonator</a></td>
         <td>38</td>
-        <td><img src="../assets/game/graphics/pokemon/turtonator/anim_front.png" alt="Turtonator Level 38 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/turtonator/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/turtonator/anim_front.png" alt="Turtonator Level 38 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/turtonator/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/turtonator/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/turtonator/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
@@ -396,7 +413,7 @@
       <tr data-href="../pokedex/delphox.html">
         <td><a href="../pokedex/delphox.html">Delphox</a></td>
         <td>38</td>
-        <td><img src="../assets/game/graphics/pokemon/delphox/anim_front.png" alt="Delphox Level 38 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/delphox/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/delphox/anim_front.png" alt="Delphox Level 38 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/delphox/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/delphox/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/delphox/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -411,7 +428,7 @@
       <tr data-href="../pokedex/pyroar.html">
         <td><a href="../pokedex/pyroar.html">Pyroar</a></td>
         <td>40</td>
-        <td><img src="../assets/game/graphics/pokemon/pyroar/anim_front.png" alt="Pyroar Level 40 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/pyroar/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/pyroar/anim_front.png" alt="Pyroar Level 40 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/pyroar/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pyroar/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pyroar/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -426,7 +443,7 @@
       <tr data-href="../pokedex/heatmor.html">
         <td><a href="../pokedex/heatmor.html">Heatmor</a></td>
         <td>43</td>
-        <td><img src="../assets/game/graphics/pokemon/heatmor/anim_front.png" alt="Heatmor Level 43 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/heatmor/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/heatmor/anim_front.png" alt="Heatmor Level 43 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/heatmor/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/heatmor/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/heatmor/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"></div>
@@ -456,7 +473,7 @@
       <tr data-href="../pokedex/turtonator.html">
         <td><a href="../pokedex/turtonator.html">Turtonator</a></td>
         <td>41</td>
-        <td><img src="../assets/game/graphics/pokemon/turtonator/anim_front.png" alt="Turtonator Level 41 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/turtonator/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/turtonator/anim_front.png" alt="Turtonator Level 41 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/turtonator/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/turtonator/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/turtonator/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
@@ -471,7 +488,7 @@
       <tr data-href="../pokedex/pyroar.html">
         <td><a href="../pokedex/pyroar.html">Pyroar</a></td>
         <td>43</td>
-        <td><img src="../assets/game/graphics/pokemon/pyroar/anim_front.png" alt="Pyroar Level 43 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/pyroar/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/pyroar/anim_front.png" alt="Pyroar Level 43 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/pyroar/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pyroar/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pyroar/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -486,7 +503,7 @@
       <tr data-href="../pokedex/delphox.html">
         <td><a href="../pokedex/delphox.html">Delphox</a></td>
         <td>41</td>
-        <td><img src="../assets/game/graphics/pokemon/delphox/anim_front.png" alt="Delphox Level 41 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/delphox/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/delphox/anim_front.png" alt="Delphox Level 41 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/delphox/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/delphox/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/delphox/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -501,7 +518,7 @@
       <tr data-href="../pokedex/sawsbuck.html">
         <td><a href="../pokedex/sawsbuck.html">Sawsbuck</a></td>
         <td>41</td>
-        <td><img src="../assets/game/graphics/pokemon/sawsbuck/anim_front.png" alt="Sawsbuck Level 41 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/sawsbuck/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/sawsbuck/anim_front.png" alt="Sawsbuck Level 41 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/sawsbuck/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sawsbuck/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sawsbuck/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"> <img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"></div>
@@ -516,7 +533,7 @@
       <tr data-href="../pokedex/heatmor.html">
         <td><a href="../pokedex/heatmor.html">Heatmor</a></td>
         <td>46</td>
-        <td><img src="../assets/game/graphics/pokemon/heatmor/anim_front.png" alt="Heatmor Level 46 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/heatmor/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/heatmor/anim_front.png" alt="Heatmor Level 46 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/heatmor/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/heatmor/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/heatmor/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"></div>
@@ -546,7 +563,7 @@
       <tr data-href="../pokedex/turtonator.html">
         <td><a href="../pokedex/turtonator.html">Turtonator</a></td>
         <td>51</td>
-        <td><img src="../assets/game/graphics/pokemon/turtonator/anim_front.png" alt="Turtonator Level 51 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/turtonator/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/turtonator/anim_front.png" alt="Turtonator Level 51 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/turtonator/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/turtonator/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/turtonator/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
@@ -561,7 +578,7 @@
       <tr data-href="../pokedex/pyroar.html">
         <td><a href="../pokedex/pyroar.html">Pyroar</a></td>
         <td>53</td>
-        <td><img src="../assets/game/graphics/pokemon/pyroar/anim_front.png" alt="Pyroar Level 53 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/pyroar/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/pyroar/anim_front.png" alt="Pyroar Level 53 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/pyroar/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pyroar/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pyroar/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -576,7 +593,7 @@
       <tr data-href="../pokedex/delphox.html">
         <td><a href="../pokedex/delphox.html">Delphox</a></td>
         <td>53</td>
-        <td><img src="../assets/game/graphics/pokemon/delphox/anim_front.png" alt="Delphox Level 53 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/delphox/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/delphox/anim_front.png" alt="Delphox Level 53 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/delphox/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/delphox/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/delphox/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -591,7 +608,7 @@
       <tr data-href="../pokedex/sawsbuck.html">
         <td><a href="../pokedex/sawsbuck.html">Sawsbuck</a></td>
         <td>51</td>
-        <td><img src="../assets/game/graphics/pokemon/sawsbuck/anim_front.png" alt="Sawsbuck Level 51 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/sawsbuck/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/sawsbuck/anim_front.png" alt="Sawsbuck Level 51 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/sawsbuck/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sawsbuck/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sawsbuck/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"> <img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"></div>
@@ -606,7 +623,7 @@
       <tr data-href="../pokedex/oricorio-pau.html">
         <td><a href="../pokedex/oricorio-pau.html">Oricorio<span class="species-form">(Pa&#39;u Style)</span></a></td>
         <td>51</td>
-        <td><img src="../assets/game/graphics/pokemon/oricorio/pau/anim_front.png" alt="Oricorio Level 51 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/oricorio/pau/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/oricorio/pau/anim_front.png" alt="Oricorio Level 51 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/oricorio/pau/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/oricorio/pau/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/oricorio/pau/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -621,7 +638,7 @@
       <tr data-href="../pokedex/heatmor.html">
         <td><a href="../pokedex/heatmor.html">Heatmor</a></td>
         <td>56</td>
-        <td><img src="../assets/game/graphics/pokemon/heatmor/anim_front.png" alt="Heatmor Level 56 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/heatmor/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/heatmor/anim_front.png" alt="Heatmor Level 56 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/heatmor/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/heatmor/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/heatmor/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"></div>
@@ -651,7 +668,7 @@
       <tr data-href="../pokedex/turtonator.html">
         <td><a href="../pokedex/turtonator.html">Turtonator</a></td>
         <td>51</td>
-        <td><img src="../assets/game/graphics/pokemon/turtonator/anim_front.png" alt="Turtonator Level 51 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/turtonator/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/turtonator/anim_front.png" alt="Turtonator Level 51 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/turtonator/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/turtonator/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/turtonator/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
@@ -666,7 +683,7 @@
       <tr data-href="../pokedex/pyroar.html">
         <td><a href="../pokedex/pyroar.html">Pyroar</a></td>
         <td>53</td>
-        <td><img src="../assets/game/graphics/pokemon/pyroar/anim_front.png" alt="Pyroar Level 53 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/pyroar/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/pyroar/anim_front.png" alt="Pyroar Level 53 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/pyroar/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pyroar/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pyroar/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"></div>
@@ -681,7 +698,7 @@
       <tr data-href="../pokedex/delphox.html">
         <td><a href="../pokedex/delphox.html">Delphox</a></td>
         <td>53</td>
-        <td><img src="../assets/game/graphics/pokemon/delphox/anim_front.png" alt="Delphox Level 53 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/delphox/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/delphox/anim_front.png" alt="Delphox Level 53 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/delphox/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/delphox/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/delphox/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"> <img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -696,7 +713,7 @@
       <tr data-href="../pokedex/sawsbuck.html">
         <td><a href="../pokedex/sawsbuck.html">Sawsbuck</a></td>
         <td>51</td>
-        <td><img src="../assets/game/graphics/pokemon/sawsbuck/anim_front.png" alt="Sawsbuck Level 51 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/sawsbuck/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/sawsbuck/anim_front.png" alt="Sawsbuck Level 51 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/sawsbuck/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sawsbuck/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sawsbuck/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"> <img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"></div>
@@ -711,7 +728,7 @@
       <tr data-href="../pokedex/oricorio-pau.html">
         <td><a href="../pokedex/oricorio-pau.html">Oricorio<span class="species-form">(Pa&#39;u Style)</span></a></td>
         <td>51</td>
-        <td><img src="../assets/game/graphics/pokemon/oricorio/pau/anim_front.png" alt="Oricorio Level 51 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/oricorio/pau/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/oricorio/pau/anim_front.png" alt="Oricorio Level 51 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/oricorio/pau/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/oricorio/pau/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/oricorio/pau/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -726,7 +743,7 @@
       <tr data-href="../pokedex/heatmor.html">
         <td><a href="../pokedex/heatmor.html">Heatmor</a></td>
         <td>56</td>
-        <td><img src="../assets/game/graphics/pokemon/heatmor/anim_front.png" alt="Heatmor Level 56 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/heatmor/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/heatmor/anim_front.png" alt="Heatmor Level 56 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/heatmor/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/heatmor/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/heatmor/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"></div>
@@ -922,7 +939,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -930,6 +947,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

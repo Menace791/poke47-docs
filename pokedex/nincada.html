@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/nincada/anim_front.png" alt="Nincada front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/nincada/anim_front__shiny.png" alt="Nincada shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/nincada/anim_front.png" alt="Nincada front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/nincada/anim_front__shiny.png">
+<img src="../assets/game/graphics/pokemon/nincada/anim_front__shiny.png" alt="Nincada shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/nincada/anim_front.png">    </div>
     <div>
       <p class="muted">National Dex #290</p>
       <p><strong>Nincada</strong></p>
@@ -350,10 +367,10 @@ pitch-black darkness of soil.</p>
   <div class="card">
     <h2>Evolutions</h2>
     <ul>
-        <li>Level up: 20 →   <a href="ninjask.html" class="species-inline-link mon-card type-bug type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/ninjask/anim_front.png" alt="Ninjask" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/ninjask/anim_front__hover.png"><span>Ninjask</span>
+        <li>Level up: 20 →   <a href="ninjask.html" class="species-inline-link mon-card type-bug type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/ninjask/anim_front.png" alt="Ninjask" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/ninjask/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/ninjask/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/ninjask/anim_front__shiny__hover.png"><span>Ninjask</span>
   </a>
 </li>
-        <li>Split From Evo: <a href="../pokedex/ninjask.html">Ninjask</a> →   <a href="shedinja.html" class="species-inline-link mon-card type-bug type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/shedinja/anim_front.png" alt="Shedinja" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/shedinja/anim_front__hover.png"><span>Shedinja</span>
+        <li>Split From Evo: <a href="../pokedex/ninjask.html">Ninjask</a> →   <a href="shedinja.html" class="species-inline-link mon-card type-bug type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/shedinja/anim_front.png" alt="Shedinja" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/shedinja/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/shedinja/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/shedinja/anim_front__shiny__hover.png"><span>Shedinja</span>
   </a>
 </li>
     </ul>
@@ -587,7 +604,7 @@ pitch-black darkness of soil.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -595,6 +612,7 @@ pitch-black darkness of soil.</p>
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

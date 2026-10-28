@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/dartrix/anim_front.png" alt="Dartrix front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/dartrix/anim_front__shiny.png" alt="Dartrix shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/dartrix/anim_front.png" alt="Dartrix front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/dartrix/anim_front__shiny.png">
+<img src="../assets/game/graphics/pokemon/dartrix/anim_front__shiny.png" alt="Dartrix shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/dartrix/anim_front.png">    </div>
     <div>
       <p class="muted">Hoenn Dex #356</p>
       <p><strong>Dartrix</strong></p>
@@ -350,13 +367,13 @@ it unable to battle.</p>
   <div class="card">
     <h2>Evolutions</h2>
     <ul>
-        <li>  <a href="rowlet.html" class="species-inline-link mon-card type-grass type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/rowlet/anim_front.png" alt="Rowlet" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/rowlet/anim_front__hover.png"><span>Rowlet</span>
+        <li>  <a href="rowlet.html" class="species-inline-link mon-card type-grass type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/rowlet/anim_front.png" alt="Rowlet" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/rowlet/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rowlet/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rowlet/anim_front__shiny__hover.png"><span>Rowlet</span>
   </a>
  → Level up: 17</li>
-        <li>Level up: 34 →   <a href="decidueye.html" class="species-inline-link mon-card type-grass type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/decidueye/anim_front.png" alt="Decidueye" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/decidueye/anim_front__hover.png"><span>Decidueye</span>
+        <li>Level up: 34 →   <a href="decidueye.html" class="species-inline-link mon-card type-grass type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/decidueye/anim_front.png" alt="Decidueye" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/decidueye/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/decidueye/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/decidueye/anim_front__shiny__hover.png"><span>Decidueye</span>
   </a>
 </li>
-        <li>Use <a href="../itemdex/dawn-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/dawn_stone.png" alt="" class="item-icon">Dawn Stone</a> →   <a href="decidueye-hisui.html" class="species-inline-link mon-card type-grass type2-fighting mon-dual"><img src="../assets/game/graphics/pokemon/decidueye/hisui/front.png" alt="Decidueye (Hisuian)" class="species-inline-sprite"><span>Decidueye (Hisuian)</span>
+        <li>Use <a href="../itemdex/dawn-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/dawn_stone.png" alt="" class="item-icon">Dawn Stone</a> →   <a href="decidueye-hisui.html" class="species-inline-link mon-card type-grass type2-fighting mon-dual"><img src="../assets/game/graphics/pokemon/decidueye/hisui/front.png" alt="Decidueye (Hisuian)" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/decidueye/hisui/front__shiny.png"><span>Decidueye (Hisuian)</span>
   </a>
 </li>
     </ul>
@@ -592,7 +609,7 @@ it unable to battle.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -600,6 +617,7 @@ it unable to battle.</p>
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

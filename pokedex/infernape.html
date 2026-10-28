@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/infernape/anim_front.png" alt="Infernape front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/infernape/anim_front__shiny.png" alt="Infernape shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/infernape/anim_front.png" alt="Infernape front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/infernape/anim_front__shiny.png">
+<img src="../assets/game/graphics/pokemon/infernape/anim_front__shiny.png" alt="Infernape shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/infernape/anim_front.png">    </div>
     <div>
       <p class="muted">Hoenn Dex #6</p>
       <p><strong>Infernape</strong></p>
@@ -350,7 +367,7 @@ take on any opponent.</p>
   <div class="card">
     <h2>Evolutions</h2>
     <ul>
-        <li>  <a href="monferno.html" class="species-inline-link mon-card type-fire type2-fighting mon-dual"><img src="../assets/game/graphics/pokemon/monferno/anim_front.png" alt="Monferno" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/monferno/anim_front__hover.png"><span>Monferno</span>
+        <li>  <a href="monferno.html" class="species-inline-link mon-card type-fire type2-fighting mon-dual"><img src="../assets/game/graphics/pokemon/monferno/anim_front.png" alt="Monferno" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/monferno/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/monferno/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/monferno/anim_front__shiny__hover.png"><span>Monferno</span>
   </a>
  → Level up: 36</li>
     </ul>
@@ -612,7 +629,7 @@ take on any opponent.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -620,6 +637,7 @@ take on any opponent.</p>
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/oricorio/sensu/anim_front.png" alt="Oricorio (Sensu Style) front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/oricorio/sensu/anim_front__shiny.png" alt="Oricorio (Sensu Style) shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/oricorio/sensu/anim_front.png" alt="Oricorio (Sensu Style) front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/oricorio/sensu/anim_front__shiny.png">
+<img src="../assets/game/graphics/pokemon/oricorio/sensu/anim_front__shiny.png" alt="Oricorio (Sensu Style) shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/oricorio/sensu/anim_front.png">    </div>
     <div>
       <p class="muted">Hoenn Dex #131</p>
       <p><strong>Oricorio (Sensu Style)</strong></p>
@@ -299,7 +316,7 @@
     <p><strong>Catch Rate:</strong> 45</p>
     <p><strong>Overworld Behavior:</strong> Ignores Player</p>
     <p><strong>Autobattle Behavior:</strong> Copies Player</p>
-<p><strong>EV Yield:</strong> 2 Sp. Atk</p><p class="wild-items"><strong>Wild Held Item:</strong> <span><a href="../itemdex/purple-nectar.html" class="item-card"><img src="../assets/game/graphics/items/icons/purple_nectar.png" alt="Purple Nectar" class="item-icon">Purple Nectar</a> (5%)</span></p><p><strong>Base Species:</strong>   <a href="oricorio.html" class="species-inline-link mon-card type-fire type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/oricorio/anim_front.png" alt="Oricorio (Baile Style)" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/oricorio/anim_front__hover.png"><span>Oricorio (Baile Style)</span>
+<p><strong>EV Yield:</strong> 2 Sp. Atk</p><p class="wild-items"><strong>Wild Held Item:</strong> <span><a href="../itemdex/purple-nectar.html" class="item-card"><img src="../assets/game/graphics/items/icons/purple_nectar.png" alt="Purple Nectar" class="item-icon">Purple Nectar</a> (5%)</span></p><p><strong>Base Species:</strong>   <a href="oricorio.html" class="species-inline-link mon-card type-fire type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/oricorio/anim_front.png" alt="Oricorio (Baile Style)" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/oricorio/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/oricorio/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/oricorio/anim_front__shiny__hover.png"><span>Oricorio (Baile Style)</span>
   </a>
 </p><p class="wild-items"><strong>Form Item:</strong> <span><a href="../itemdex/purple-nectar.html" class="item-card"><img src="../assets/game/graphics/items/icons/purple_nectar.png" alt="Purple Nectar" class="item-icon">Purple Nectar</a></span></p>  </section>
   <section class="card">
@@ -358,11 +375,11 @@ them that will bring on their demise.</p>
   <div class="card">
     <h2>Forms</h2>
     <ul class="form-list">
-        <li><a href="oricorio.html" class="form-entry mon-card type-fire type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/oricorio/anim_front.png" alt="Oricorio (Baile Style)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/oricorio/anim_front__hover.png"><span>Oricorio (Baile Style)</span>
+        <li><a href="oricorio.html" class="form-entry mon-card type-fire type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/oricorio/anim_front.png" alt="Oricorio (Baile Style)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/oricorio/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/oricorio/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/oricorio/anim_front__shiny__hover.png"><span>Oricorio (Baile Style)</span>
         </a></li>
-        <li><a href="oricorio-pom-pom.html" class="form-entry mon-card type-electric type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/oricorio/pom_pom/anim_front.png" alt="Oricorio (Pom-Pom Style)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/oricorio/pom_pom/anim_front__hover.png"><span>Oricorio (Pom-Pom Style)</span>
+        <li><a href="oricorio-pom-pom.html" class="form-entry mon-card type-electric type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/oricorio/pom_pom/anim_front.png" alt="Oricorio (Pom-Pom Style)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/oricorio/pom_pom/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/oricorio/pom_pom/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/oricorio/pom_pom/anim_front__shiny__hover.png"><span>Oricorio (Pom-Pom Style)</span>
         </a></li>
-        <li><a href="oricorio-pau.html" class="form-entry mon-card type-psychic type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/oricorio/pau/anim_front.png" alt="Oricorio (Pa&#39;u Style)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/oricorio/pau/anim_front__hover.png"><span>Oricorio (Pa&#39;u Style)</span>
+        <li><a href="oricorio-pau.html" class="form-entry mon-card type-psychic type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/oricorio/pau/anim_front.png" alt="Oricorio (Pa&#39;u Style)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/oricorio/pau/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/oricorio/pau/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/oricorio/pau/anim_front__shiny__hover.png"><span>Oricorio (Pa&#39;u Style)</span>
         </a></li>
     </ul>
   </div>
@@ -600,7 +617,7 @@ them that will bring on their demise.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -608,6 +625,7 @@ them that will bring on their demise.</p>
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

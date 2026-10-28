@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -291,28 +308,28 @@
     <h3>Level-Up <span class="muted small-text">3</span></h3>
     <ul class="cross-link-grid">
 <li><a href="../pokedex/cinccino.html" class="mon-card type-normal">
-<img src="../assets/game/graphics/pokemon/cinccino/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/cinccino/anim_front__hover.png">  <span class="name">Cinccino</span>
+<img src="../assets/game/graphics/pokemon/cinccino/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/cinccino/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/cinccino/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/cinccino/anim_front__shiny__hover.png">  <span class="name">Cinccino</span>
 </a></li><li><a href="../pokedex/sandslash-alola.html" class="mon-card type-ice type2-steel mon-dual">
-<img src="../assets/game/graphics/pokemon/sandslash/alola/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/sandslash/alola/anim_front__hover.png">  <span class="name">Sandslash (Alolan)</span>
+<img src="../assets/game/graphics/pokemon/sandslash/alola/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/sandslash/alola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sandslash/alola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sandslash/alola/anim_front__shiny__hover.png">  <span class="name">Sandslash (Alolan)</span>
 </a></li><li><a href="../pokedex/shellder.html" class="mon-card type-water">
-<img src="../assets/game/graphics/pokemon/shellder/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/shellder/anim_front__hover.png">  <span class="name">Shellder</span>
+<img src="../assets/game/graphics/pokemon/shellder/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/shellder/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/shellder/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/shellder/anim_front__shiny__hover.png">  <span class="name">Shellder</span>
 </a></li>    </ul>
     <h3>Egg <span class="muted small-text">7</span></h3>
     <ul class="cross-link-grid">
 <li><a href="../pokedex/cloyster.html" class="mon-card type-water type2-ice mon-dual">
-<img src="../assets/game/graphics/pokemon/cloyster/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/cloyster/anim_front__hover.png">  <span class="name">Cloyster</span>
+<img src="../assets/game/graphics/pokemon/cloyster/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/cloyster/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/cloyster/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/cloyster/anim_front__shiny__hover.png">  <span class="name">Cloyster</span>
 </a></li><li><a href="../pokedex/corsola.html" class="mon-card type-water type2-rock mon-dual">
-<img src="../assets/game/graphics/pokemon/corsola/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/corsola/anim_front__hover.png">  <span class="name">Corsola</span>
+<img src="../assets/game/graphics/pokemon/corsola/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/corsola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/corsola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/corsola/anim_front__shiny__hover.png">  <span class="name">Corsola</span>
 </a></li><li><a href="../pokedex/dewgong.html" class="mon-card type-water type2-ice mon-dual">
-<img src="../assets/game/graphics/pokemon/dewgong/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/dewgong/anim_front__hover.png">  <span class="name">Dewgong</span>
+<img src="../assets/game/graphics/pokemon/dewgong/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/dewgong/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/dewgong/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/dewgong/anim_front__shiny__hover.png">  <span class="name">Dewgong</span>
 </a></li><li><a href="../pokedex/sandshrew-alola.html" class="mon-card type-ice type2-steel mon-dual">
-<img src="../assets/game/graphics/pokemon/sandshrew/alola/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/sandshrew/alola/anim_front__hover.png">  <span class="name">Sandshrew (Alolan)</span>
+<img src="../assets/game/graphics/pokemon/sandshrew/alola/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/sandshrew/alola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sandshrew/alola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sandshrew/alola/anim_front__shiny__hover.png">  <span class="name">Sandshrew (Alolan)</span>
 </a></li><li><a href="../pokedex/sandslash-alola.html" class="mon-card type-ice type2-steel mon-dual">
-<img src="../assets/game/graphics/pokemon/sandslash/alola/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/sandslash/alola/anim_front__hover.png">  <span class="name">Sandslash (Alolan)</span>
+<img src="../assets/game/graphics/pokemon/sandslash/alola/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/sandslash/alola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sandslash/alola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sandslash/alola/anim_front__shiny__hover.png">  <span class="name">Sandslash (Alolan)</span>
 </a></li><li><a href="../pokedex/seel.html" class="mon-card type-water">
-<img src="../assets/game/graphics/pokemon/seel/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/seel/anim_front__hover.png">  <span class="name">Seel</span>
+<img src="../assets/game/graphics/pokemon/seel/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/seel/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/seel/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/seel/anim_front__shiny__hover.png">  <span class="name">Seel</span>
 </a></li><li><a href="../pokedex/shellder.html" class="mon-card type-water">
-<img src="../assets/game/graphics/pokemon/shellder/anim_front.png" alt="" class="sprite" data-hover="../assets/game/graphics/pokemon/shellder/anim_front__hover.png">  <span class="name">Shellder</span>
+<img src="../assets/game/graphics/pokemon/shellder/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/shellder/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/shellder/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/shellder/anim_front__shiny__hover.png">  <span class="name">Shellder</span>
 </a></li>    </ul>
 </section>
   </main>
@@ -460,7 +477,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -468,6 +485,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

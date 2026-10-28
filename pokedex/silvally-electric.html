@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/silvally/electric/anim_front.png" alt="Silvally (Type: Electric) front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/silvally/electric/anim_front__shiny.png" alt="Silvally (Type: Electric) shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/silvally/electric/anim_front.png" alt="Silvally (Type: Electric) front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/electric/anim_front__shiny.png">
+<img src="../assets/game/graphics/pokemon/silvally/electric/anim_front__shiny.png" alt="Silvally (Type: Electric) shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/electric/anim_front.png">    </div>
     <div>
       <p class="muted">Hoenn Dex #291</p>
       <p><strong>Silvally (Type: Electric)</strong></p>
@@ -299,7 +316,7 @@
     <p><strong>Catch Rate:</strong> 3</p>
     <p><strong>Overworld Behavior:</strong> Ignores Player</p>
     <p><strong>Autobattle Behavior:</strong> Copies Player</p>
-<p><strong>EV Yield:</strong> 3 HP</p><p><strong>Base Species:</strong>   <a href="silvally.html" class="species-inline-link mon-card type-normal"><img src="../assets/game/graphics/pokemon/silvally/anim_front.png" alt="Silvally (Type: Normal)" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/silvally/anim_front__hover.png"><span>Silvally (Type: Normal)</span>
+<p><strong>EV Yield:</strong> 3 HP</p><p><strong>Base Species:</strong>   <a href="silvally.html" class="species-inline-link mon-card type-normal"><img src="../assets/game/graphics/pokemon/silvally/anim_front.png" alt="Silvally (Type: Normal)" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/anim_front__shiny__hover.png"><span>Silvally (Type: Normal)</span>
   </a>
 </p><p class="wild-items"><strong>Form Item:</strong> <span><a href="../itemdex/magnet.html" class="item-card"><img src="../assets/game/graphics/items/icons/magnet.png" alt="Magnet" class="item-icon">Magnet</a></span></p>  </section>
   <section class="card">
@@ -355,39 +372,39 @@
   <div class="card">
     <h2>Forms</h2>
     <ul class="form-list">
-        <li><a href="silvally.html" class="form-entry mon-card type-normal"><img src="../assets/game/graphics/pokemon/silvally/anim_front.png" alt="Silvally (Type: Normal)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/silvally/anim_front__hover.png"><span>Silvally (Type: Normal)</span>
+        <li><a href="silvally.html" class="form-entry mon-card type-normal"><img src="../assets/game/graphics/pokemon/silvally/anim_front.png" alt="Silvally (Type: Normal)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/anim_front__shiny__hover.png"><span>Silvally (Type: Normal)</span>
         </a></li>
-        <li><a href="silvally-fighting.html" class="form-entry mon-card type-fighting"><img src="../assets/game/graphics/pokemon/silvally/fighting/anim_front.png" alt="Silvally (Type: Fighting)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/silvally/fighting/anim_front__hover.png"><span>Silvally (Type: Fighting)</span>
+        <li><a href="silvally-fighting.html" class="form-entry mon-card type-fighting"><img src="../assets/game/graphics/pokemon/silvally/fighting/anim_front.png" alt="Silvally (Type: Fighting)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/fighting/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/fighting/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/fighting/anim_front__shiny__hover.png"><span>Silvally (Type: Fighting)</span>
         </a></li>
-        <li><a href="silvally-flying.html" class="form-entry mon-card type-flying"><img src="../assets/game/graphics/pokemon/silvally/flying/anim_front.png" alt="Silvally (Type: Flying)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/silvally/flying/anim_front__hover.png"><span>Silvally (Type: Flying)</span>
+        <li><a href="silvally-flying.html" class="form-entry mon-card type-flying"><img src="../assets/game/graphics/pokemon/silvally/flying/anim_front.png" alt="Silvally (Type: Flying)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/flying/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/flying/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/flying/anim_front__shiny__hover.png"><span>Silvally (Type: Flying)</span>
         </a></li>
-        <li><a href="silvally-poison.html" class="form-entry mon-card type-poison"><img src="../assets/game/graphics/pokemon/silvally/poison/anim_front.png" alt="Silvally (Type: Poison)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/silvally/poison/anim_front__hover.png"><span>Silvally (Type: Poison)</span>
+        <li><a href="silvally-poison.html" class="form-entry mon-card type-poison"><img src="../assets/game/graphics/pokemon/silvally/poison/anim_front.png" alt="Silvally (Type: Poison)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/poison/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/poison/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/poison/anim_front__shiny__hover.png"><span>Silvally (Type: Poison)</span>
         </a></li>
-        <li><a href="silvally-ground.html" class="form-entry mon-card type-ground"><img src="../assets/game/graphics/pokemon/silvally/ground/anim_front.png" alt="Silvally (Type: Ground)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/silvally/ground/anim_front__hover.png"><span>Silvally (Type: Ground)</span>
+        <li><a href="silvally-ground.html" class="form-entry mon-card type-ground"><img src="../assets/game/graphics/pokemon/silvally/ground/anim_front.png" alt="Silvally (Type: Ground)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/ground/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/ground/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/ground/anim_front__shiny__hover.png"><span>Silvally (Type: Ground)</span>
         </a></li>
-        <li><a href="silvally-rock.html" class="form-entry mon-card type-rock"><img src="../assets/game/graphics/pokemon/silvally/rock/anim_front.png" alt="Silvally (Type: Rock)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/silvally/rock/anim_front__hover.png"><span>Silvally (Type: Rock)</span>
+        <li><a href="silvally-rock.html" class="form-entry mon-card type-rock"><img src="../assets/game/graphics/pokemon/silvally/rock/anim_front.png" alt="Silvally (Type: Rock)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/rock/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/rock/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/rock/anim_front__shiny__hover.png"><span>Silvally (Type: Rock)</span>
         </a></li>
-        <li><a href="silvally-bug.html" class="form-entry mon-card type-bug"><img src="../assets/game/graphics/pokemon/silvally/bug/anim_front.png" alt="Silvally (Type: Bug)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/silvally/bug/anim_front__hover.png"><span>Silvally (Type: Bug)</span>
+        <li><a href="silvally-bug.html" class="form-entry mon-card type-bug"><img src="../assets/game/graphics/pokemon/silvally/bug/anim_front.png" alt="Silvally (Type: Bug)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/bug/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/bug/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/bug/anim_front__shiny__hover.png"><span>Silvally (Type: Bug)</span>
         </a></li>
-        <li><a href="silvally-ghost.html" class="form-entry mon-card type-ghost"><img src="../assets/game/graphics/pokemon/silvally/ghost/anim_front.png" alt="Silvally (Type: Ghost)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/silvally/ghost/anim_front__hover.png"><span>Silvally (Type: Ghost)</span>
+        <li><a href="silvally-ghost.html" class="form-entry mon-card type-ghost"><img src="../assets/game/graphics/pokemon/silvally/ghost/anim_front.png" alt="Silvally (Type: Ghost)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/ghost/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/ghost/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/ghost/anim_front__shiny__hover.png"><span>Silvally (Type: Ghost)</span>
         </a></li>
-        <li><a href="silvally-steel.html" class="form-entry mon-card type-steel"><img src="../assets/game/graphics/pokemon/silvally/steel/anim_front.png" alt="Silvally (Type: Steel)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/silvally/steel/anim_front__hover.png"><span>Silvally (Type: Steel)</span>
+        <li><a href="silvally-steel.html" class="form-entry mon-card type-steel"><img src="../assets/game/graphics/pokemon/silvally/steel/anim_front.png" alt="Silvally (Type: Steel)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/steel/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/steel/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/steel/anim_front__shiny__hover.png"><span>Silvally (Type: Steel)</span>
         </a></li>
-        <li><a href="silvally-fire.html" class="form-entry mon-card type-fire"><img src="../assets/game/graphics/pokemon/silvally/fire/anim_front.png" alt="Silvally (Type: Fire)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/silvally/fire/anim_front__hover.png"><span>Silvally (Type: Fire)</span>
+        <li><a href="silvally-fire.html" class="form-entry mon-card type-fire"><img src="../assets/game/graphics/pokemon/silvally/fire/anim_front.png" alt="Silvally (Type: Fire)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/fire/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/fire/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/fire/anim_front__shiny__hover.png"><span>Silvally (Type: Fire)</span>
         </a></li>
-        <li><a href="silvally-water.html" class="form-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/silvally/water/anim_front.png" alt="Silvally (Type: Water)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/silvally/water/anim_front__hover.png"><span>Silvally (Type: Water)</span>
+        <li><a href="silvally-water.html" class="form-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/silvally/water/anim_front.png" alt="Silvally (Type: Water)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/water/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/water/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/water/anim_front__shiny__hover.png"><span>Silvally (Type: Water)</span>
         </a></li>
-        <li><a href="silvally-grass.html" class="form-entry mon-card type-grass"><img src="../assets/game/graphics/pokemon/silvally/grass/anim_front.png" alt="Silvally (Type: Grass)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/silvally/grass/anim_front__hover.png"><span>Silvally (Type: Grass)</span>
+        <li><a href="silvally-grass.html" class="form-entry mon-card type-grass"><img src="../assets/game/graphics/pokemon/silvally/grass/anim_front.png" alt="Silvally (Type: Grass)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/grass/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/grass/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/grass/anim_front__shiny__hover.png"><span>Silvally (Type: Grass)</span>
         </a></li>
-        <li><a href="silvally-psychic.html" class="form-entry mon-card type-psychic"><img src="../assets/game/graphics/pokemon/silvally/psychic/anim_front.png" alt="Silvally (Type: Psychic)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/silvally/psychic/anim_front__hover.png"><span>Silvally (Type: Psychic)</span>
+        <li><a href="silvally-psychic.html" class="form-entry mon-card type-psychic"><img src="../assets/game/graphics/pokemon/silvally/psychic/anim_front.png" alt="Silvally (Type: Psychic)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/psychic/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/psychic/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/psychic/anim_front__shiny__hover.png"><span>Silvally (Type: Psychic)</span>
         </a></li>
-        <li><a href="silvally-ice.html" class="form-entry mon-card type-ice"><img src="../assets/game/graphics/pokemon/silvally/ice/anim_front.png" alt="Silvally (Type: Ice)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/silvally/ice/anim_front__hover.png"><span>Silvally (Type: Ice)</span>
+        <li><a href="silvally-ice.html" class="form-entry mon-card type-ice"><img src="../assets/game/graphics/pokemon/silvally/ice/anim_front.png" alt="Silvally (Type: Ice)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/ice/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/ice/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/ice/anim_front__shiny__hover.png"><span>Silvally (Type: Ice)</span>
         </a></li>
-        <li><a href="silvally-dragon.html" class="form-entry mon-card type-dragon"><img src="../assets/game/graphics/pokemon/silvally/dragon/anim_front.png" alt="Silvally (Type: Dragon)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/silvally/dragon/anim_front__hover.png"><span>Silvally (Type: Dragon)</span>
+        <li><a href="silvally-dragon.html" class="form-entry mon-card type-dragon"><img src="../assets/game/graphics/pokemon/silvally/dragon/anim_front.png" alt="Silvally (Type: Dragon)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/dragon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/dragon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/dragon/anim_front__shiny__hover.png"><span>Silvally (Type: Dragon)</span>
         </a></li>
-        <li><a href="silvally-dark.html" class="form-entry mon-card type-dark"><img src="../assets/game/graphics/pokemon/silvally/dark/anim_front.png" alt="Silvally (Type: Dark)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/silvally/dark/anim_front__hover.png"><span>Silvally (Type: Dark)</span>
+        <li><a href="silvally-dark.html" class="form-entry mon-card type-dark"><img src="../assets/game/graphics/pokemon/silvally/dark/anim_front.png" alt="Silvally (Type: Dark)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/dark/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/dark/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/dark/anim_front__shiny__hover.png"><span>Silvally (Type: Dark)</span>
         </a></li>
-        <li><a href="silvally-fairy.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/silvally/fairy/anim_front.png" alt="Silvally (Type: Fairy)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/silvally/fairy/anim_front__hover.png"><span>Silvally (Type: Fairy)</span>
+        <li><a href="silvally-fairy.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/silvally/fairy/anim_front.png" alt="Silvally (Type: Fairy)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/silvally/fairy/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/fairy/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/fairy/anim_front__shiny__hover.png"><span>Silvally (Type: Fairy)</span>
         </a></li>
     </ul>
   </div>
@@ -626,7 +643,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -634,6 +651,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

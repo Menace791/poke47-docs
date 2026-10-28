@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -299,7 +316,7 @@
       <tr data-href="../pokedex/zweilous.html">
         <td><a href="../pokedex/zweilous.html">Zweilous</a></td>
         <td>52</td>
-        <td><img src="../assets/game/graphics/pokemon/zweilous/anim_front.png" alt="Zweilous Level 52 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/zweilous/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/zweilous/anim_front.png" alt="Zweilous Level 52 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/zweilous/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/zweilous/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/zweilous/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
@@ -314,7 +331,7 @@
       <tr data-href="../pokedex/garchomp.html">
         <td><a href="../pokedex/garchomp.html">Garchomp</a></td>
         <td>53</td>
-        <td><img src="../assets/game/graphics/pokemon/garchomp/anim_front.png" alt="Garchomp Level 53 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/garchomp/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/garchomp/anim_front.png" alt="Garchomp Level 53 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/garchomp/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/garchomp/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/garchomp/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"> <img src="../assets/generated/types/ground.svg" alt="Ground type" class="type-icon"></div>
@@ -329,7 +346,7 @@
       <tr data-href="../pokedex/goodra-hisui.html">
         <td><a href="../pokedex/goodra-hisui.html">Goodra<span class="species-form">(Hisuian)</span></a></td>
         <td>54</td>
-        <td><img src="../assets/game/graphics/pokemon/goodra/hisui/front.png" alt="Goodra Level 54 sprite" class="trainer-mon-sprite"></td>
+        <td><img src="../assets/game/graphics/pokemon/goodra/hisui/front.png" alt="Goodra Level 54 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/goodra/hisui/front__shiny.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"> <img src="../assets/generated/types/steel.svg" alt="Steel type" class="type-icon"></div>
@@ -344,7 +361,7 @@
       <tr data-href="../pokedex/kommo-o.html">
         <td><a href="../pokedex/kommo-o.html">Kommo-o</a></td>
         <td>53</td>
-        <td><img src="../assets/game/graphics/pokemon/kommo_o/anim_front.png" alt="Kommo-o Level 53 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/kommo_o/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/kommo_o/anim_front.png" alt="Kommo-o Level 53 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/kommo_o/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/kommo_o/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/kommo_o/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"> <img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -359,7 +376,7 @@
       <tr data-href="../pokedex/hydreigon.html">
         <td><a href="../pokedex/hydreigon.html">Hydreigon</a></td>
         <td>55</td>
-        <td><img src="../assets/game/graphics/pokemon/hydreigon/anim_front.png" alt="Hydreigon Level 55 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/hydreigon/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/hydreigon/anim_front.png" alt="Hydreigon Level 55 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/hydreigon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/hydreigon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/hydreigon/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon"> <img src="../assets/generated/types/dragon.svg" alt="Dragon type" class="type-icon"></div>
@@ -521,7 +538,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -529,6 +546,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/goomy/anim_front.png" alt="Goomy front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/goomy/anim_front__shiny.png" alt="Goomy shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/goomy/anim_front.png" alt="Goomy front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/goomy/anim_front__shiny.png">
+<img src="../assets/game/graphics/pokemon/goomy/anim_front__shiny.png" alt="Goomy shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/goomy/anim_front.png">    </div>
     <div>
       <p class="muted">Hoenn Dex #253</p>
       <p><strong>Goomy</strong></p>
@@ -350,10 +367,10 @@ hand-washing.</p>
   <div class="card">
     <h2>Evolutions</h2>
     <ul>
-        <li>Level up: 40 →   <a href="sliggoo.html" class="species-inline-link mon-card type-dragon"><img src="../assets/game/graphics/pokemon/sliggoo/anim_front.png" alt="Sliggoo" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/sliggoo/anim_front__hover.png"><span>Sliggoo</span>
+        <li>Level up: 40 →   <a href="sliggoo.html" class="species-inline-link mon-card type-dragon"><img src="../assets/game/graphics/pokemon/sliggoo/anim_front.png" alt="Sliggoo" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/sliggoo/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sliggoo/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sliggoo/anim_front__shiny__hover.png"><span>Sliggoo</span>
   </a>
 </li>
-        <li>Use <a href="../itemdex/dawn-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/dawn_stone.png" alt="" class="item-icon">Dawn Stone</a> →   <a href="sliggoo-hisui.html" class="species-inline-link mon-card type-dragon type2-steel mon-dual"><img src="../assets/game/graphics/pokemon/sliggoo/hisui/front.png" alt="Sliggoo (Hisuian)" class="species-inline-sprite"><span>Sliggoo (Hisuian)</span>
+        <li>Use <a href="../itemdex/dawn-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/dawn_stone.png" alt="" class="item-icon">Dawn Stone</a> →   <a href="sliggoo-hisui.html" class="species-inline-link mon-card type-dragon type2-steel mon-dual"><img src="../assets/game/graphics/pokemon/sliggoo/hisui/front.png" alt="Sliggoo (Hisuian)" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/sliggoo/hisui/front__shiny.png"><span>Sliggoo (Hisuian)</span>
   </a>
 </li>
     </ul>
@@ -441,7 +458,7 @@ hand-washing.</p>
               <li>
                 <span class="encounter-where"><a href="../locations/rustboro-city.html#rustboro-city-house1">House 1</a> · In-Game Trade</span>
                 <span class="muted small-text">For <a href="../pokedex/flabebe.html" class="encounter-entry mon-card type-fairy">
-      <span>Flabébé (Red Flower)</span><img src="../assets/game/graphics/pokemon/flabebe/anim_front.png" alt="Flabebe Red" class="encounter-sprite"></a></span>
+      <span>Flabébé (Red Flower)</span><img src="../assets/game/graphics/pokemon/flabebe/anim_front.png" alt="Flabebe Red" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/flabebe/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/flabebe/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/flabebe/anim_front__shiny__hover.png"></a></span>
               </li>
       </ul>
     </div>
@@ -600,7 +617,7 @@ hand-washing.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -608,6 +625,7 @@ hand-washing.</p>
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

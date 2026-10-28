@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -304,7 +321,7 @@
       <tr data-href="../pokedex/cherrim.html">
         <td><a href="../pokedex/cherrim.html">Cherrim</a></td>
         <td>13</td>
-        <td><img src="../assets/game/graphics/pokemon/cherrim/anim_front.png" alt="Cherrim Level 13 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/cherrim/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/cherrim/anim_front.png" alt="Cherrim Level 13 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/cherrim/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/cherrim/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/cherrim/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"></div>
@@ -319,7 +336,7 @@
       <tr data-href="../pokedex/chimchar.html">
         <td><a href="../pokedex/chimchar.html">Chimchar</a></td>
         <td>15</td>
-        <td><img src="../assets/game/graphics/pokemon/chimchar/anim_front.png" alt="Chimchar Level 15 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/chimchar/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/chimchar/anim_front.png" alt="Chimchar Level 15 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/chimchar/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/chimchar/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/chimchar/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"></div>
@@ -349,7 +366,7 @@
       <tr data-href="../pokedex/darumaka.html">
         <td><a href="../pokedex/darumaka.html">Darumaka</a></td>
         <td>13</td>
-        <td><img src="../assets/game/graphics/pokemon/darumaka/anim_front.png" alt="Darumaka Level 13 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/darumaka/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/darumaka/anim_front.png" alt="Darumaka Level 13 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/darumaka/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/darumaka/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/darumaka/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fire.svg" alt="Fire type" class="type-icon"></div>
@@ -364,7 +381,7 @@
       <tr data-href="../pokedex/piplup.html">
         <td><a href="../pokedex/piplup.html">Piplup</a></td>
         <td>15</td>
-        <td><img src="../assets/game/graphics/pokemon/piplup/anim_front.png" alt="Piplup Level 15 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/piplup/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/piplup/anim_front.png" alt="Piplup Level 15 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/piplup/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/piplup/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/piplup/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
@@ -394,7 +411,7 @@
       <tr data-href="../pokedex/buizel.html">
         <td><a href="../pokedex/buizel.html">Buizel</a></td>
         <td>13</td>
-        <td><img src="../assets/game/graphics/pokemon/buizel/anim_front.png" alt="Buizel Level 13 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/buizel/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/buizel/anim_front.png" alt="Buizel Level 13 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/buizel/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/buizel/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/buizel/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
@@ -409,7 +426,7 @@
       <tr data-href="../pokedex/turtwig.html">
         <td><a href="../pokedex/turtwig.html">Turtwig</a></td>
         <td>15</td>
-        <td><img src="../assets/game/graphics/pokemon/turtwig/anim_front.png" alt="Turtwig Level 15 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/turtwig/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/turtwig/anim_front.png" alt="Turtwig Level 15 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/turtwig/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/turtwig/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/turtwig/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"></div>
@@ -605,7 +622,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -613,6 +630,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

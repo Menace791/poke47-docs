@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -306,7 +323,7 @@
       <tr data-href="../pokedex/meowstic.html">
         <td><a href="../pokedex/meowstic.html">Meowstic<span class="species-form">(M)</span></a></td>
         <td>40</td>
-        <td><img src="../assets/game/graphics/pokemon/meowstic/anim_front.png" alt="Meowstic Level 40 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/meowstic/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/meowstic/anim_front.png" alt="Meowstic Level 40 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/meowstic/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/meowstic/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/meowstic/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -321,7 +338,7 @@
       <tr data-href="../pokedex/meowstic-f.html">
         <td><a href="../pokedex/meowstic-f.html">Meowstic<span class="species-form">(F)</span></a></td>
         <td>40</td>
-        <td><img src="../assets/game/graphics/pokemon/meowstic/f/anim_front.png" alt="Meowstic Level 40 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/meowstic/f/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/meowstic/f/anim_front.png" alt="Meowstic Level 40 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/meowstic/f/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/meowstic/f/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/meowstic/f/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -336,7 +353,7 @@
       <tr data-href="../pokedex/reuniclus.html">
         <td><a href="../pokedex/reuniclus.html">Reuniclus</a></td>
         <td>42</td>
-        <td><img src="../assets/game/graphics/pokemon/reuniclus/anim_front.png" alt="Reuniclus Level 42 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/reuniclus/anim_front.png" alt="Reuniclus Level 42 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/reuniclus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -351,7 +368,7 @@
       <tr data-href="../pokedex/duosion.html">
         <td><a href="../pokedex/duosion.html">Duosion</a></td>
         <td>42</td>
-        <td><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion Level 42 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion Level 42 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/duosion/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/duosion/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -381,7 +398,7 @@
       <tr data-href="../pokedex/meowstic.html">
         <td><a href="../pokedex/meowstic.html">Meowstic<span class="species-form">(M)</span></a></td>
         <td>48</td>
-        <td><img src="../assets/game/graphics/pokemon/meowstic/anim_front.png" alt="Meowstic Level 48 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/meowstic/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/meowstic/anim_front.png" alt="Meowstic Level 48 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/meowstic/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/meowstic/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/meowstic/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -396,7 +413,7 @@
       <tr data-href="../pokedex/meowstic-f.html">
         <td><a href="../pokedex/meowstic-f.html">Meowstic<span class="species-form">(F)</span></a></td>
         <td>48</td>
-        <td><img src="../assets/game/graphics/pokemon/meowstic/f/anim_front.png" alt="Meowstic Level 48 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/meowstic/f/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/meowstic/f/anim_front.png" alt="Meowstic Level 48 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/meowstic/f/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/meowstic/f/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/meowstic/f/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -411,7 +428,7 @@
       <tr data-href="../pokedex/reuniclus.html">
         <td><a href="../pokedex/reuniclus.html">Reuniclus</a></td>
         <td>50</td>
-        <td><img src="../assets/game/graphics/pokemon/reuniclus/anim_front.png" alt="Reuniclus Level 50 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/reuniclus/anim_front.png" alt="Reuniclus Level 50 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/reuniclus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -426,7 +443,7 @@
       <tr data-href="../pokedex/duosion.html">
         <td><a href="../pokedex/duosion.html">Duosion</a></td>
         <td>50</td>
-        <td><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion Level 50 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion Level 50 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/duosion/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/duosion/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -456,7 +473,7 @@
       <tr data-href="../pokedex/malamar.html">
         <td><a href="../pokedex/malamar.html">Malamar</a></td>
         <td>54</td>
-        <td><img src="../assets/game/graphics/pokemon/malamar/anim_front.png" alt="Malamar Level 54 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/malamar/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/malamar/anim_front.png" alt="Malamar Level 54 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/malamar/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/malamar/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/malamar/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon"> <img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -471,7 +488,7 @@
       <tr data-href="../pokedex/musharna.html">
         <td><a href="../pokedex/musharna.html">Musharna</a></td>
         <td>54</td>
-        <td><img src="../assets/game/graphics/pokemon/musharna/anim_front.png" alt="Musharna Level 54 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/musharna/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/musharna/anim_front.png" alt="Musharna Level 54 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/musharna/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/musharna/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/musharna/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -486,7 +503,7 @@
       <tr data-href="../pokedex/meowstic.html">
         <td><a href="../pokedex/meowstic.html">Meowstic<span class="species-form">(M)</span></a></td>
         <td>54</td>
-        <td><img src="../assets/game/graphics/pokemon/meowstic/anim_front.png" alt="Meowstic Level 54 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/meowstic/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/meowstic/anim_front.png" alt="Meowstic Level 54 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/meowstic/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/meowstic/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/meowstic/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -501,7 +518,7 @@
       <tr data-href="../pokedex/meowstic-f.html">
         <td><a href="../pokedex/meowstic-f.html">Meowstic<span class="species-form">(F)</span></a></td>
         <td>54</td>
-        <td><img src="../assets/game/graphics/pokemon/meowstic/f/anim_front.png" alt="Meowstic Level 54 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/meowstic/f/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/meowstic/f/anim_front.png" alt="Meowstic Level 54 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/meowstic/f/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/meowstic/f/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/meowstic/f/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -516,7 +533,7 @@
       <tr data-href="../pokedex/reuniclus.html">
         <td><a href="../pokedex/reuniclus.html">Reuniclus</a></td>
         <td>56</td>
-        <td><img src="../assets/game/graphics/pokemon/reuniclus/anim_front.png" alt="Reuniclus Level 56 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/reuniclus/anim_front.png" alt="Reuniclus Level 56 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/reuniclus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -531,7 +548,7 @@
       <tr data-href="../pokedex/duosion.html">
         <td><a href="../pokedex/duosion.html">Duosion</a></td>
         <td>56</td>
-        <td><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion Level 56 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion Level 56 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/duosion/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/duosion/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -561,7 +578,7 @@
       <tr data-href="../pokedex/malamar.html">
         <td><a href="../pokedex/malamar.html">Malamar</a></td>
         <td>58</td>
-        <td><img src="../assets/game/graphics/pokemon/malamar/anim_front.png" alt="Malamar Level 58 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/malamar/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/malamar/anim_front.png" alt="Malamar Level 58 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/malamar/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/malamar/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/malamar/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon"> <img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -576,7 +593,7 @@
       <tr data-href="../pokedex/musharna.html">
         <td><a href="../pokedex/musharna.html">Musharna</a></td>
         <td>58</td>
-        <td><img src="../assets/game/graphics/pokemon/musharna/anim_front.png" alt="Musharna Level 58 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/musharna/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/musharna/anim_front.png" alt="Musharna Level 58 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/musharna/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/musharna/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/musharna/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -591,7 +608,7 @@
       <tr data-href="../pokedex/meowstic.html">
         <td><a href="../pokedex/meowstic.html">Meowstic<span class="species-form">(M)</span></a></td>
         <td>58</td>
-        <td><img src="../assets/game/graphics/pokemon/meowstic/anim_front.png" alt="Meowstic Level 58 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/meowstic/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/meowstic/anim_front.png" alt="Meowstic Level 58 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/meowstic/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/meowstic/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/meowstic/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -606,7 +623,7 @@
       <tr data-href="../pokedex/meowstic-f.html">
         <td><a href="../pokedex/meowstic-f.html">Meowstic<span class="species-form">(F)</span></a></td>
         <td>60</td>
-        <td><img src="../assets/game/graphics/pokemon/meowstic/f/anim_front.png" alt="Meowstic Level 60 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/meowstic/f/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/meowstic/f/anim_front.png" alt="Meowstic Level 60 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/meowstic/f/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/meowstic/f/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/meowstic/f/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -621,7 +638,7 @@
       <tr data-href="../pokedex/reuniclus.html">
         <td><a href="../pokedex/reuniclus.html">Reuniclus</a></td>
         <td>60</td>
-        <td><img src="../assets/game/graphics/pokemon/reuniclus/anim_front.png" alt="Reuniclus Level 60 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/reuniclus/anim_front.png" alt="Reuniclus Level 60 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/reuniclus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -636,7 +653,7 @@
       <tr data-href="../pokedex/duosion.html">
         <td><a href="../pokedex/duosion.html">Duosion</a></td>
         <td>60</td>
-        <td><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion Level 60 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion Level 60 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/duosion/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/duosion/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -666,7 +683,7 @@
       <tr data-href="../pokedex/malamar.html">
         <td><a href="../pokedex/malamar.html">Malamar</a></td>
         <td>64</td>
-        <td><img src="../assets/game/graphics/pokemon/malamar/anim_front.png" alt="Malamar Level 64 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/malamar/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/malamar/anim_front.png" alt="Malamar Level 64 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/malamar/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/malamar/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/malamar/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/dark.svg" alt="Dark type" class="type-icon"> <img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -681,7 +698,7 @@
       <tr data-href="../pokedex/musharna.html">
         <td><a href="../pokedex/musharna.html">Musharna</a></td>
         <td>64</td>
-        <td><img src="../assets/game/graphics/pokemon/musharna/anim_front.png" alt="Musharna Level 64 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/musharna/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/musharna/anim_front.png" alt="Musharna Level 64 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/musharna/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/musharna/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/musharna/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -696,7 +713,7 @@
       <tr data-href="../pokedex/meowstic.html">
         <td><a href="../pokedex/meowstic.html">Meowstic<span class="species-form">(M)</span></a></td>
         <td>65</td>
-        <td><img src="../assets/game/graphics/pokemon/meowstic/anim_front.png" alt="Meowstic Level 65 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/meowstic/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/meowstic/anim_front.png" alt="Meowstic Level 65 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/meowstic/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/meowstic/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/meowstic/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -711,7 +728,7 @@
       <tr data-href="../pokedex/meowstic-f.html">
         <td><a href="../pokedex/meowstic-f.html">Meowstic<span class="species-form">(F)</span></a></td>
         <td>65</td>
-        <td><img src="../assets/game/graphics/pokemon/meowstic/f/anim_front.png" alt="Meowstic Level 65 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/meowstic/f/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/meowstic/f/anim_front.png" alt="Meowstic Level 65 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/meowstic/f/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/meowstic/f/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/meowstic/f/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -726,7 +743,7 @@
       <tr data-href="../pokedex/reuniclus.html">
         <td><a href="../pokedex/reuniclus.html">Reuniclus</a></td>
         <td>66</td>
-        <td><img src="../assets/game/graphics/pokemon/reuniclus/anim_front.png" alt="Reuniclus Level 66 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/reuniclus/anim_front.png" alt="Reuniclus Level 66 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/reuniclus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/reuniclus/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -741,7 +758,7 @@
       <tr data-href="../pokedex/duosion.html">
         <td><a href="../pokedex/duosion.html">Duosion</a></td>
         <td>66</td>
-        <td><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion Level 66 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/duosion/anim_front.png" alt="Duosion Level 66 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/duosion/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/duosion/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/duosion/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/psychic.svg" alt="Psychic type" class="type-icon"></div>
@@ -937,7 +954,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -945,6 +962,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

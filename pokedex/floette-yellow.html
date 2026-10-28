@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -279,8 +296,8 @@
 <section class="card pokemon-hero-card">
   <div class="pokemon-hero">
     <div class="pokemon-hero-sprites">
-      <img src="../assets/game/graphics/pokemon/floette/yellow/anim_front.png" alt="Floette (Yellow Flower) front sprite" class="pokemon-hero-sprite">
-<img src="../assets/game/graphics/pokemon/floette/yellow/anim_front__shiny.png" alt="Floette (Yellow Flower) shiny front sprite" class="pokemon-hero-sprite">    </div>
+      <img src="../assets/game/graphics/pokemon/floette/yellow/anim_front.png" alt="Floette (Yellow Flower) front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/floette/yellow/anim_front__shiny.png">
+<img src="../assets/game/graphics/pokemon/floette/yellow/anim_front__shiny.png" alt="Floette (Yellow Flower) shiny front sprite" class="pokemon-hero-sprite" data-shiny="../assets/game/graphics/pokemon/floette/yellow/anim_front.png">    </div>
     <div>
       <p class="muted">Hoenn Dex #28</p>
       <p><strong>Floette (Yellow Flower)</strong></p>
@@ -299,7 +316,7 @@
     <p><strong>Catch Rate:</strong> 120</p>
     <p><strong>Overworld Behavior:</strong> Ignores Player</p>
     <p><strong>Autobattle Behavior:</strong> Copies Player</p>
-<p><strong>EV Yield:</strong> 2 Sp. Def</p><p><strong>Base Species:</strong>   <a href="floette.html" class="species-inline-link mon-card type-fairy"><img src="../assets/game/graphics/pokemon/floette/anim_front.png" alt="Floette (Red Flower)" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/floette/anim_front__hover.png"><span>Floette (Red Flower)</span>
+<p><strong>EV Yield:</strong> 2 Sp. Def</p><p><strong>Base Species:</strong>   <a href="floette.html" class="species-inline-link mon-card type-fairy"><img src="../assets/game/graphics/pokemon/floette/anim_front.png" alt="Floette (Red Flower)" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/floette/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/floette/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/floette/anim_front__shiny__hover.png"><span>Floette (Red Flower)</span>
   </a>
 </p>  </section>
   <section class="card">
@@ -352,10 +369,10 @@ Floette uses to protect itself.</p>
   <div class="card">
     <h2>Evolutions</h2>
     <ul>
-        <li>  <a href="flabebe-yellow.html" class="species-inline-link mon-card type-fairy"><img src="../assets/game/graphics/pokemon/flabebe/yellow/anim_front.png" alt="Flabébé (Yellow Flower)" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/flabebe/yellow/anim_front__hover.png"><span>Flabébé (Yellow Flower)</span>
+        <li>  <a href="flabebe-yellow.html" class="species-inline-link mon-card type-fairy"><img src="../assets/game/graphics/pokemon/flabebe/yellow/anim_front.png" alt="Flabébé (Yellow Flower)" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/flabebe/yellow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/flabebe/yellow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/flabebe/yellow/anim_front__shiny__hover.png"><span>Flabébé (Yellow Flower)</span>
   </a>
  → Level up: 19</li>
-        <li>Use <a href="../itemdex/shiny-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/shiny_stone.png" alt="" class="item-icon">Shiny Stone</a> →   <a href="florges-yellow.html" class="species-inline-link mon-card type-fairy"><img src="../assets/game/graphics/pokemon/florges/yellow/anim_front.png" alt="Florges (Yellow Flower)" class="species-inline-sprite" data-hover="../assets/game/graphics/pokemon/florges/yellow/anim_front__hover.png"><span>Florges (Yellow Flower)</span>
+        <li>Use <a href="../itemdex/shiny-stone.html" class="item-card"><img src="../assets/game/graphics/items/icons/shiny_stone.png" alt="" class="item-icon">Shiny Stone</a> →   <a href="florges-yellow.html" class="species-inline-link mon-card type-fairy"><img src="../assets/game/graphics/pokemon/florges/yellow/anim_front.png" alt="Florges (Yellow Flower)" class="species-inline-sprite" data-shiny="../assets/game/graphics/pokemon/florges/yellow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/florges/yellow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/florges/yellow/anim_front__shiny__hover.png"><span>Florges (Yellow Flower)</span>
   </a>
 </li>
     </ul>
@@ -363,13 +380,13 @@ Floette uses to protect itself.</p>
   <div class="card">
     <h2>Forms</h2>
     <ul class="form-list">
-        <li><a href="floette.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/floette/anim_front.png" alt="Floette (Red Flower)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/floette/anim_front__hover.png"><span>Floette (Red Flower)</span>
+        <li><a href="floette.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/floette/anim_front.png" alt="Floette (Red Flower)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/floette/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/floette/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/floette/anim_front__shiny__hover.png"><span>Floette (Red Flower)</span>
         </a></li>
-        <li><a href="floette-orange.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/floette/orange/anim_front.png" alt="Floette (Orange Flower)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/floette/orange/anim_front__hover.png"><span>Floette (Orange Flower)</span>
+        <li><a href="floette-orange.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/floette/orange/anim_front.png" alt="Floette (Orange Flower)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/floette/orange/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/floette/orange/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/floette/orange/anim_front__shiny__hover.png"><span>Floette (Orange Flower)</span>
         </a></li>
-        <li><a href="floette-blue.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/floette/blue/anim_front.png" alt="Floette (Blue Flower)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/floette/blue/anim_front__hover.png"><span>Floette (Blue Flower)</span>
+        <li><a href="floette-blue.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/floette/blue/anim_front.png" alt="Floette (Blue Flower)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/floette/blue/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/floette/blue/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/floette/blue/anim_front__shiny__hover.png"><span>Floette (Blue Flower)</span>
         </a></li>
-        <li><a href="floette-white.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/floette/white/anim_front.png" alt="Floette (White Flower)" class="form-sprite" data-hover="../assets/game/graphics/pokemon/floette/white/anim_front__hover.png"><span>Floette (White Flower)</span>
+        <li><a href="floette-white.html" class="form-entry mon-card type-fairy"><img src="../assets/game/graphics/pokemon/floette/white/anim_front.png" alt="Floette (White Flower)" class="form-sprite" data-shiny="../assets/game/graphics/pokemon/floette/white/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/floette/white/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/floette/white/anim_front__shiny__hover.png"><span>Floette (White Flower)</span>
         </a></li>
     </ul>
   </div>
@@ -599,7 +616,7 @@ Floette uses to protect itself.</p>
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -607,6 +624,7 @@ Floette uses to protect itself.</p>
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

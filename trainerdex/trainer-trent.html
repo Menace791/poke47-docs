@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -306,7 +323,7 @@
       <tr data-href="../pokedex/rockruff.html">
         <td><a href="../pokedex/rockruff.html">Rockruff</a></td>
         <td>16</td>
-        <td><img src="../assets/game/graphics/pokemon/rockruff/anim_front.png" alt="Rockruff Level 16 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/rockruff/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/rockruff/anim_front.png" alt="Rockruff Level 16 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/rockruff/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rockruff/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rockruff/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -321,7 +338,7 @@
       <tr data-href="../pokedex/roggenrola.html">
         <td><a href="../pokedex/roggenrola.html">Roggenrola</a></td>
         <td>17</td>
-        <td><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola Level 17 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola Level 17 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -336,7 +353,7 @@
       <tr data-href="../pokedex/roggenrola.html">
         <td><a href="../pokedex/roggenrola.html">Roggenrola</a></td>
         <td>16</td>
-        <td><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola Level 16 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola Level 16 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -366,7 +383,7 @@
       <tr data-href="../pokedex/rockruff.html">
         <td><a href="../pokedex/rockruff.html">Rockruff</a></td>
         <td>24</td>
-        <td><img src="../assets/game/graphics/pokemon/rockruff/anim_front.png" alt="Rockruff Level 24 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/rockruff/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/rockruff/anim_front.png" alt="Rockruff Level 24 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/rockruff/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rockruff/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rockruff/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -381,7 +398,7 @@
       <tr data-href="../pokedex/roggenrola.html">
         <td><a href="../pokedex/roggenrola.html">Roggenrola</a></td>
         <td>24</td>
-        <td><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola Level 24 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola Level 24 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -396,7 +413,7 @@
       <tr data-href="../pokedex/roggenrola.html">
         <td><a href="../pokedex/roggenrola.html">Roggenrola</a></td>
         <td>24</td>
-        <td><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola Level 24 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola Level 24 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -411,7 +428,7 @@
       <tr data-href="../pokedex/boldore.html">
         <td><a href="../pokedex/boldore.html">Boldore</a></td>
         <td>24</td>
-        <td><img src="../assets/game/graphics/pokemon/boldore/anim_front.png" alt="Boldore Level 24 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/boldore/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/boldore/anim_front.png" alt="Boldore Level 24 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/boldore/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/boldore/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/boldore/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -441,7 +458,7 @@
       <tr data-href="../pokedex/rockruff.html">
         <td><a href="../pokedex/rockruff.html">Rockruff</a></td>
         <td>27</td>
-        <td><img src="../assets/game/graphics/pokemon/rockruff/anim_front.png" alt="Rockruff Level 27 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/rockruff/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/rockruff/anim_front.png" alt="Rockruff Level 27 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/rockruff/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rockruff/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rockruff/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -456,7 +473,7 @@
       <tr data-href="../pokedex/roggenrola.html">
         <td><a href="../pokedex/roggenrola.html">Roggenrola</a></td>
         <td>27</td>
-        <td><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola Level 27 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola Level 27 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -471,7 +488,7 @@
       <tr data-href="../pokedex/roggenrola.html">
         <td><a href="../pokedex/roggenrola.html">Roggenrola</a></td>
         <td>27</td>
-        <td><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola Level 27 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola Level 27 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -486,7 +503,7 @@
       <tr data-href="../pokedex/boldore.html">
         <td><a href="../pokedex/boldore.html">Boldore</a></td>
         <td>27</td>
-        <td><img src="../assets/game/graphics/pokemon/boldore/anim_front.png" alt="Boldore Level 27 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/boldore/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/boldore/anim_front.png" alt="Boldore Level 27 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/boldore/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/boldore/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/boldore/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -516,7 +533,7 @@
       <tr data-href="../pokedex/rockruff.html">
         <td><a href="../pokedex/rockruff.html">Rockruff</a></td>
         <td>30</td>
-        <td><img src="../assets/game/graphics/pokemon/rockruff/anim_front.png" alt="Rockruff Level 30 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/rockruff/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/rockruff/anim_front.png" alt="Rockruff Level 30 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/rockruff/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rockruff/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rockruff/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -531,7 +548,7 @@
       <tr data-href="../pokedex/boldore.html">
         <td><a href="../pokedex/boldore.html">Boldore</a></td>
         <td>30</td>
-        <td><img src="../assets/game/graphics/pokemon/boldore/anim_front.png" alt="Boldore Level 30 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/boldore/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/boldore/anim_front.png" alt="Boldore Level 30 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/boldore/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/boldore/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/boldore/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -546,7 +563,7 @@
       <tr data-href="../pokedex/boldore.html">
         <td><a href="../pokedex/boldore.html">Boldore</a></td>
         <td>30</td>
-        <td><img src="../assets/game/graphics/pokemon/boldore/anim_front.png" alt="Boldore Level 30 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/boldore/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/boldore/anim_front.png" alt="Boldore Level 30 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/boldore/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/boldore/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/boldore/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -561,7 +578,7 @@
       <tr data-href="../pokedex/boldore.html">
         <td><a href="../pokedex/boldore.html">Boldore</a></td>
         <td>30</td>
-        <td><img src="../assets/game/graphics/pokemon/boldore/anim_front.png" alt="Boldore Level 30 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/boldore/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/boldore/anim_front.png" alt="Boldore Level 30 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/boldore/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/boldore/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/boldore/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -591,7 +608,7 @@
       <tr data-href="../pokedex/lycanroc-midnight.html">
         <td><a href="../pokedex/lycanroc-midnight.html">Lycanroc<span class="species-form">(Midnight)</span></a></td>
         <td>33</td>
-        <td><img src="../assets/game/graphics/pokemon/lycanroc/midnight/anim_front.png" alt="Lycanroc Level 33 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/lycanroc/midnight/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/lycanroc/midnight/anim_front.png" alt="Lycanroc Level 33 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/lycanroc/midnight/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/lycanroc/midnight/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/lycanroc/midnight/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -606,7 +623,7 @@
       <tr data-href="../pokedex/boldore.html">
         <td><a href="../pokedex/boldore.html">Boldore</a></td>
         <td>33</td>
-        <td><img src="../assets/game/graphics/pokemon/boldore/anim_front.png" alt="Boldore Level 33 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/boldore/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/boldore/anim_front.png" alt="Boldore Level 33 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/boldore/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/boldore/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/boldore/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -621,7 +638,7 @@
       <tr data-href="../pokedex/boldore.html">
         <td><a href="../pokedex/boldore.html">Boldore</a></td>
         <td>33</td>
-        <td><img src="../assets/game/graphics/pokemon/boldore/anim_front.png" alt="Boldore Level 33 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/boldore/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/boldore/anim_front.png" alt="Boldore Level 33 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/boldore/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/boldore/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/boldore/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -636,7 +653,7 @@
       <tr data-href="../pokedex/gigalith.html">
         <td><a href="../pokedex/gigalith.html">Gigalith</a></td>
         <td>33</td>
-        <td><img src="../assets/game/graphics/pokemon/gigalith/anim_front.png" alt="Gigalith Level 33 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/gigalith/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/gigalith/anim_front.png" alt="Gigalith Level 33 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/gigalith/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/gigalith/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/gigalith/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/rock.svg" alt="Rock type" class="type-icon"></div>
@@ -832,7 +849,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -840,6 +857,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>

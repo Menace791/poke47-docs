@@ -35,6 +35,23 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
+    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    window.obstagoonShinyView = {
+      get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
+      set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
+      toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
+    };
+    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
+    window.obstagoonApplyShiny = () => {
+      const shiny = obstagoonShinyView.get() === 'shiny';
+      document.documentElement.classList.toggle('shiny-on', shiny);
+      document.querySelectorAll('img[data-shiny]').forEach((img) => {
+        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
+        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
+        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
+        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
+      });
+    };
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -306,7 +323,7 @@
       <tr data-href="../pokedex/crabrawler.html">
         <td><a href="../pokedex/crabrawler.html">Crabrawler</a></td>
         <td>15</td>
-        <td><img src="../assets/game/graphics/pokemon/crabrawler/anim_front.png" alt="Crabrawler Level 15 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/crabrawler/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/crabrawler/anim_front.png" alt="Crabrawler Level 15 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/crabrawler/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/crabrawler/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/crabrawler/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -321,7 +338,7 @@
       <tr data-href="../pokedex/hawlucha.html">
         <td><a href="../pokedex/hawlucha.html">Hawlucha</a></td>
         <td>16</td>
-        <td><img src="../assets/game/graphics/pokemon/hawlucha/anim_front.png" alt="Hawlucha Level 16 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/hawlucha/anim_front.png" alt="Hawlucha Level 16 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/hawlucha/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -336,7 +353,7 @@
       <tr data-href="../pokedex/passimian.html">
         <td><a href="../pokedex/passimian.html">Passimian</a></td>
         <td>18</td>
-        <td><img src="../assets/game/graphics/pokemon/passimian/anim_front.png" alt="Passimian Level 18 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/passimian/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/passimian/anim_front.png" alt="Passimian Level 18 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/passimian/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/passimian/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/passimian/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -366,7 +383,7 @@
       <tr data-href="../pokedex/sawk.html">
         <td><a href="../pokedex/sawk.html">Sawk</a></td>
         <td>33</td>
-        <td><img src="../assets/game/graphics/pokemon/sawk/anim_front.png" alt="Sawk Level 33 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/sawk/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/sawk/anim_front.png" alt="Sawk Level 33 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/sawk/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sawk/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sawk/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -381,7 +398,7 @@
       <tr data-href="../pokedex/crabominable.html">
         <td><a href="../pokedex/crabominable.html">Crabominable</a></td>
         <td>36</td>
-        <td><img src="../assets/game/graphics/pokemon/crabominable/anim_front.png" alt="Crabominable Level 36 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/crabominable/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/crabominable/anim_front.png" alt="Crabominable Level 36 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/crabominable/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/crabominable/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/crabominable/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"> <img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -396,7 +413,7 @@
       <tr data-href="../pokedex/hawlucha.html">
         <td><a href="../pokedex/hawlucha.html">Hawlucha</a></td>
         <td>36</td>
-        <td><img src="../assets/game/graphics/pokemon/hawlucha/anim_front.png" alt="Hawlucha Level 36 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/hawlucha/anim_front.png" alt="Hawlucha Level 36 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/hawlucha/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -411,7 +428,7 @@
       <tr data-href="../pokedex/passimian.html">
         <td><a href="../pokedex/passimian.html">Passimian</a></td>
         <td>40</td>
-        <td><img src="../assets/game/graphics/pokemon/passimian/anim_front.png" alt="Passimian Level 40 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/passimian/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/passimian/anim_front.png" alt="Passimian Level 40 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/passimian/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/passimian/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/passimian/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -426,7 +443,7 @@
       <tr data-href="../pokedex/bewear.html">
         <td><a href="../pokedex/bewear.html">Bewear</a></td>
         <td>34</td>
-        <td><img src="../assets/game/graphics/pokemon/bewear/anim_front.png" alt="Bewear Level 34 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/bewear/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/bewear/anim_front.png" alt="Bewear Level 34 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/bewear/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/bewear/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/bewear/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"> <img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -456,7 +473,7 @@
       <tr data-href="../pokedex/chesnaught.html">
         <td><a href="../pokedex/chesnaught.html">Chesnaught</a></td>
         <td>45</td>
-        <td><img src="../assets/game/graphics/pokemon/chesnaught/anim_front.png" alt="Chesnaught Level 45 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/chesnaught/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/chesnaught/anim_front.png" alt="Chesnaught Level 45 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/chesnaught/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/chesnaught/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/chesnaught/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -471,7 +488,7 @@
       <tr data-href="../pokedex/sawk.html">
         <td><a href="../pokedex/sawk.html">Sawk</a></td>
         <td>45</td>
-        <td><img src="../assets/game/graphics/pokemon/sawk/anim_front.png" alt="Sawk Level 45 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/sawk/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/sawk/anim_front.png" alt="Sawk Level 45 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/sawk/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sawk/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sawk/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -486,7 +503,7 @@
       <tr data-href="../pokedex/hawlucha.html">
         <td><a href="../pokedex/hawlucha.html">Hawlucha</a></td>
         <td>44</td>
-        <td><img src="../assets/game/graphics/pokemon/hawlucha/anim_front.png" alt="Hawlucha Level 44 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/hawlucha/anim_front.png" alt="Hawlucha Level 44 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/hawlucha/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -501,7 +518,7 @@
       <tr data-href="../pokedex/crabominable.html">
         <td><a href="../pokedex/crabominable.html">Crabominable</a></td>
         <td>44</td>
-        <td><img src="../assets/game/graphics/pokemon/crabominable/anim_front.png" alt="Crabominable Level 44 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/crabominable/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/crabominable/anim_front.png" alt="Crabominable Level 44 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/crabominable/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/crabominable/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/crabominable/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"> <img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -516,7 +533,7 @@
       <tr data-href="../pokedex/passimian.html">
         <td><a href="../pokedex/passimian.html">Passimian</a></td>
         <td>48</td>
-        <td><img src="../assets/game/graphics/pokemon/passimian/anim_front.png" alt="Passimian Level 48 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/passimian/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/passimian/anim_front.png" alt="Passimian Level 48 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/passimian/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/passimian/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/passimian/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -531,7 +548,7 @@
       <tr data-href="../pokedex/bewear.html">
         <td><a href="../pokedex/bewear.html">Bewear</a></td>
         <td>45</td>
-        <td><img src="../assets/game/graphics/pokemon/bewear/anim_front.png" alt="Bewear Level 45 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/bewear/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/bewear/anim_front.png" alt="Bewear Level 45 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/bewear/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/bewear/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/bewear/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"> <img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -561,7 +578,7 @@
       <tr data-href="../pokedex/chesnaught.html">
         <td><a href="../pokedex/chesnaught.html">Chesnaught</a></td>
         <td>54</td>
-        <td><img src="../assets/game/graphics/pokemon/chesnaught/anim_front.png" alt="Chesnaught Level 54 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/chesnaught/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/chesnaught/anim_front.png" alt="Chesnaught Level 54 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/chesnaught/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/chesnaught/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/chesnaught/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -576,7 +593,7 @@
       <tr data-href="../pokedex/pyukumuku.html">
         <td><a href="../pokedex/pyukumuku.html">Pyukumuku</a></td>
         <td>53</td>
-        <td><img src="../assets/game/graphics/pokemon/pyukumuku/anim_front.png" alt="Pyukumuku Level 53 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/pyukumuku/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/pyukumuku/anim_front.png" alt="Pyukumuku Level 53 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/pyukumuku/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pyukumuku/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pyukumuku/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
@@ -591,7 +608,7 @@
       <tr data-href="../pokedex/hawlucha.html">
         <td><a href="../pokedex/hawlucha.html">Hawlucha</a></td>
         <td>53</td>
-        <td><img src="../assets/game/graphics/pokemon/hawlucha/anim_front.png" alt="Hawlucha Level 53 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/hawlucha/anim_front.png" alt="Hawlucha Level 53 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/hawlucha/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -606,7 +623,7 @@
       <tr data-href="../pokedex/crabominable.html">
         <td><a href="../pokedex/crabominable.html">Crabominable</a></td>
         <td>55</td>
-        <td><img src="../assets/game/graphics/pokemon/crabominable/anim_front.png" alt="Crabominable Level 55 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/crabominable/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/crabominable/anim_front.png" alt="Crabominable Level 55 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/crabominable/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/crabominable/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/crabominable/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"> <img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -621,7 +638,7 @@
       <tr data-href="../pokedex/passimian.html">
         <td><a href="../pokedex/passimian.html">Passimian</a></td>
         <td>55</td>
-        <td><img src="../assets/game/graphics/pokemon/passimian/anim_front.png" alt="Passimian Level 55 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/passimian/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/passimian/anim_front.png" alt="Passimian Level 55 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/passimian/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/passimian/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/passimian/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -636,7 +653,7 @@
       <tr data-href="../pokedex/bewear.html">
         <td><a href="../pokedex/bewear.html">Bewear</a></td>
         <td>55</td>
-        <td><img src="../assets/game/graphics/pokemon/bewear/anim_front.png" alt="Bewear Level 55 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/bewear/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/bewear/anim_front.png" alt="Bewear Level 55 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/bewear/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/bewear/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/bewear/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"> <img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -666,7 +683,7 @@
       <tr data-href="../pokedex/chesnaught.html">
         <td><a href="../pokedex/chesnaught.html">Chesnaught</a></td>
         <td>64</td>
-        <td><img src="../assets/game/graphics/pokemon/chesnaught/anim_front.png" alt="Chesnaught Level 64 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/chesnaught/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/chesnaught/anim_front.png" alt="Chesnaught Level 64 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/chesnaught/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/chesnaught/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/chesnaught/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/grass.svg" alt="Grass type" class="type-icon"> <img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -681,7 +698,7 @@
       <tr data-href="../pokedex/pyukumuku.html">
         <td><a href="../pokedex/pyukumuku.html">Pyukumuku</a></td>
         <td>63</td>
-        <td><img src="../assets/game/graphics/pokemon/pyukumuku/anim_front.png" alt="Pyukumuku Level 63 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/pyukumuku/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/pyukumuku/anim_front.png" alt="Pyukumuku Level 63 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/pyukumuku/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pyukumuku/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pyukumuku/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/water.svg" alt="Water type" class="type-icon"></div>
@@ -696,7 +713,7 @@
       <tr data-href="../pokedex/hawlucha.html">
         <td><a href="../pokedex/hawlucha.html">Hawlucha</a></td>
         <td>63</td>
-        <td><img src="../assets/game/graphics/pokemon/hawlucha/anim_front.png" alt="Hawlucha Level 63 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/hawlucha/anim_front.png" alt="Hawlucha Level 63 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/hawlucha/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/hawlucha/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"> <img src="../assets/generated/types/flying.svg" alt="Flying type" class="type-icon"></div>
@@ -711,7 +728,7 @@
       <tr data-href="../pokedex/crabominable.html">
         <td><a href="../pokedex/crabominable.html">Crabominable</a></td>
         <td>66</td>
-        <td><img src="../assets/game/graphics/pokemon/crabominable/anim_front.png" alt="Crabominable Level 66 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/crabominable/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/crabominable/anim_front.png" alt="Crabominable Level 66 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/crabominable/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/crabominable/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/crabominable/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"> <img src="../assets/generated/types/ice.svg" alt="Ice type" class="type-icon"></div>
@@ -726,7 +743,7 @@
       <tr data-href="../pokedex/passimian.html">
         <td><a href="../pokedex/passimian.html">Passimian</a></td>
         <td>64</td>
-        <td><img src="../assets/game/graphics/pokemon/passimian/anim_front.png" alt="Passimian Level 64 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/passimian/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/passimian/anim_front.png" alt="Passimian Level 64 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/passimian/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/passimian/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/passimian/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -741,7 +758,7 @@
       <tr data-href="../pokedex/bewear.html">
         <td><a href="../pokedex/bewear.html">Bewear</a></td>
         <td>65</td>
-        <td><img src="../assets/game/graphics/pokemon/bewear/anim_front.png" alt="Bewear Level 65 sprite" class="trainer-mon-sprite" data-hover="../assets/game/graphics/pokemon/bewear/anim_front__hover.png"></td>
+        <td><img src="../assets/game/graphics/pokemon/bewear/anim_front.png" alt="Bewear Level 65 sprite" class="trainer-mon-sprite" data-shiny="../assets/game/graphics/pokemon/bewear/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/bewear/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/bewear/anim_front__shiny__hover.png"></td>
         <td>
             <div class="trainer-type-stack">
               <div class="trainer-types-row"><img src="../assets/generated/types/normal.svg" alt="Normal type" class="type-icon"> <img src="../assets/generated/types/fighting.svg" alt="Fighting type" class="type-icon"></div>
@@ -937,7 +954,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -945,6 +962,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
+      obstagoonApplyShiny();
     }
   </script>
 </body>
