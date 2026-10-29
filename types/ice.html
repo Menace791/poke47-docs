@@ -7,7 +7,8 @@
   <meta property="og:description" content="Expansion-native documentation for Poké47.">
   <meta property="og:image" content="https://menace791.github.io/poke47-docs/assets/og-image.gif">
   <meta property="og:type" content="website">
-  <meta name="twitter:card" content="summary_large_image">  <link rel="stylesheet" href="../assets/style.css">
+  <meta name="twitter:card" content="summary_large_image">  <script>try{var r=document.documentElement;if(sessionStorage.getItem('obstagoon:dexview')==='all')r.classList.add('dex-all');if(sessionStorage.getItem('obstagoon:shinyview')==='shiny')r.classList.add('shiny-on');}catch(e){}</script>
+  <link rel="stylesheet" href="../assets/style.css">
   <script>
     // Casefold + diacritic-strip + non-alphanumeric strip so "basculinwhitestriped" matches "Basculin (White-Striped)".
     window.obstagoonNormalize = (s) => (s || '').toLowerCase()
@@ -35,23 +36,13 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
-    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    // Site-wide shiny sprite preference; the "Shiny" link in the Level Cap description toggles it.
     window.obstagoonShinyView = {
       get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
       set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
       toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
     };
-    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
-    window.obstagoonApplyShiny = () => {
-      const shiny = obstagoonShinyView.get() === 'shiny';
-      document.documentElement.classList.toggle('shiny-on', shiny);
-      document.querySelectorAll('img[data-shiny]').forEach((img) => {
-        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
-        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
-        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
-        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
-      });
-    };
+    window.obstagoonApplyShiny = () => document.documentElement.classList.toggle('shiny-on', obstagoonShinyView.get() === 'shiny');
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -59,6 +50,7 @@
       const countEl = opts.countId ? document.getElementById(opts.countId) : null;
       let currentView = obstagoonDexView.get(opts.default || 'hoenn');
       const apply = () => {
+        document.documentElement.classList.toggle('dex-all', currentView === 'all');
         let count = 0;
         sections.forEach((el) => {
           const show = currentView === 'all' || !!el.dataset.hoennDex;
@@ -93,7 +85,7 @@
         .map((c) => c.kind ? c : {kind: defaultKind || 'Pokémon', name: c.name});
       if (saved.search) input.value = saved.search;
       let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
-      let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
+      let activeDir = ['asc', 'desc'].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
       const view = opts.view || null;
       let currentView = view ? obstagoonDexView.get(view.default) : null;
       const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -102,10 +94,7 @@
         ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
       });
       const applyView = () => {
-        if (!view) return;
-        rows.forEach((el) => { el.cells[view.numberCol].textContent = (currentView === 'hoenn' ? el.dataset.hoennDex : el.dataset.natDex) || ''; });
-        const header = view.headerId ? document.getElementById(view.headerId) : null;
-        if (header) header.textContent = view.labels[currentView];
+        if (view) document.documentElement.classList.toggle('dex-all', currentView === 'all');
       };
 
       const formCellTargets = ['spriteHtml', 'nameHtml', 'typesHtml', 'abilitiesHtml'];
@@ -230,6 +219,10 @@
         const headers = Array.from(document.querySelectorAll(opts.tableSelector + ' thead th'));
         const original = Array.from(tbody.querySelectorAll('tr'));
         const cellValue = (tr, i, kind) => {
+          if (kind === 'number' && view && i === view.numberCol) {
+            const n = parseFloat((currentView === 'hoenn' ? tr.dataset.hoennDex : tr.dataset.natDex) || '');
+            return isNaN(n) ? -Infinity : n;
+          }
           const text = tr.cells[i].textContent.trim();
           if (kind === 'number') { const n = parseFloat(text); return isNaN(n) ? -Infinity : n; }
           return text.toLowerCase();
@@ -251,8 +244,8 @@
           if (!th.dataset.sort) return;
           th.classList.add('sortable');
           th.addEventListener('click', () => {
-            activeDir = i !== activeCol ? 'asc' : activeDir === 'asc' ? 'desc' : activeDir === 'desc' ? '' : 'asc';
-            activeCol = activeDir ? i : -1;
+            activeDir = i === activeCol && activeDir === 'asc' ? 'desc' : 'asc';
+            activeCol = i;
             applySort();
             persist();
           });
@@ -296,7 +289,7 @@
 
 <section class="card">
   <div class="pokedex-header">
-    <h2>Pokémon <span class="muted small-text" id="type-species-count">21</span></h2>
+    <h2>Pokémon <span class="muted small-text" id="type-species-count"><span class="dex-h">21</span><span class="dex-n">39</span></span></h2>
 <div class="dex-view-toggle">
   <span class="dex-view-label">Hoenn Dex</span>
   <label class="dex-toggle-switch">
@@ -314,14 +307,14 @@
   <div id="type-species-chips" class="filter-chips"></div>
   <div class="table-scroll">
   <table id="type-species-table" class="sortable-table">
-    <thead><tr><th data-sort="number" id="type-dex-header">Hoenn Dex #</th><th>Sprite</th><th data-sort="text">Name</th><th data-sort="text">Types</th><th>Abilities</th></tr></thead>
+    <thead><tr><th data-sort="number" id="type-dex-header" class="sortable sort-asc"><span class="dex-h">Hoenn Dex #</span><span class="dex-n">National Dex #</span></th><th>Sprite</th><th data-sort="text" class="sortable">Name</th><th data-sort="text" class="sortable">Types</th><th>Abilities</th></tr></thead>
     <tbody>
       <tr data-search-text="119 740 Crabominable"
           data-hoenn-dex="119"
           data-nat-dex="740"
           data-href="../pokedex/crabominable.html">
-        <td>119</td>
-        <td><img src="../assets/game/graphics/pokemon/crabominable/anim_front.png" alt="Crabominable front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/crabominable/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/crabominable/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/crabominable/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">119</span><span class="dex-n">740</span></td>
+        <td><span role="img" aria-label="Crabominable front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/crabominable/anim_front.png');--s:url('../assets/game/graphics/pokemon/crabominable/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/crabominable/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/crabominable/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/crabominable.html">Crabominable</a></td>
         <td><span class="type-badge type-fighting">Fighting</span> <span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/double-wallop.html">Double Whammy</a>, <a href="../abilities/iron-fist.html">Iron Fist</a>, <a href="../abilities/unseen-fist.html">Unseen Fist</a></td>
@@ -330,8 +323,8 @@
           data-hoenn-dex="132"
           data-nat-dex="459"
           data-href="../pokedex/snover.html">
-        <td>132</td>
-        <td><img src="../assets/game/graphics/pokemon/snover/anim_front.png" alt="Snover front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/snover/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/snover/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/snover/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">132</span><span class="dex-n">459</span></td>
+        <td><span role="img" aria-label="Snover front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/snover/anim_front.png');--s:url('../assets/game/graphics/pokemon/snover/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/snover/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/snover/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/snover.html">Snover</a></td>
         <td><span class="type-badge type-grass">Grass</span> <span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/snow-warning.html">Snow Warning</a>, <a href="../abilities/soundproof.html">Soundproof</a></td>
@@ -340,8 +333,8 @@
           data-hoenn-dex="133"
           data-nat-dex="460"
           data-href="../pokedex/abomasnow.html">
-        <td>133</td>
-        <td><img src="../assets/game/graphics/pokemon/abomasnow/anim_front.png" alt="Abomasnow front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/abomasnow/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/abomasnow/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/abomasnow/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">133</span><span class="dex-n">460</span></td>
+        <td><span role="img" aria-label="Abomasnow front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/abomasnow/anim_front.png');--s:url('../assets/game/graphics/pokemon/abomasnow/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/abomasnow/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/abomasnow/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/abomasnow.html">Abomasnow</a></td>
         <td><span class="type-badge type-grass">Grass</span> <span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/snow-warning.html">Snow Warning</a>, <a href="../abilities/soundproof.html">Soundproof</a></td>
@@ -350,8 +343,8 @@
           data-hoenn-dex="134"
           data-nat-dex="613"
           data-href="../pokedex/cubchoo.html">
-        <td>134</td>
-        <td><img src="../assets/game/graphics/pokemon/cubchoo/anim_front.png" alt="Cubchoo front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/cubchoo/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/cubchoo/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/cubchoo/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">134</span><span class="dex-n">613</span></td>
+        <td><span role="img" aria-label="Cubchoo front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/cubchoo/anim_front.png');--s:url('../assets/game/graphics/pokemon/cubchoo/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/cubchoo/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/cubchoo/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/cubchoo.html">Cubchoo</a></td>
         <td><span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/slush-rush.html">Slush Rush</a>, <a href="../abilities/snow-cloak.html">Snow Cloak</a>, <a href="../abilities/rattled.html">Rattled</a></td>
@@ -360,8 +353,8 @@
           data-hoenn-dex="135"
           data-nat-dex="614"
           data-href="../pokedex/beartic.html">
-        <td>135</td>
-        <td><img src="../assets/game/graphics/pokemon/beartic/anim_front.png" alt="Beartic front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/beartic/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/beartic/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/beartic/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">135</span><span class="dex-n">614</span></td>
+        <td><span role="img" aria-label="Beartic front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/beartic/anim_front.png');--s:url('../assets/game/graphics/pokemon/beartic/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/beartic/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/beartic/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/beartic.html">Beartic</a></td>
         <td><span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/slush-rush.html">Slush Rush</a>, <a href="../abilities/swift-swim.html">Swift Swim</a>, <a href="../abilities/rattled.html">Rattled</a></td>
@@ -370,8 +363,8 @@
           data-hoenn-dex="138"
           data-nat-dex="554"
           data-href="../pokedex/darumaka-galar.html">
-        <td>138</td>
-        <td><img src="../assets/game/graphics/pokemon/darumaka/galar/front.png" alt="Darumaka (Galarian) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/darumaka/galar/front__shiny.png"></td>
+        <td><span class="dex-h">138</span><span class="dex-n">554</span></td>
+        <td><span role="img" aria-label="Darumaka (Galarian) front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/darumaka/galar/front.png');--s:url('../assets/game/graphics/pokemon/darumaka/galar/front__shiny.png')"></span></td>
         <td><a href="../pokedex/darumaka-galar.html">Darumaka<span class="species-form">(Galarian)</span></a></td>
         <td><span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/hustle.html">Hustle</a>, <a href="../abilities/inner-focus.html">Inner Focus</a></td>
@@ -380,8 +373,8 @@
           data-hoenn-dex="139"
           data-nat-dex="555"
           data-href="../pokedex/darmanitan-galar.html">
-        <td>139</td>
-        <td><img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="Darmanitan (Galarian) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/darmanitan/galar_standard/front__shiny.png"></td>
+        <td><span class="dex-h">139</span><span class="dex-n">555</span></td>
+        <td><span role="img" aria-label="Darmanitan (Galarian) front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png');--s:url('../assets/game/graphics/pokemon/darmanitan/galar_standard/front__shiny.png')"></span></td>
         <td><a href="../pokedex/darmanitan-galar.html">Darmanitan<span class="species-form">(Galarian)</span></a></td>
         <td><span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/gorilla-tactics.html">Gorilla Tactics</a>, <a href="../abilities/zen-mode.html">Zen Mode</a></td>
@@ -390,8 +383,8 @@
           data-hoenn-dex="203"
           data-nat-dex="698"
           data-href="../pokedex/amaura.html">
-        <td>203</td>
-        <td><img src="../assets/game/graphics/pokemon/amaura/anim_front.png" alt="Amaura front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/amaura/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/amaura/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/amaura/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">203</span><span class="dex-n">698</span></td>
+        <td><span role="img" aria-label="Amaura front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/amaura/anim_front.png');--s:url('../assets/game/graphics/pokemon/amaura/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/amaura/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/amaura/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/amaura.html">Amaura</a></td>
         <td><span class="type-badge type-ice">Ice</span> <span class="type-badge type-dragon">Dragon</span></td>
         <td><a href="../abilities/prism-armor.html">Prism Armor</a>, <a href="../abilities/good-as-gold.html">Good as Gold</a>, <a href="../abilities/snow-warning.html">Snow Warning</a></td>
@@ -400,8 +393,8 @@
           data-hoenn-dex="204"
           data-nat-dex="699"
           data-href="../pokedex/aurorus.html">
-        <td>204</td>
-        <td><img src="../assets/game/graphics/pokemon/aurorus/anim_front.png" alt="Aurorus front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/aurorus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/aurorus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/aurorus/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">204</span><span class="dex-n">699</span></td>
+        <td><span role="img" aria-label="Aurorus front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/aurorus/anim_front.png');--s:url('../assets/game/graphics/pokemon/aurorus/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/aurorus/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/aurorus/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/aurorus.html">Aurorus</a></td>
         <td><span class="type-badge type-ice">Ice</span> <span class="type-badge type-dragon">Dragon</span></td>
         <td><a href="../abilities/prism-armor.html">Prism Armor</a>, <a href="../abilities/good-as-gold.html">Good as Gold</a>, <a href="../abilities/snow-warning.html">Snow Warning</a></td>
@@ -410,8 +403,8 @@
           data-hoenn-dex="222"
           data-nat-dex="479"
           data-href="../pokedex/rotom-frost.html">
-        <td>222</td>
-        <td><img src="../assets/game/graphics/pokemon/rotom/frost/anim_front.png" alt="Rotom (Frost) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/rotom/frost/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/rotom/frost/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/rotom/frost/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">222</span><span class="dex-n">479</span></td>
+        <td><span role="img" aria-label="Rotom (Frost) front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/rotom/frost/anim_front.png');--s:url('../assets/game/graphics/pokemon/rotom/frost/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/rotom/frost/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/rotom/frost/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/rotom-frost.html">Rotom<span class="species-form">(Frost)</span></a></td>
         <td><span class="type-badge type-electric">Electric</span> <span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/levitate.html">Levitate</a></td>
@@ -420,8 +413,8 @@
           data-hoenn-dex="225"
           data-nat-dex="712"
           data-href="../pokedex/bergmite.html">
-        <td>225</td>
-        <td><img src="../assets/game/graphics/pokemon/bergmite/anim_front.png" alt="Bergmite front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/bergmite/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/bergmite/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/bergmite/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">225</span><span class="dex-n">712</span></td>
+        <td><span role="img" aria-label="Bergmite front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/bergmite/anim_front.png');--s:url('../assets/game/graphics/pokemon/bergmite/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/bergmite/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/bergmite/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/bergmite.html">Bergmite</a></td>
         <td><span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/own-tempo.html">Own Tempo</a>, <a href="../abilities/ice-body.html">Ice Body</a>, <a href="../abilities/sturdy.html">Sturdy</a></td>
@@ -430,8 +423,8 @@
           data-hoenn-dex="226"
           data-nat-dex="713"
           data-href="../pokedex/avalugg.html">
-        <td>226</td>
-        <td><img src="../assets/game/graphics/pokemon/avalugg/anim_front.png" alt="Avalugg front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/avalugg/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/avalugg/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/avalugg/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">226</span><span class="dex-n">713</span></td>
+        <td><span role="img" aria-label="Avalugg front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/avalugg/anim_front.png');--s:url('../assets/game/graphics/pokemon/avalugg/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/avalugg/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/avalugg/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/avalugg.html">Avalugg</a></td>
         <td><span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/own-tempo.html">Own Tempo</a>, <a href="../abilities/ice-body.html">Ice Body</a>, <a href="../abilities/sturdy.html">Sturdy</a></td>
@@ -440,8 +433,8 @@
           data-hoenn-dex="234"
           data-nat-dex="585"
           data-href="../pokedex/deerling-winter.html">
-        <td>234</td>
-        <td><img src="../assets/game/graphics/pokemon/deerling/winter/anim_front.png" alt="Deerling (Winter) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/deerling/winter/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/deerling/winter/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/deerling/winter/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">234</span><span class="dex-n">585</span></td>
+        <td><span role="img" aria-label="Deerling (Winter) front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/deerling/winter/anim_front.png');--s:url('../assets/game/graphics/pokemon/deerling/winter/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/deerling/winter/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/deerling/winter/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/deerling-winter.html">Deerling<span class="species-form">(Winter)</span></a></td>
         <td><span class="type-badge type-ice">Ice</span> <span class="type-badge type-grass">Grass</span></td>
         <td><a href="../abilities/forecast.html">Forecast</a>, <a href="../abilities/chlorophyll.html">Chlorophyll</a></td>
@@ -450,8 +443,8 @@
           data-hoenn-dex="235"
           data-nat-dex="586"
           data-href="../pokedex/sawsbuck-winter.html">
-        <td>235</td>
-        <td><img src="../assets/game/graphics/pokemon/sawsbuck/winter/anim_front.png" alt="Sawsbuck (Winter) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/sawsbuck/winter/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sawsbuck/winter/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sawsbuck/winter/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">235</span><span class="dex-n">586</span></td>
+        <td><span role="img" aria-label="Sawsbuck (Winter) front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/sawsbuck/winter/anim_front.png');--s:url('../assets/game/graphics/pokemon/sawsbuck/winter/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/sawsbuck/winter/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/sawsbuck/winter/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/sawsbuck-winter.html">Sawsbuck<span class="species-form">(Winter)</span></a></td>
         <td><span class="type-badge type-ice">Ice</span> <span class="type-badge type-grass">Grass</span></td>
         <td><a href="../abilities/forecast.html">Forecast</a>, <a href="../abilities/chlorophyll.html">Chlorophyll</a></td>
@@ -460,8 +453,8 @@
           data-hoenn-dex="262"
           data-nat-dex="676"
           data-href="../pokedex/furfrou-la-reine.html">
-        <td>262</td>
-        <td><img src="../assets/game/graphics/pokemon/furfrou/la_reine/anim_front.png" alt="Furfrou (La Reine Trim) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/furfrou/la_reine/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/furfrou/la_reine/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/furfrou/la_reine/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">262</span><span class="dex-n">676</span></td>
+        <td><span role="img" aria-label="Furfrou (La Reine Trim) front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/furfrou/la_reine/anim_front.png');--s:url('../assets/game/graphics/pokemon/furfrou/la_reine/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/furfrou/la_reine/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/furfrou/la_reine/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/furfrou-la-reine.html">Furfrou<span class="species-form">(La Reine Trim)</span></a></td>
         <td><span class="type-badge type-ice">Ice</span> <span class="type-badge type-normal">Normal</span></td>
         <td><a href="../abilities/queenly-majesty.html">Queenly Majesty</a>, <a href="../abilities/fur-coat.html">Fur Coat</a></td>
@@ -470,8 +463,8 @@
           data-hoenn-dex="283"
           data-nat-dex="582"
           data-href="../pokedex/vanillite.html">
-        <td>283</td>
-        <td><img src="../assets/game/graphics/pokemon/vanillite/anim_front.png" alt="Vanillite front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/vanillite/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vanillite/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vanillite/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">283</span><span class="dex-n">582</span></td>
+        <td><span role="img" aria-label="Vanillite front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/vanillite/anim_front.png');--s:url('../assets/game/graphics/pokemon/vanillite/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/vanillite/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/vanillite/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/vanillite.html">Vanillite</a></td>
         <td><span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/ice-body.html">Ice Body</a>, <a href="../abilities/snow-cloak.html">Snow Cloak</a>, <a href="../abilities/weak-armor.html">Weak Armor</a></td>
@@ -480,8 +473,8 @@
           data-hoenn-dex="284"
           data-nat-dex="583"
           data-href="../pokedex/vanillish.html">
-        <td>284</td>
-        <td><img src="../assets/game/graphics/pokemon/vanillish/anim_front.png" alt="Vanillish front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/vanillish/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vanillish/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vanillish/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">284</span><span class="dex-n">583</span></td>
+        <td><span role="img" aria-label="Vanillish front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/vanillish/anim_front.png');--s:url('../assets/game/graphics/pokemon/vanillish/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/vanillish/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/vanillish/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/vanillish.html">Vanillish</a></td>
         <td><span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/ice-body.html">Ice Body</a>, <a href="../abilities/snow-cloak.html">Snow Cloak</a>, <a href="../abilities/weak-armor.html">Weak Armor</a></td>
@@ -490,8 +483,8 @@
           data-hoenn-dex="285"
           data-nat-dex="584"
           data-href="../pokedex/vanilluxe.html">
-        <td>285</td>
-        <td><img src="../assets/game/graphics/pokemon/vanilluxe/anim_front.png" alt="Vanilluxe front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/vanilluxe/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vanilluxe/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vanilluxe/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">285</span><span class="dex-n">584</span></td>
+        <td><span role="img" aria-label="Vanilluxe front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/vanilluxe/anim_front.png');--s:url('../assets/game/graphics/pokemon/vanilluxe/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/vanilluxe/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/vanilluxe/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/vanilluxe.html">Vanilluxe</a></td>
         <td><span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/ice-body.html">Ice Body</a>, <a href="../abilities/snow-warning.html">Snow Warning</a>, <a href="../abilities/weak-armor.html">Weak Armor</a></td>
@@ -500,8 +493,8 @@
           data-hoenn-dex="286"
           data-nat-dex="615"
           data-href="../pokedex/cryogonal.html">
-        <td>286</td>
-        <td><img src="../assets/game/graphics/pokemon/cryogonal/anim_front.png" alt="Cryogonal front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/cryogonal/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/cryogonal/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/cryogonal/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">286</span><span class="dex-n">615</span></td>
+        <td><span role="img" aria-label="Cryogonal front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/cryogonal/anim_front.png');--s:url('../assets/game/graphics/pokemon/cryogonal/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/cryogonal/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/cryogonal/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/cryogonal.html">Cryogonal</a></td>
         <td><span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/ice-scales.html">Ice Scales</a>, <a href="../abilities/magic-bounce.html">Magic Bounce</a>, <a href="../abilities/levitate.html">Levitate</a></td>
@@ -510,8 +503,8 @@
           data-hoenn-dex="291"
           data-nat-dex="773"
           data-href="../pokedex/silvally-ice.html">
-        <td>291</td>
-        <td><img src="../assets/game/graphics/pokemon/silvally/ice/anim_front.png" alt="Silvally (Type: Ice) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/silvally/ice/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/ice/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/ice/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">291</span><span class="dex-n">773</span></td>
+        <td><span role="img" aria-label="Silvally (Type: Ice) front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/silvally/ice/anim_front.png');--s:url('../assets/game/graphics/pokemon/silvally/ice/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/silvally/ice/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/silvally/ice/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/silvally-ice.html">Silvally<span class="species-form">(Type: Ice)</span></a></td>
         <td><span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/multitype.html">Multitype</a></td>
@@ -520,8 +513,8 @@
           data-hoenn-dex="352"
           data-nat-dex="646"
           data-href="../pokedex/kyurem.html">
-        <td>352</td>
-        <td><img src="../assets/game/graphics/pokemon/kyurem/anim_front.png" alt="Kyurem front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/kyurem/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/kyurem/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/kyurem/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">352</span><span class="dex-n">646</span></td>
+        <td><span role="img" aria-label="Kyurem front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/kyurem/anim_front.png');--s:url('../assets/game/graphics/pokemon/kyurem/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/kyurem/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/kyurem/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/kyurem.html">Kyurem</a></td>
         <td><span class="type-badge type-dragon">Dragon</span> <span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/whiteout.html">Whiteout</a>, <a href="../abilities/pressure.html">Pressure</a></td>
@@ -530,8 +523,8 @@
           data-hoenn-dex=""
           data-nat-dex="27"
           data-href="../pokedex/sandshrew-alola.html">
-        <td>27</td>
-        <td><img src="../assets/game/graphics/pokemon/sandshrew/alola/anim_front.png" alt="Sandshrew (Alolan) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/sandshrew/alola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sandshrew/alola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sandshrew/alola/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">27</span></td>
+        <td><span role="img" aria-label="Sandshrew (Alolan) front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/sandshrew/alola/anim_front.png');--s:url('../assets/game/graphics/pokemon/sandshrew/alola/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/sandshrew/alola/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/sandshrew/alola/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/sandshrew-alola.html">Sandshrew<span class="species-form">(Alolan)</span></a></td>
         <td><span class="type-badge type-ice">Ice</span> <span class="type-badge type-steel">Steel</span></td>
         <td><a href="../abilities/slush-rush.html">Slush Rush</a>, <a href="../abilities/filter.html">Filter</a>, <a href="../abilities/mirror-armor.html">Mirror Armor</a></td>
@@ -540,8 +533,8 @@
           data-hoenn-dex=""
           data-nat-dex="28"
           data-href="../pokedex/sandslash-alola.html">
-        <td>28</td>
-        <td><img src="../assets/game/graphics/pokemon/sandslash/alola/anim_front.png" alt="Sandslash (Alolan) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/sandslash/alola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sandslash/alola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sandslash/alola/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">28</span></td>
+        <td><span role="img" aria-label="Sandslash (Alolan) front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/sandslash/alola/anim_front.png');--s:url('../assets/game/graphics/pokemon/sandslash/alola/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/sandslash/alola/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/sandslash/alola/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/sandslash-alola.html">Sandslash<span class="species-form">(Alolan)</span></a></td>
         <td><span class="type-badge type-ice">Ice</span> <span class="type-badge type-steel">Steel</span></td>
         <td><a href="../abilities/slush-rush.html">Slush Rush</a>, <a href="../abilities/filter.html">Filter</a>, <a href="../abilities/sand-rush.html">Sand Rush</a></td>
@@ -550,8 +543,8 @@
           data-hoenn-dex=""
           data-nat-dex="37"
           data-href="../pokedex/vulpix-alola.html">
-        <td>37</td>
-        <td><img src="../assets/game/graphics/pokemon/vulpix/alola/anim_front.png" alt="Vulpix (Alolan) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/vulpix/alola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vulpix/alola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vulpix/alola/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">37</span></td>
+        <td><span role="img" aria-label="Vulpix (Alolan) front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/vulpix/alola/anim_front.png');--s:url('../assets/game/graphics/pokemon/vulpix/alola/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/vulpix/alola/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/vulpix/alola/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/vulpix-alola.html">Vulpix<span class="species-form">(Alolan)</span></a></td>
         <td><span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/snow-cloak.html">Snow Cloak</a>, <a href="../abilities/wonder-skin.html">Wonder Skin</a>, <a href="../abilities/snow-warning.html">Snow Warning</a></td>
@@ -560,8 +553,8 @@
           data-hoenn-dex=""
           data-nat-dex="38"
           data-href="../pokedex/ninetales-alola.html">
-        <td>38</td>
-        <td><img src="../assets/game/graphics/pokemon/ninetales/alola/anim_front.png" alt="Ninetales (Alolan) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/ninetales/alola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/ninetales/alola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/ninetales/alola/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">38</span></td>
+        <td><span role="img" aria-label="Ninetales (Alolan) front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/ninetales/alola/anim_front.png');--s:url('../assets/game/graphics/pokemon/ninetales/alola/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/ninetales/alola/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/ninetales/alola/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/ninetales-alola.html">Ninetales<span class="species-form">(Alolan)</span></a></td>
         <td><span class="type-badge type-ice">Ice</span> <span class="type-badge type-fairy">Fairy</span></td>
         <td><a href="../abilities/snow-cloak.html">Snow Cloak</a>, <a href="../abilities/misty-surge.html">Misty Surge</a>, <a href="../abilities/snow-warning.html">Snow Warning</a></td>
@@ -570,8 +563,8 @@
           data-hoenn-dex=""
           data-nat-dex="87"
           data-href="../pokedex/dewgong.html">
-        <td>87</td>
-        <td><img src="../assets/game/graphics/pokemon/dewgong/anim_front.png" alt="Dewgong front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/dewgong/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/dewgong/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/dewgong/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">87</span></td>
+        <td><span role="img" aria-label="Dewgong front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/dewgong/anim_front.png');--s:url('../assets/game/graphics/pokemon/dewgong/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/dewgong/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/dewgong/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/dewgong.html">Dewgong</a></td>
         <td><span class="type-badge type-water">Water</span> <span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/thick-fat.html">Thick Fat</a>, <a href="../abilities/hydration.html">Hydration</a>, <a href="../abilities/ice-body.html">Ice Body</a></td>
@@ -580,8 +573,8 @@
           data-hoenn-dex=""
           data-nat-dex="91"
           data-href="../pokedex/cloyster.html">
-        <td>91</td>
-        <td><img src="../assets/game/graphics/pokemon/cloyster/anim_front.png" alt="Cloyster front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/cloyster/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/cloyster/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/cloyster/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">91</span></td>
+        <td><span role="img" aria-label="Cloyster front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/cloyster/anim_front.png');--s:url('../assets/game/graphics/pokemon/cloyster/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/cloyster/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/cloyster/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/cloyster.html">Cloyster</a></td>
         <td><span class="type-badge type-water">Water</span> <span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/slush-rush.html">Slush Rush</a>, <a href="../abilities/skill-link.html">Skill Link</a>, <a href="../abilities/overcoat.html">Overcoat</a></td>
@@ -590,8 +583,8 @@
           data-hoenn-dex=""
           data-nat-dex="122"
           data-href="../pokedex/mr-mime-galar.html">
-        <td>122</td>
-        <td><img src="../assets/game/graphics/pokemon/mr_mime/galar/front.png" alt="Mr. Mime (Galarian) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/mr_mime/galar/front__shiny.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">122</span></td>
+        <td><span role="img" aria-label="Mr. Mime (Galarian) front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/mr_mime/galar/front.png');--s:url('../assets/game/graphics/pokemon/mr_mime/galar/front__shiny.png')"></span></td>
         <td><a href="../pokedex/mr-mime-galar.html">Mr. Mime<span class="species-form">(Galarian)</span></a></td>
         <td><span class="type-badge type-ice">Ice</span> <span class="type-badge type-psychic">Psychic</span></td>
         <td><a href="../abilities/vital-spirit.html">Vital Spirit</a>, <a href="../abilities/screen-cleaner.html">Screen Cleaner</a>, <a href="../abilities/ice-body.html">Ice Body</a></td>
@@ -600,8 +593,8 @@
           data-hoenn-dex=""
           data-nat-dex="131"
           data-href="../pokedex/lapras.html">
-        <td>131</td>
-        <td><img src="../assets/game/graphics/pokemon/lapras/anim_front.png" alt="Lapras front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/lapras/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/lapras/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/lapras/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">131</span></td>
+        <td><span role="img" aria-label="Lapras front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/lapras/anim_front.png');--s:url('../assets/game/graphics/pokemon/lapras/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/lapras/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/lapras/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/lapras.html">Lapras</a></td>
         <td><span class="type-badge type-water">Water</span> <span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/tank-shell.html">Tank Shell</a>, <a href="../abilities/shell-armor.html">Shell Armor</a>, <a href="../abilities/liquid-voice.html">Liquid Voice</a></td>
@@ -610,8 +603,8 @@
           data-hoenn-dex=""
           data-nat-dex="225"
           data-href="../pokedex/delibird.html">
-        <td>225</td>
-        <td><img src="../assets/game/graphics/pokemon/delibird/anim_front.png" alt="Delibird front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/delibird/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/delibird/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/delibird/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">225</span></td>
+        <td><span role="img" aria-label="Delibird front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/delibird/anim_front.png');--s:url('../assets/game/graphics/pokemon/delibird/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/delibird/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/delibird/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/delibird.html">Delibird</a></td>
         <td><span class="type-badge type-ice">Ice</span> <span class="type-badge type-flying">Flying</span></td>
         <td><a href="../abilities/vital-spirit.html">Vital Spirit</a>, <a href="../abilities/hustle.html">Hustle</a>, <a href="../abilities/insomnia.html">Insomnia</a></td>
@@ -620,8 +613,8 @@
           data-hoenn-dex=""
           data-nat-dex="361"
           data-href="../pokedex/snorunt.html">
-        <td>361</td>
-        <td><img src="../assets/game/graphics/pokemon/snorunt/anim_front.png" alt="Snorunt front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/snorunt/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/snorunt/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/snorunt/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">361</span></td>
+        <td><span role="img" aria-label="Snorunt front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/snorunt/anim_front.png');--s:url('../assets/game/graphics/pokemon/snorunt/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/snorunt/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/snorunt/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/snorunt.html">Snorunt</a></td>
         <td><span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/snow-cloak.html">Snow Cloak</a>, <a href="../abilities/ice-body.html">Ice Body</a>, <a href="../abilities/moody.html">Moody</a></td>
@@ -630,8 +623,8 @@
           data-hoenn-dex=""
           data-nat-dex="362"
           data-href="../pokedex/glalie.html">
-        <td>362</td>
-        <td><img src="../assets/game/graphics/pokemon/glalie/anim_front.png" alt="Glalie front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/glalie/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/glalie/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/glalie/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">362</span></td>
+        <td><span role="img" aria-label="Glalie front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/glalie/anim_front.png');--s:url('../assets/game/graphics/pokemon/glalie/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/glalie/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/glalie/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/glalie.html">Glalie</a></td>
         <td><span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/levitate.html">Levitate</a>, <a href="../abilities/slush-rush.html">Slush Rush</a>, <a href="../abilities/moody.html">Moody</a></td>
@@ -640,8 +633,8 @@
           data-hoenn-dex=""
           data-nat-dex="363"
           data-href="../pokedex/spheal.html">
-        <td>363</td>
-        <td><img src="../assets/game/graphics/pokemon/spheal/anim_front.png" alt="Spheal front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/spheal/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/spheal/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/spheal/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">363</span></td>
+        <td><span role="img" aria-label="Spheal front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/spheal/anim_front.png');--s:url('../assets/game/graphics/pokemon/spheal/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/spheal/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/spheal/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/spheal.html">Spheal</a></td>
         <td><span class="type-badge type-ice">Ice</span> <span class="type-badge type-water">Water</span></td>
         <td><a href="../abilities/thick-fat.html">Thick Fat</a>, <a href="../abilities/ice-body.html">Ice Body</a>, <a href="../abilities/snow-cloak.html">Snow Cloak</a></td>
@@ -650,8 +643,8 @@
           data-hoenn-dex=""
           data-nat-dex="364"
           data-href="../pokedex/sealeo.html">
-        <td>364</td>
-        <td><img src="../assets/game/graphics/pokemon/sealeo/anim_front.png" alt="Sealeo front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/sealeo/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sealeo/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sealeo/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">364</span></td>
+        <td><span role="img" aria-label="Sealeo front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/sealeo/anim_front.png');--s:url('../assets/game/graphics/pokemon/sealeo/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/sealeo/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/sealeo/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/sealeo.html">Sealeo</a></td>
         <td><span class="type-badge type-ice">Ice</span> <span class="type-badge type-water">Water</span></td>
         <td><a href="../abilities/thick-fat.html">Thick Fat</a>, <a href="../abilities/ice-body.html">Ice Body</a>, <a href="../abilities/snow-cloak.html">Snow Cloak</a></td>
@@ -660,8 +653,8 @@
           data-hoenn-dex=""
           data-nat-dex="365"
           data-href="../pokedex/walrein.html">
-        <td>365</td>
-        <td><img src="../assets/game/graphics/pokemon/walrein/anim_front.png" alt="Walrein front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/walrein/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/walrein/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/walrein/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">365</span></td>
+        <td><span role="img" aria-label="Walrein front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/walrein/anim_front.png');--s:url('../assets/game/graphics/pokemon/walrein/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/walrein/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/walrein/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/walrein.html">Walrein</a></td>
         <td><span class="type-badge type-ice">Ice</span> <span class="type-badge type-water">Water</span></td>
         <td><a href="../abilities/thick-fat.html">Thick Fat</a>, <a href="../abilities/ice-body.html">Ice Body</a>, <a href="../abilities/snow-warning.html">Snow Warning</a></td>
@@ -670,8 +663,8 @@
           data-hoenn-dex=""
           data-nat-dex="471"
           data-href="../pokedex/glaceon.html">
-        <td>471</td>
-        <td><img src="../assets/game/graphics/pokemon/glaceon/anim_front.png" alt="Glaceon front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/glaceon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/glaceon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/glaceon/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">471</span></td>
+        <td><span role="img" aria-label="Glaceon front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/glaceon/anim_front.png');--s:url('../assets/game/graphics/pokemon/glaceon/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/glaceon/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/glaceon/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/glaceon.html">Glaceon</a></td>
         <td><span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/slush-rush.html">Slush Rush</a>, <a href="../abilities/snow-cloak.html">Snow Cloak</a>, <a href="../abilities/ice-body.html">Ice Body</a></td>
@@ -680,8 +673,8 @@
           data-hoenn-dex=""
           data-nat-dex="478"
           data-href="../pokedex/froslass.html">
-        <td>478</td>
-        <td><img src="../assets/game/graphics/pokemon/froslass/anim_front.png" alt="Froslass front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/froslass/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/froslass/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/froslass/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">478</span></td>
+        <td><span role="img" aria-label="Froslass front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/froslass/anim_front.png');--s:url('../assets/game/graphics/pokemon/froslass/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/froslass/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/froslass/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/froslass.html">Froslass</a></td>
         <td><span class="type-badge type-ice">Ice</span> <span class="type-badge type-ghost">Ghost</span></td>
         <td><a href="../abilities/snow-cloak.html">Snow Cloak</a>, <a href="../abilities/ice-body.html">Ice Body</a>, <a href="../abilities/cursed-body.html">Cursed Body</a></td>
@@ -690,8 +683,8 @@
           data-hoenn-dex=""
           data-nat-dex="555"
           data-href="../pokedex/darmanitan-galar.html">
-        <td>555</td>
-        <td><img src="../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png" alt="Darmanitan front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/darmanitan/galar_standard/front__shiny.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">555</span></td>
+        <td><span role="img" aria-label="Darmanitan front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/darmanitan/galar_standard/front.png');--s:url('../assets/game/graphics/pokemon/darmanitan/galar_standard/front__shiny.png')"></span></td>
         <td><a href="../pokedex/darmanitan-galar.html">Darmanitan</a></td>
         <td><span class="type-badge type-ice">Ice</span></td>
         <td><a href="../abilities/gorilla-tactics.html">Gorilla Tactics</a>, <a href="../abilities/zen-mode.html">Zen Mode</a></td>
@@ -700,8 +693,8 @@
           data-hoenn-dex=""
           data-nat-dex="866"
           data-href="../pokedex/mr-rime.html">
-        <td>866</td>
-        <td><img src="../assets/game/graphics/pokemon/mr_rime/front.png" alt="Mr. Rime front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/mr_rime/front__shiny.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">866</span></td>
+        <td><span role="img" aria-label="Mr. Rime front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/mr_rime/front.png');--s:url('../assets/game/graphics/pokemon/mr_rime/front__shiny.png')"></span></td>
         <td><a href="../pokedex/mr-rime.html">Mr. Rime</a></td>
         <td><span class="type-badge type-ice">Ice</span> <span class="type-badge type-psychic">Psychic</span></td>
         <td><a href="../abilities/tangled-feet.html">Tangled Feet</a>, <a href="../abilities/screen-cleaner.html">Screen Cleaner</a>, <a href="../abilities/ice-body.html">Ice Body</a></td>
@@ -723,12 +716,12 @@
   <div class="table-scroll">
   <table id="type-moves-table" class="sortable-table">
     <thead><tr>
-      <th data-sort="text">Name</th>
-      <th data-sort="text">Type</th>
-      <th data-sort="text">Category</th>
-      <th data-sort="number">Power</th>
-      <th data-sort="number">Accuracy</th>
-      <th data-sort="number">PP</th>
+      <th data-sort="text" class="sortable sort-asc">Name</th>
+      <th data-sort="text" class="sortable">Type</th>
+      <th data-sort="text" class="sortable">Category</th>
+      <th data-sort="number" class="sortable">Power</th>
+      <th data-sort="number" class="sortable">Accuracy</th>
+      <th data-sort="number" class="sortable">PP</th>
     </tr></thead>
     <tbody>
       <tr data-search-text="Aurora Beam"
@@ -1149,36 +1142,30 @@ view: {toggleId: 'type-view-slider', headerId: 'type-dex-header', numberCol: 0, 
       });
     }
     function obstagoonBindSpriteHover() {
-      // Delegated on body so it covers every page's sprite lists and survives re-renders.
-      // Scope to the card itself, not a bare li: an evolution li holds the card plus the arrow/method text, and li-scope would swap the sprite from anywhere in the row. Cross-link cards (no card class) scope to their own <a>.
-      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, .cross-link-grid > li > a, .sprite-card, figure, section[data-href], .roster-cmon, .roster-mon') : null);
-      const restore = (img) => { if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; delete img.dataset.base; } };
-      const swap = (scope, toHover) => {
-        const img = scope && scope.querySelector('img[data-hover]');
-        if (!img) return;
-        if (!toHover) return restore(img);
-        // Skip if already swapped, so a repeat mouseover (touch fires with null relatedTarget) can't capture the hover frame as the base.
-        if (img.dataset.base) return;
-        img.dataset.base = img.src;
-        img.onerror = () => restore(img);
-        img.src = img.dataset.hover;
+      // Desktop hover is CSS; touch has none, so flag the pressed sprite and let CSS animate it while a card is held.
+      const spriteOf = (t) => {
+        if (!t || t.nodeType !== 1) return null;
+        const card = t.closest('a, tr, .roster-mon');
+        return (card && card.querySelector('.sprite-bg')) || t.closest('.sprite-bg');
       };
-      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
-      document.body.addEventListener('mouseover', (e) => {
-        const scope = scopeOf(e.target);
-        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
-      });
-      document.body.addEventListener('mouseout', (e) => {
-        const scope = scopeOf(e.target);
-        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
-      });
-      // Touch has no hover, so swap the sprite while a card is pressed and restore on release.
-      document.body.addEventListener('touchstart', (e) => { const scope = scopeOf(e.target); if (scope) swap(scope, true); }, {passive: true});
-      const endTouch = (e) => { const scope = scopeOf(e.target); if (scope) swap(scope, false); };
-      document.body.addEventListener('touchend', endTouch, {passive: true});
-      document.body.addEventListener('touchcancel', endTouch, {passive: true});
-      // A tap on mobile swaps without a matching mouseout, so restore every sprite when the page shows (incl. bfcache back-nav).
-      window.addEventListener('pageshow', () => document.querySelectorAll('img[data-hover]').forEach(restore));
+      const press = (e, on) => { const s = spriteOf(e.target); if (s) s.classList.toggle('sprite-pressed', on); };
+      document.body.addEventListener('touchstart', (e) => press(e, true), {passive: true});
+      const end = (e) => press(e, false);
+      document.body.addEventListener('touchend', end, {passive: true});
+      document.body.addEventListener('touchcancel', end, {passive: true});
+      // A tap swaps without a matching release on bfcache back-nav, so clear every pressed sprite on pageshow.
+      window.addEventListener('pageshow', () => document.querySelectorAll('.sprite-pressed').forEach((el) => el.classList.remove('sprite-pressed')));
+    }
+    function obstagoonPreloadSprites() {
+      // Warm a sprite's other variants (hover, shiny) at idle once it nears the viewport, so first hover/toggle is instant.
+      if (!('IntersectionObserver' in window)) return;
+      const idle = window.requestIdleCallback || ((f) => setTimeout(f, 0));
+      const io = new IntersectionObserver((entries, obs) => entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        obs.unobserve(e.target);
+        idle(() => (e.target.getAttribute('style') || '').match(/url\('[^']+'\)/g)?.forEach((u) => { new Image().src = u.slice(5, -2); }));
+      }), { rootMargin: '200px' });
+      document.querySelectorAll('.sprite-bg').forEach((s) => io.observe(s));
     }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
@@ -1197,7 +1184,7 @@ view: {toggleId: 'type-view-slider', headerId: 'type-dex-header', numberCol: 0, 
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonPreloadSprites(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -1205,7 +1192,7 @@ view: {toggleId: 'type-view-slider', headerId: 'type-dex-header', numberCol: 0, 
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
-      obstagoonApplyShiny();
+      obstagoonPreloadSprites();
     }
   </script>
 </body>

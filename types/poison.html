@@ -7,7 +7,8 @@
   <meta property="og:description" content="Expansion-native documentation for Poké47.">
   <meta property="og:image" content="https://menace791.github.io/poke47-docs/assets/og-image.gif">
   <meta property="og:type" content="website">
-  <meta name="twitter:card" content="summary_large_image">  <link rel="stylesheet" href="../assets/style.css">
+  <meta name="twitter:card" content="summary_large_image">  <script>try{var r=document.documentElement;if(sessionStorage.getItem('obstagoon:dexview')==='all')r.classList.add('dex-all');if(sessionStorage.getItem('obstagoon:shinyview')==='shiny')r.classList.add('shiny-on');}catch(e){}</script>
+  <link rel="stylesheet" href="../assets/style.css">
   <script>
     // Casefold + diacritic-strip + non-alphanumeric strip so "basculinwhitestriped" matches "Basculin (White-Striped)".
     window.obstagoonNormalize = (s) => (s || '').toLowerCase()
@@ -35,23 +36,13 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
-    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    // Site-wide shiny sprite preference; the "Shiny" link in the Level Cap description toggles it.
     window.obstagoonShinyView = {
       get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
       set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
       toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
     };
-    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
-    window.obstagoonApplyShiny = () => {
-      const shiny = obstagoonShinyView.get() === 'shiny';
-      document.documentElement.classList.toggle('shiny-on', shiny);
-      document.querySelectorAll('img[data-shiny]').forEach((img) => {
-        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
-        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
-        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
-        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
-      });
-    };
+    window.obstagoonApplyShiny = () => document.documentElement.classList.toggle('shiny-on', obstagoonShinyView.get() === 'shiny');
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -59,6 +50,7 @@
       const countEl = opts.countId ? document.getElementById(opts.countId) : null;
       let currentView = obstagoonDexView.get(opts.default || 'hoenn');
       const apply = () => {
+        document.documentElement.classList.toggle('dex-all', currentView === 'all');
         let count = 0;
         sections.forEach((el) => {
           const show = currentView === 'all' || !!el.dataset.hoennDex;
@@ -93,7 +85,7 @@
         .map((c) => c.kind ? c : {kind: defaultKind || 'Pokémon', name: c.name});
       if (saved.search) input.value = saved.search;
       let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
-      let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
+      let activeDir = ['asc', 'desc'].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
       const view = opts.view || null;
       let currentView = view ? obstagoonDexView.get(view.default) : null;
       const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -102,10 +94,7 @@
         ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
       });
       const applyView = () => {
-        if (!view) return;
-        rows.forEach((el) => { el.cells[view.numberCol].textContent = (currentView === 'hoenn' ? el.dataset.hoennDex : el.dataset.natDex) || ''; });
-        const header = view.headerId ? document.getElementById(view.headerId) : null;
-        if (header) header.textContent = view.labels[currentView];
+        if (view) document.documentElement.classList.toggle('dex-all', currentView === 'all');
       };
 
       const formCellTargets = ['spriteHtml', 'nameHtml', 'typesHtml', 'abilitiesHtml'];
@@ -230,6 +219,10 @@
         const headers = Array.from(document.querySelectorAll(opts.tableSelector + ' thead th'));
         const original = Array.from(tbody.querySelectorAll('tr'));
         const cellValue = (tr, i, kind) => {
+          if (kind === 'number' && view && i === view.numberCol) {
+            const n = parseFloat((currentView === 'hoenn' ? tr.dataset.hoennDex : tr.dataset.natDex) || '');
+            return isNaN(n) ? -Infinity : n;
+          }
           const text = tr.cells[i].textContent.trim();
           if (kind === 'number') { const n = parseFloat(text); return isNaN(n) ? -Infinity : n; }
           return text.toLowerCase();
@@ -251,8 +244,8 @@
           if (!th.dataset.sort) return;
           th.classList.add('sortable');
           th.addEventListener('click', () => {
-            activeDir = i !== activeCol ? 'asc' : activeDir === 'asc' ? 'desc' : activeDir === 'desc' ? '' : 'asc';
-            activeCol = activeDir ? i : -1;
+            activeDir = i === activeCol && activeDir === 'asc' ? 'desc' : 'asc';
+            activeCol = i;
             applySort();
             persist();
           });
@@ -296,7 +289,7 @@
 
 <section class="card">
   <div class="pokedex-header">
-    <h2>Pokémon <span class="muted small-text" id="type-species-count">25</span></h2>
+    <h2>Pokémon <span class="muted small-text" id="type-species-count"><span class="dex-h">25</span><span class="dex-n">58</span></span></h2>
 <div class="dex-view-toggle">
   <span class="dex-view-label">Hoenn Dex</span>
   <label class="dex-toggle-switch">
@@ -314,14 +307,14 @@
   <div id="type-species-chips" class="filter-chips"></div>
   <div class="table-scroll">
   <table id="type-species-table" class="sortable-table">
-    <thead><tr><th data-sort="number" id="type-dex-header">Hoenn Dex #</th><th>Sprite</th><th data-sort="text">Name</th><th data-sort="text">Types</th><th>Abilities</th></tr></thead>
+    <thead><tr><th data-sort="number" id="type-dex-header" class="sortable sort-asc"><span class="dex-h">Hoenn Dex #</span><span class="dex-n">National Dex #</span></th><th>Sprite</th><th data-sort="text" class="sortable">Name</th><th data-sort="text" class="sortable">Types</th><th>Abilities</th></tr></thead>
     <tbody>
       <tr data-search-text="18 406 Budew"
           data-hoenn-dex="18"
           data-nat-dex="406"
           data-href="../pokedex/budew.html">
-        <td>18</td>
-        <td><img src="../assets/game/graphics/pokemon/budew/anim_front.png" alt="Budew front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/budew/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/budew/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/budew/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">18</span><span class="dex-n">406</span></td>
+        <td><span role="img" aria-label="Budew front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/budew/anim_front.png');--s:url('../assets/game/graphics/pokemon/budew/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/budew/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/budew/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/budew.html">Budew</a></td>
         <td><span class="type-badge type-grass">Grass</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/natural-cure.html">Natural Cure</a>, <a href="../abilities/poison-point.html">Poison Point</a>, <a href="../abilities/leaf-guard.html">Leaf Guard</a></td>
@@ -330,8 +323,8 @@
           data-hoenn-dex="19"
           data-nat-dex="315"
           data-href="../pokedex/roselia.html">
-        <td>19</td>
-        <td><img src="../assets/game/graphics/pokemon/roselia/anim_front.png" alt="Roselia front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/roselia/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roselia/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roselia/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">19</span><span class="dex-n">315</span></td>
+        <td><span role="img" aria-label="Roselia front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/roselia/anim_front.png');--s:url('../assets/game/graphics/pokemon/roselia/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/roselia/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/roselia/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/roselia.html">Roselia</a></td>
         <td><span class="type-badge type-grass">Grass</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/natural-cure.html">Natural Cure</a>, <a href="../abilities/poison-point.html">Poison Point</a>, <a href="../abilities/technician.html">Technician</a></td>
@@ -340,8 +333,8 @@
           data-hoenn-dex="20"
           data-nat-dex="407"
           data-href="../pokedex/roserade.html">
-        <td>20</td>
-        <td><img src="../assets/game/graphics/pokemon/roserade/anim_front.png" alt="Roserade front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/roserade/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roserade/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roserade/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">20</span><span class="dex-n">407</span></td>
+        <td><span role="img" aria-label="Roserade front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/roserade/anim_front.png');--s:url('../assets/game/graphics/pokemon/roserade/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/roserade/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/roserade/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/roserade.html">Roserade</a></td>
         <td><span class="type-badge type-grass">Grass</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/natural-cure.html">Natural Cure</a>, <a href="../abilities/sniper.html">Sniper</a>, <a href="../abilities/technician.html">Technician</a></td>
@@ -350,8 +343,8 @@
           data-hoenn-dex="54"
           data-nat-dex="590"
           data-href="../pokedex/foongus.html">
-        <td>54</td>
-        <td><img src="../assets/game/graphics/pokemon/foongus/anim_front.png" alt="Foongus front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/foongus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/foongus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/foongus/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">54</span><span class="dex-n">590</span></td>
+        <td><span role="img" aria-label="Foongus front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/foongus/anim_front.png');--s:url('../assets/game/graphics/pokemon/foongus/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/foongus/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/foongus/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/foongus.html">Foongus</a></td>
         <td><span class="type-badge type-grass">Grass</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/effect-spore.html">Effect Spore</a>, <a href="../abilities/poison-puppeteer.html">Poison Puppeteer</a>, <a href="../abilities/regenerator.html">Regenerator</a></td>
@@ -360,8 +353,8 @@
           data-hoenn-dex="55"
           data-nat-dex="591"
           data-href="../pokedex/amoonguss.html">
-        <td>55</td>
-        <td><img src="../assets/game/graphics/pokemon/amoonguss/anim_front.png" alt="Amoonguss front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/amoonguss/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/amoonguss/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/amoonguss/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">55</span><span class="dex-n">591</span></td>
+        <td><span role="img" aria-label="Amoonguss front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/amoonguss/anim_front.png');--s:url('../assets/game/graphics/pokemon/amoonguss/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/amoonguss/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/amoonguss/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/amoonguss.html">Amoonguss</a></td>
         <td><span class="type-badge type-grass">Grass</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/effect-spore.html">Effect Spore</a>, <a href="../abilities/poison-puppeteer.html">Poison Puppeteer</a>, <a href="../abilities/regenerator.html">Regenerator</a></td>
@@ -370,8 +363,8 @@
           data-hoenn-dex="125"
           data-nat-dex="434"
           data-href="../pokedex/stunky.html">
-        <td>125</td>
-        <td><img src="../assets/game/graphics/pokemon/stunky/anim_front.png" alt="Stunky front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/stunky/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/stunky/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/stunky/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">125</span><span class="dex-n">434</span></td>
+        <td><span role="img" aria-label="Stunky front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/stunky/anim_front.png');--s:url('../assets/game/graphics/pokemon/stunky/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/stunky/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/stunky/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/stunky.html">Stunky</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-dark">Dark</span></td>
         <td><a href="../abilities/lingering-aroma.html">Lingering Aroma</a>, <a href="../abilities/aftermath.html">Aftermath</a>, <a href="../abilities/neutralizing-gas.html">Neutralizing Gas</a></td>
@@ -380,8 +373,8 @@
           data-hoenn-dex="126"
           data-nat-dex="435"
           data-href="../pokedex/skuntank.html">
-        <td>126</td>
-        <td><img src="../assets/game/graphics/pokemon/skuntank/anim_front.png" alt="Skuntank front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/skuntank/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/skuntank/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/skuntank/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">126</span><span class="dex-n">435</span></td>
+        <td><span role="img" aria-label="Skuntank front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/skuntank/anim_front.png');--s:url('../assets/game/graphics/pokemon/skuntank/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/skuntank/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/skuntank/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/skuntank.html">Skuntank</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-dark">Dark</span></td>
         <td><a href="../abilities/lingering-aroma.html">Lingering Aroma</a>, <a href="../abilities/aftermath.html">Aftermath</a>, <a href="../abilities/neutralizing-gas.html">Neutralizing Gas</a></td>
@@ -390,8 +383,8 @@
           data-hoenn-dex="127"
           data-nat-dex="568"
           data-href="../pokedex/trubbish.html">
-        <td>127</td>
-        <td><img src="../assets/game/graphics/pokemon/trubbish/anim_front.png" alt="Trubbish front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/trubbish/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/trubbish/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/trubbish/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">127</span><span class="dex-n">568</span></td>
+        <td><span role="img" aria-label="Trubbish front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/trubbish/anim_front.png');--s:url('../assets/game/graphics/pokemon/trubbish/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/trubbish/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/trubbish/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/trubbish.html">Trubbish</a></td>
         <td><span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/item-get.html">Litter Picker</a>, <a href="../abilities/sticky-hold.html">Sticky Hold</a>, <a href="../abilities/aftermath.html">Aftermath</a></td>
@@ -400,8 +393,8 @@
           data-hoenn-dex="128"
           data-nat-dex="569"
           data-href="../pokedex/garbodor.html">
-        <td>128</td>
-        <td><img src="../assets/game/graphics/pokemon/garbodor/anim_front.png" alt="Garbodor front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/garbodor/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/garbodor/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/garbodor/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">128</span><span class="dex-n">569</span></td>
+        <td><span role="img" aria-label="Garbodor front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/garbodor/anim_front.png');--s:url('../assets/game/graphics/pokemon/garbodor/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/garbodor/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/garbodor/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/garbodor.html">Garbodor</a></td>
         <td><span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/item-get.html">Litter Picker</a>, <a href="../abilities/weak-armor.html">Weak Armor</a>, <a href="../abilities/aftermath.html">Aftermath</a></td>
@@ -410,8 +403,8 @@
           data-hoenn-dex="159"
           data-nat-dex="757"
           data-href="../pokedex/salandit.html">
-        <td>159</td>
-        <td><img src="../assets/game/graphics/pokemon/salandit/anim_front.png" alt="Salandit front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/salandit/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/salandit/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/salandit/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">159</span><span class="dex-n">757</span></td>
+        <td><span role="img" aria-label="Salandit front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/salandit/anim_front.png');--s:url('../assets/game/graphics/pokemon/salandit/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/salandit/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/salandit/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/salandit.html">Salandit</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/corrosion.html">Corrosion</a>, <a href="../abilities/white-smoke.html">White Smoke</a>, <a href="../abilities/oblivious.html">Oblivious</a></td>
@@ -420,8 +413,8 @@
           data-hoenn-dex="160"
           data-nat-dex="758"
           data-href="../pokedex/salazzle.html">
-        <td>160</td>
-        <td><img src="../assets/game/graphics/pokemon/salazzle/anim_front.png" alt="Salazzle front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/salazzle/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/salazzle/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/salazzle/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">160</span><span class="dex-n">758</span></td>
+        <td><span role="img" aria-label="Salazzle front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/salazzle/anim_front.png');--s:url('../assets/game/graphics/pokemon/salazzle/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/salazzle/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/salazzle/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/salazzle.html">Salazzle</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-fire">Fire</span></td>
         <td><a href="../abilities/corrosion.html">Corrosion</a>, <a href="../abilities/white-smoke.html">White Smoke</a>, <a href="../abilities/oblivious.html">Oblivious</a></td>
@@ -430,8 +423,8 @@
           data-hoenn-dex="167"
           data-nat-dex="451"
           data-href="../pokedex/skorupi.html">
-        <td>167</td>
-        <td><img src="../assets/game/graphics/pokemon/skorupi/anim_front.png" alt="Skorupi front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/skorupi/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/skorupi/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/skorupi/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">167</span><span class="dex-n">451</span></td>
+        <td><span role="img" aria-label="Skorupi front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/skorupi/anim_front.png');--s:url('../assets/game/graphics/pokemon/skorupi/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/skorupi/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/skorupi/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/skorupi.html">Skorupi</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-bug">Bug</span></td>
         <td><a href="../abilities/toxic-debris.html">Toxic Debris</a>, <a href="../abilities/sniper.html">Sniper</a>, <a href="../abilities/battle-armor.html">Battle Armor</a></td>
@@ -440,8 +433,8 @@
           data-hoenn-dex="168"
           data-nat-dex="452"
           data-href="../pokedex/drapion.html">
-        <td>168</td>
-        <td><img src="../assets/game/graphics/pokemon/drapion/anim_front.png" alt="Drapion front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/drapion/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/drapion/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/drapion/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">168</span><span class="dex-n">452</span></td>
+        <td><span role="img" aria-label="Drapion front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/drapion/anim_front.png');--s:url('../assets/game/graphics/pokemon/drapion/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/drapion/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/drapion/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/drapion.html">Drapion</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-dark">Dark</span></td>
         <td><a href="../abilities/toxic-debris.html">Toxic Debris</a>, <a href="../abilities/sniper.html">Sniper</a>, <a href="../abilities/battle-armor.html">Battle Armor</a></td>
@@ -450,8 +443,8 @@
           data-hoenn-dex="231"
           data-nat-dex="543"
           data-href="../pokedex/venipede.html">
-        <td>231</td>
-        <td><img src="../assets/game/graphics/pokemon/venipede/anim_front.png" alt="Venipede front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/venipede/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/venipede/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/venipede/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">231</span><span class="dex-n">543</span></td>
+        <td><span role="img" aria-label="Venipede front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/venipede/anim_front.png');--s:url('../assets/game/graphics/pokemon/venipede/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/venipede/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/venipede/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/venipede.html">Venipede</a></td>
         <td><span class="type-badge type-bug">Bug</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/poison-point.html">Poison Point</a>, <a href="../abilities/swarm.html">Swarm</a>, <a href="../abilities/speed-boost.html">Speed Boost</a></td>
@@ -460,8 +453,8 @@
           data-hoenn-dex="232"
           data-nat-dex="544"
           data-href="../pokedex/whirlipede.html">
-        <td>232</td>
-        <td><img src="../assets/game/graphics/pokemon/whirlipede/anim_front.png" alt="Whirlipede front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/whirlipede/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/whirlipede/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/whirlipede/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">232</span><span class="dex-n">544</span></td>
+        <td><span role="img" aria-label="Whirlipede front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/whirlipede/anim_front.png');--s:url('../assets/game/graphics/pokemon/whirlipede/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/whirlipede/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/whirlipede/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/whirlipede.html">Whirlipede</a></td>
         <td><span class="type-badge type-bug">Bug</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/contrary.html">Contrary</a>, <a href="../abilities/swarm.html">Swarm</a>, <a href="../abilities/speed-boost.html">Speed Boost</a></td>
@@ -470,8 +463,8 @@
           data-hoenn-dex="233"
           data-nat-dex="545"
           data-href="../pokedex/scolipede.html">
-        <td>233</td>
-        <td><img src="../assets/game/graphics/pokemon/scolipede/anim_front.png" alt="Scolipede front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/scolipede/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/scolipede/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/scolipede/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">233</span><span class="dex-n">545</span></td>
+        <td><span role="img" aria-label="Scolipede front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/scolipede/anim_front.png');--s:url('../assets/game/graphics/pokemon/scolipede/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/scolipede/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/scolipede/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/scolipede.html">Scolipede</a></td>
         <td><span class="type-badge type-bug">Bug</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/contrary.html">Contrary</a>, <a href="../abilities/swarm.html">Swarm</a>, <a href="../abilities/speed-boost.html">Speed Boost</a></td>
@@ -480,8 +473,8 @@
           data-hoenn-dex="238"
           data-nat-dex="803"
           data-href="../pokedex/poipole.html">
-        <td>238</td>
-        <td><img src="../assets/game/graphics/pokemon/poipole/anim_front.png" alt="Poipole front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/poipole/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/poipole/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/poipole/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">238</span><span class="dex-n">803</span></td>
+        <td><span role="img" aria-label="Poipole front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/poipole/anim_front.png');--s:url('../assets/game/graphics/pokemon/poipole/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/poipole/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/poipole/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/poipole.html">Poipole</a></td>
         <td><span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/beast-boost.html">Beast Boost</a></td>
@@ -490,8 +483,8 @@
           data-hoenn-dex="239"
           data-nat-dex="804"
           data-href="../pokedex/naganadel.html">
-        <td>239</td>
-        <td><img src="../assets/game/graphics/pokemon/naganadel/anim_front.png" alt="Naganadel front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/naganadel/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/naganadel/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/naganadel/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">239</span><span class="dex-n">804</span></td>
+        <td><span role="img" aria-label="Naganadel front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/naganadel/anim_front.png');--s:url('../assets/game/graphics/pokemon/naganadel/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/naganadel/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/naganadel/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/naganadel.html">Naganadel</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-dragon">Dragon</span></td>
         <td><a href="../abilities/beast-boost.html">Beast Boost</a></td>
@@ -500,8 +493,8 @@
           data-hoenn-dex="251"
           data-nat-dex="453"
           data-href="../pokedex/croagunk.html">
-        <td>251</td>
-        <td><img src="../assets/game/graphics/pokemon/croagunk/anim_front.png" alt="Croagunk front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/croagunk/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/croagunk/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/croagunk/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">251</span><span class="dex-n">453</span></td>
+        <td><span role="img" aria-label="Croagunk front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/croagunk/anim_front.png');--s:url('../assets/game/graphics/pokemon/croagunk/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/croagunk/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/croagunk/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/croagunk.html">Croagunk</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-fighting">Fighting</span></td>
         <td><a href="../abilities/merciless.html">Merciless</a>, <a href="../abilities/dry-skin.html">Dry Skin</a>, <a href="../abilities/poison-touch.html">Poison Touch</a></td>
@@ -510,8 +503,8 @@
           data-hoenn-dex="252"
           data-nat-dex="454"
           data-href="../pokedex/toxicroak.html">
-        <td>252</td>
-        <td><img src="../assets/game/graphics/pokemon/toxicroak/anim_front.png" alt="Toxicroak front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/toxicroak/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/toxicroak/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/toxicroak/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">252</span><span class="dex-n">454</span></td>
+        <td><span role="img" aria-label="Toxicroak front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/toxicroak/anim_front.png');--s:url('../assets/game/graphics/pokemon/toxicroak/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/toxicroak/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/toxicroak/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/toxicroak.html">Toxicroak</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-fighting">Fighting</span></td>
         <td><a href="../abilities/merciless.html">Merciless</a>, <a href="../abilities/dry-skin.html">Dry Skin</a>, <a href="../abilities/poison-touch.html">Poison Touch</a></td>
@@ -520,8 +513,8 @@
           data-hoenn-dex="291"
           data-nat-dex="773"
           data-href="../pokedex/silvally-poison.html">
-        <td>291</td>
-        <td><img src="../assets/game/graphics/pokemon/silvally/poison/anim_front.png" alt="Silvally (Type: Poison) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/silvally/poison/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/silvally/poison/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/silvally/poison/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">291</span><span class="dex-n">773</span></td>
+        <td><span role="img" aria-label="Silvally (Type: Poison) front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/silvally/poison/anim_front.png');--s:url('../assets/game/graphics/pokemon/silvally/poison/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/silvally/poison/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/silvally/poison/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/silvally-poison.html">Silvally<span class="species-form">(Type: Poison)</span></a></td>
         <td><span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/multitype.html">Multitype</a></td>
@@ -530,8 +523,8 @@
           data-hoenn-dex="296"
           data-nat-dex="690"
           data-href="../pokedex/skrelp.html">
-        <td>296</td>
-        <td><img src="../assets/game/graphics/pokemon/skrelp/anim_front.png" alt="Skrelp front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/skrelp/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/skrelp/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/skrelp/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">296</span><span class="dex-n">690</span></td>
+        <td><span role="img" aria-label="Skrelp front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/skrelp/anim_front.png');--s:url('../assets/game/graphics/pokemon/skrelp/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/skrelp/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/skrelp/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/skrelp.html">Skrelp</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-water">Water</span></td>
         <td><a href="../abilities/poison-point.html">Poison Point</a>, <a href="../abilities/poison-touch.html">Poison Touch</a>, <a href="../abilities/adaptability.html">Adaptability</a></td>
@@ -540,8 +533,8 @@
           data-hoenn-dex="297"
           data-nat-dex="691"
           data-href="../pokedex/dragalge.html">
-        <td>297</td>
-        <td><img src="../assets/game/graphics/pokemon/dragalge/anim_front.png" alt="Dragalge front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/dragalge/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/dragalge/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/dragalge/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">297</span><span class="dex-n">691</span></td>
+        <td><span role="img" aria-label="Dragalge front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/dragalge/anim_front.png');--s:url('../assets/game/graphics/pokemon/dragalge/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/dragalge/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/dragalge/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/dragalge.html">Dragalge</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-dragon">Dragon</span></td>
         <td><a href="../abilities/multiscale.html">Multiscale</a>, <a href="../abilities/toxic-chain.html">Toxic Chain</a>, <a href="../abilities/adaptability.html">Adaptability</a></td>
@@ -550,8 +543,8 @@
           data-hoenn-dex="298"
           data-nat-dex="747"
           data-href="../pokedex/mareanie.html">
-        <td>298</td>
-        <td><img src="../assets/game/graphics/pokemon/mareanie/anim_front.png" alt="Mareanie front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/mareanie/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/mareanie/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/mareanie/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">298</span><span class="dex-n">747</span></td>
+        <td><span role="img" aria-label="Mareanie front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/mareanie/anim_front.png');--s:url('../assets/game/graphics/pokemon/mareanie/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/mareanie/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/mareanie/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/mareanie.html">Mareanie</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-water">Water</span></td>
         <td><a href="../abilities/merciless.html">Merciless</a>, <a href="../abilities/corrosion.html">Corrosion</a>, <a href="../abilities/regenerator.html">Regenerator</a></td>
@@ -560,8 +553,8 @@
           data-hoenn-dex="299"
           data-nat-dex="748"
           data-href="../pokedex/toxapex.html">
-        <td>299</td>
-        <td><img src="../assets/game/graphics/pokemon/toxapex/anim_front.png" alt="Toxapex front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/toxapex/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/toxapex/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/toxapex/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h">299</span><span class="dex-n">748</span></td>
+        <td><span role="img" aria-label="Toxapex front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/toxapex/anim_front.png');--s:url('../assets/game/graphics/pokemon/toxapex/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/toxapex/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/toxapex/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/toxapex.html">Toxapex</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-water">Water</span></td>
         <td><a href="../abilities/merciless.html">Merciless</a>, <a href="../abilities/corrosion.html">Corrosion</a>, <a href="../abilities/regenerator.html">Regenerator</a></td>
@@ -570,8 +563,8 @@
           data-hoenn-dex=""
           data-nat-dex="13"
           data-href="../pokedex/weedle.html">
-        <td>13</td>
-        <td><img src="../assets/game/graphics/pokemon/weedle/anim_front.png" alt="Weedle front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/weedle/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/weedle/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/weedle/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">13</span></td>
+        <td><span role="img" aria-label="Weedle front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/weedle/anim_front.png');--s:url('../assets/game/graphics/pokemon/weedle/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/weedle/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/weedle/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/weedle.html">Weedle</a></td>
         <td><span class="type-badge type-bug">Bug</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/shield-dust.html">Shield Dust</a>, <a href="../abilities/run-away.html">Run Away</a></td>
@@ -580,8 +573,8 @@
           data-hoenn-dex=""
           data-nat-dex="14"
           data-href="../pokedex/kakuna.html">
-        <td>14</td>
-        <td><img src="../assets/game/graphics/pokemon/kakuna/anim_front.png" alt="Kakuna front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/kakuna/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/kakuna/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/kakuna/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">14</span></td>
+        <td><span role="img" aria-label="Kakuna front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/kakuna/anim_front.png');--s:url('../assets/game/graphics/pokemon/kakuna/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/kakuna/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/kakuna/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/kakuna.html">Kakuna</a></td>
         <td><span class="type-badge type-bug">Bug</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/shed-skin.html">Shed Skin</a>, <a href="../abilities/overcoat.html">Overcoat</a></td>
@@ -590,8 +583,8 @@
           data-hoenn-dex=""
           data-nat-dex="15"
           data-href="../pokedex/beedrill.html">
-        <td>15</td>
-        <td><img src="../assets/game/graphics/pokemon/beedrill/anim_front.png" alt="Beedrill front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/beedrill/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/beedrill/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/beedrill/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">15</span></td>
+        <td><span role="img" aria-label="Beedrill front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/beedrill/anim_front.png');--s:url('../assets/game/graphics/pokemon/beedrill/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/beedrill/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/beedrill/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/beedrill.html">Beedrill</a></td>
         <td><span class="type-badge type-bug">Bug</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/swarm.html">Swarm</a>, <a href="../abilities/sniper.html">Sniper</a></td>
@@ -600,8 +593,8 @@
           data-hoenn-dex=""
           data-nat-dex="29"
           data-href="../pokedex/nidoran-f.html">
-        <td>29</td>
-        <td><img src="../assets/game/graphics/pokemon/nidoran_f/anim_front.png" alt="Nidoran♀ front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/nidoran_f/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/nidoran_f/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/nidoran_f/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">29</span></td>
+        <td><span role="img" aria-label="Nidoran♀ front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/nidoran_f/anim_front.png');--s:url('../assets/game/graphics/pokemon/nidoran_f/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/nidoran_f/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/nidoran_f/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/nidoran-f.html">Nidoran♀</a></td>
         <td><span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/poison-touch.html">Poison Touch</a>, <a href="../abilities/rivalry.html">Rivalry</a>, <a href="../abilities/hustle.html">Hustle</a></td>
@@ -610,8 +603,8 @@
           data-hoenn-dex=""
           data-nat-dex="30"
           data-href="../pokedex/nidorina.html">
-        <td>30</td>
-        <td><img src="../assets/game/graphics/pokemon/nidorina/anim_front.png" alt="Nidorina front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/nidorina/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/nidorina/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/nidorina/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">30</span></td>
+        <td><span role="img" aria-label="Nidorina front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/nidorina/anim_front.png');--s:url('../assets/game/graphics/pokemon/nidorina/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/nidorina/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/nidorina/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/nidorina.html">Nidorina</a></td>
         <td><span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/poison-touch.html">Poison Touch</a>, <a href="../abilities/rivalry.html">Rivalry</a>, <a href="../abilities/hustle.html">Hustle</a></td>
@@ -620,8 +613,8 @@
           data-hoenn-dex=""
           data-nat-dex="31"
           data-href="../pokedex/nidoqueen.html">
-        <td>31</td>
-        <td><img src="../assets/game/graphics/pokemon/nidoqueen/anim_front.png" alt="Nidoqueen front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/nidoqueen/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/nidoqueen/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/nidoqueen/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">31</span></td>
+        <td><span role="img" aria-label="Nidoqueen front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/nidoqueen/anim_front.png');--s:url('../assets/game/graphics/pokemon/nidoqueen/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/nidoqueen/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/nidoqueen/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/nidoqueen.html">Nidoqueen</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/poison-touch.html">Poison Touch</a>, <a href="../abilities/queenly-majesty.html">Queenly Majesty</a>, <a href="../abilities/sheer-force.html">Sheer Force</a></td>
@@ -630,8 +623,8 @@
           data-hoenn-dex=""
           data-nat-dex="41"
           data-href="../pokedex/zubat.html">
-        <td>41</td>
-        <td><img src="../assets/game/graphics/pokemon/zubat/anim_front.png" alt="Zubat front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/zubat/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/zubat/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/zubat/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">41</span></td>
+        <td><span role="img" aria-label="Zubat front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/zubat/anim_front.png');--s:url('../assets/game/graphics/pokemon/zubat/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/zubat/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/zubat/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/zubat.html">Zubat</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-flying">Flying</span></td>
         <td><a href="../abilities/inner-focus.html">Inner Focus</a>, <a href="../abilities/infiltrator.html">Infiltrator</a></td>
@@ -640,8 +633,8 @@
           data-hoenn-dex=""
           data-nat-dex="42"
           data-href="../pokedex/golbat.html">
-        <td>42</td>
-        <td><img src="../assets/game/graphics/pokemon/golbat/anim_front.png" alt="Golbat front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/golbat/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/golbat/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/golbat/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">42</span></td>
+        <td><span role="img" aria-label="Golbat front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/golbat/anim_front.png');--s:url('../assets/game/graphics/pokemon/golbat/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/golbat/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/golbat/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/golbat.html">Golbat</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-flying">Flying</span></td>
         <td><a href="../abilities/inner-focus.html">Inner Focus</a>, <a href="../abilities/infiltrator.html">Infiltrator</a></td>
@@ -650,8 +643,8 @@
           data-hoenn-dex=""
           data-nat-dex="43"
           data-href="../pokedex/oddish.html">
-        <td>43</td>
-        <td><img src="../assets/game/graphics/pokemon/oddish/anim_front.png" alt="Oddish front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/oddish/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/oddish/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/oddish/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">43</span></td>
+        <td><span role="img" aria-label="Oddish front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/oddish/anim_front.png');--s:url('../assets/game/graphics/pokemon/oddish/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/oddish/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/oddish/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/oddish.html">Oddish</a></td>
         <td><span class="type-badge type-grass">Grass</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/chlorophyll.html">Chlorophyll</a>, <a href="../abilities/leaf-guard.html">Leaf Guard</a>, <a href="../abilities/run-away.html">Run Away</a></td>
@@ -660,8 +653,8 @@
           data-hoenn-dex=""
           data-nat-dex="44"
           data-href="../pokedex/gloom.html">
-        <td>44</td>
-        <td><img src="../assets/game/graphics/pokemon/gloom/anim_front.png" alt="Gloom front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/gloom/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/gloom/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/gloom/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">44</span></td>
+        <td><span role="img" aria-label="Gloom front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/gloom/anim_front.png');--s:url('../assets/game/graphics/pokemon/gloom/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/gloom/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/gloom/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/gloom.html">Gloom</a></td>
         <td><span class="type-badge type-grass">Grass</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/chlorophyll.html">Chlorophyll</a>, <a href="../abilities/leaf-guard.html">Leaf Guard</a>, <a href="../abilities/stench.html">Glitz Link</a></td>
@@ -670,8 +663,8 @@
           data-hoenn-dex=""
           data-nat-dex="45"
           data-href="../pokedex/vileplume.html">
-        <td>45</td>
-        <td><img src="../assets/game/graphics/pokemon/vileplume/anim_front.png" alt="Vileplume front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/vileplume/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vileplume/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vileplume/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">45</span></td>
+        <td><span role="img" aria-label="Vileplume front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/vileplume/anim_front.png');--s:url('../assets/game/graphics/pokemon/vileplume/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/vileplume/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/vileplume/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/vileplume.html">Vileplume</a></td>
         <td><span class="type-badge type-grass">Grass</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/chlorophyll.html">Chlorophyll</a>, <a href="../abilities/aroma-veil.html">Aroma Veil</a>, <a href="../abilities/effect-spore.html">Effect Spore</a></td>
@@ -680,8 +673,8 @@
           data-hoenn-dex=""
           data-nat-dex="48"
           data-href="../pokedex/venonat.html">
-        <td>48</td>
-        <td><img src="../assets/game/graphics/pokemon/venonat/anim_front.png" alt="Venonat front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/venonat/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/venonat/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/venonat/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">48</span></td>
+        <td><span role="img" aria-label="Venonat front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/venonat/anim_front.png');--s:url('../assets/game/graphics/pokemon/venonat/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/venonat/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/venonat/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/venonat.html">Venonat</a></td>
         <td><span class="type-badge type-bug">Bug</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/compound-eyes.html">Compound Eyes</a>, <a href="../abilities/tinted-lens.html">Tinted Lens</a>, <a href="../abilities/fur-coat.html">Fur Coat</a></td>
@@ -690,8 +683,8 @@
           data-hoenn-dex=""
           data-nat-dex="49"
           data-href="../pokedex/venomoth.html">
-        <td>49</td>
-        <td><img src="../assets/game/graphics/pokemon/venomoth/anim_front.png" alt="Venomoth front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/venomoth/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/venomoth/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/venomoth/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">49</span></td>
+        <td><span role="img" aria-label="Venomoth front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/venomoth/anim_front.png');--s:url('../assets/game/graphics/pokemon/venomoth/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/venomoth/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/venomoth/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/venomoth.html">Venomoth</a></td>
         <td><span class="type-badge type-bug">Bug</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/shield-dust.html">Shield Dust</a>, <a href="../abilities/tinted-lens.html">Tinted Lens</a>, <a href="../abilities/wonder-skin.html">Wonder Skin</a></td>
@@ -700,8 +693,8 @@
           data-hoenn-dex=""
           data-nat-dex="69"
           data-href="../pokedex/bellsprout.html">
-        <td>69</td>
-        <td><img src="../assets/game/graphics/pokemon/bellsprout/anim_front.png" alt="Bellsprout front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/bellsprout/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/bellsprout/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/bellsprout/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">69</span></td>
+        <td><span role="img" aria-label="Bellsprout front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/bellsprout/anim_front.png');--s:url('../assets/game/graphics/pokemon/bellsprout/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/bellsprout/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/bellsprout/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/bellsprout.html">Bellsprout</a></td>
         <td><span class="type-badge type-grass">Grass</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/chlorophyll.html">Chlorophyll</a>, <a href="../abilities/corrosion.html">Corrosion</a>, <a href="../abilities/gluttony.html">Gluttony</a></td>
@@ -710,8 +703,8 @@
           data-hoenn-dex=""
           data-nat-dex="70"
           data-href="../pokedex/weepinbell.html">
-        <td>70</td>
-        <td><img src="../assets/game/graphics/pokemon/weepinbell/anim_front.png" alt="Weepinbell front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/weepinbell/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/weepinbell/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/weepinbell/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">70</span></td>
+        <td><span role="img" aria-label="Weepinbell front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/weepinbell/anim_front.png');--s:url('../assets/game/graphics/pokemon/weepinbell/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/weepinbell/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/weepinbell/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/weepinbell.html">Weepinbell</a></td>
         <td><span class="type-badge type-grass">Grass</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/chlorophyll.html">Chlorophyll</a>, <a href="../abilities/corrosion.html">Corrosion</a>, <a href="../abilities/gluttony.html">Gluttony</a></td>
@@ -720,8 +713,8 @@
           data-hoenn-dex=""
           data-nat-dex="71"
           data-href="../pokedex/victreebel.html">
-        <td>71</td>
-        <td><img src="../assets/game/graphics/pokemon/victreebel/anim_front.png" alt="Victreebel front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/victreebel/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/victreebel/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/victreebel/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">71</span></td>
+        <td><span role="img" aria-label="Victreebel front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/victreebel/anim_front.png');--s:url('../assets/game/graphics/pokemon/victreebel/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/victreebel/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/victreebel/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/victreebel.html">Victreebel</a></td>
         <td><span class="type-badge type-grass">Grass</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/chlorophyll.html">Chlorophyll</a>, <a href="../abilities/corrosion.html">Corrosion</a>, <a href="../abilities/gluttony.html">Gluttony</a></td>
@@ -730,8 +723,8 @@
           data-hoenn-dex=""
           data-nat-dex="72"
           data-href="../pokedex/tentacool.html">
-        <td>72</td>
-        <td><img src="../assets/game/graphics/pokemon/tentacool/anim_front.png" alt="Tentacool front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/tentacool/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/tentacool/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/tentacool/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">72</span></td>
+        <td><span role="img" aria-label="Tentacool front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/tentacool/anim_front.png');--s:url('../assets/game/graphics/pokemon/tentacool/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/tentacool/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/tentacool/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/tentacool.html">Tentacool</a></td>
         <td><span class="type-badge type-water">Water</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/clear-body.html">Clear Body</a>, <a href="../abilities/liquid-ooze.html">Liquid Ooze</a>, <a href="../abilities/water-bubble.html">Water Bubble</a></td>
@@ -740,8 +733,8 @@
           data-hoenn-dex=""
           data-nat-dex="73"
           data-href="../pokedex/tentacruel.html">
-        <td>73</td>
-        <td><img src="../assets/game/graphics/pokemon/tentacruel/anim_front.png" alt="Tentacruel front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/tentacruel/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/tentacruel/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/tentacruel/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">73</span></td>
+        <td><span role="img" aria-label="Tentacruel front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/tentacruel/anim_front.png');--s:url('../assets/game/graphics/pokemon/tentacruel/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/tentacruel/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/tentacruel/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/tentacruel.html">Tentacruel</a></td>
         <td><span class="type-badge type-water">Water</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/clear-body.html">Clear Body</a>, <a href="../abilities/liquid-ooze.html">Liquid Ooze</a>, <a href="../abilities/water-bubble.html">Water Bubble</a></td>
@@ -750,8 +743,8 @@
           data-hoenn-dex=""
           data-nat-dex="88"
           data-href="../pokedex/grimer.html">
-        <td>88</td>
-        <td><img src="../assets/game/graphics/pokemon/grimer/anim_front.png" alt="Grimer front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/grimer/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/grimer/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/grimer/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">88</span></td>
+        <td><span role="img" aria-label="Grimer front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/grimer/anim_front.png');--s:url('../assets/game/graphics/pokemon/grimer/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/grimer/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/grimer/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/grimer.html">Grimer</a></td>
         <td><span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/stench.html">Glitz Link</a>, <a href="../abilities/gooey.html">Gooey</a>, <a href="../abilities/poison-touch.html">Poison Touch</a></td>
@@ -760,8 +753,8 @@
           data-hoenn-dex=""
           data-nat-dex="89"
           data-href="../pokedex/muk.html">
-        <td>89</td>
-        <td><img src="../assets/game/graphics/pokemon/muk/anim_front.png" alt="Muk front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/muk/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/muk/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/muk/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">89</span></td>
+        <td><span role="img" aria-label="Muk front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/muk/anim_front.png');--s:url('../assets/game/graphics/pokemon/muk/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/muk/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/muk/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/muk.html">Muk</a></td>
         <td><span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/stench.html">Glitz Link</a>, <a href="../abilities/gooey.html">Gooey</a>, <a href="../abilities/poison-touch.html">Poison Touch</a></td>
@@ -770,8 +763,8 @@
           data-hoenn-dex=""
           data-nat-dex="92"
           data-href="../pokedex/gastly.html">
-        <td>92</td>
-        <td><img src="../assets/game/graphics/pokemon/gastly/anim_front.png" alt="Gastly front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/gastly/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/gastly/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/gastly/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">92</span></td>
+        <td><span role="img" aria-label="Gastly front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/gastly/anim_front.png');--s:url('../assets/game/graphics/pokemon/gastly/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/gastly/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/gastly/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/gastly.html">Gastly</a></td>
         <td><span class="type-badge type-ghost">Ghost</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/levitate.html">Levitate</a>, <a href="../abilities/cursed-body.html">Cursed Body</a></td>
@@ -780,8 +773,8 @@
           data-hoenn-dex=""
           data-nat-dex="93"
           data-href="../pokedex/haunter.html">
-        <td>93</td>
-        <td><img src="../assets/game/graphics/pokemon/haunter/anim_front.png" alt="Haunter front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/haunter/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/haunter/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/haunter/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">93</span></td>
+        <td><span role="img" aria-label="Haunter front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/haunter/anim_front.png');--s:url('../assets/game/graphics/pokemon/haunter/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/haunter/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/haunter/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/haunter.html">Haunter</a></td>
         <td><span class="type-badge type-ghost">Ghost</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/levitate.html">Levitate</a>, <a href="../abilities/cursed-body.html">Cursed Body</a></td>
@@ -790,8 +783,8 @@
           data-hoenn-dex=""
           data-nat-dex="94"
           data-href="../pokedex/gengar.html">
-        <td>94</td>
-        <td><img src="../assets/game/graphics/pokemon/gengar/anim_front.png" alt="Gengar front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/gengar/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/gengar/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/gengar/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">94</span></td>
+        <td><span role="img" aria-label="Gengar front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/gengar/anim_front.png');--s:url('../assets/game/graphics/pokemon/gengar/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/gengar/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/gengar/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/gengar.html">Gengar</a></td>
         <td><span class="type-badge type-ghost">Ghost</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/bad-dreams.html">Bad Dreams</a>, <a href="../abilities/cursed-body.html">Cursed Body</a></td>
@@ -800,8 +793,8 @@
           data-hoenn-dex=""
           data-nat-dex="109"
           data-href="../pokedex/koffing.html">
-        <td>109</td>
-        <td><img src="../assets/game/graphics/pokemon/koffing/anim_front.png" alt="Koffing front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/koffing/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/koffing/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/koffing/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">109</span></td>
+        <td><span role="img" aria-label="Koffing front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/koffing/anim_front.png');--s:url('../assets/game/graphics/pokemon/koffing/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/koffing/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/koffing/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/koffing.html">Koffing</a></td>
         <td><span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/levitate.html">Levitate</a>, <a href="../abilities/neutralizing-gas.html">Neutralizing Gas</a>, <a href="../abilities/aftermath.html">Aftermath</a></td>
@@ -810,8 +803,8 @@
           data-hoenn-dex=""
           data-nat-dex="110"
           data-href="../pokedex/weezing.html">
-        <td>110</td>
-        <td><img src="../assets/game/graphics/pokemon/weezing/anim_front.png" alt="Weezing front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/weezing/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/weezing/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/weezing/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">110</span></td>
+        <td><span role="img" aria-label="Weezing front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/weezing/anim_front.png');--s:url('../assets/game/graphics/pokemon/weezing/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/weezing/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/weezing/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/weezing.html">Weezing</a></td>
         <td><span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/levitate.html">Levitate</a>, <a href="../abilities/neutralizing-gas.html">Neutralizing Gas</a>, <a href="../abilities/aftermath.html">Aftermath</a></td>
@@ -820,8 +813,8 @@
           data-hoenn-dex=""
           data-nat-dex="167"
           data-href="../pokedex/spinarak.html">
-        <td>167</td>
-        <td><img src="../assets/game/graphics/pokemon/spinarak/anim_front.png" alt="Spinarak front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/spinarak/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/spinarak/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/spinarak/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">167</span></td>
+        <td><span role="img" aria-label="Spinarak front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/spinarak/anim_front.png');--s:url('../assets/game/graphics/pokemon/spinarak/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/spinarak/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/spinarak/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/spinarak.html">Spinarak</a></td>
         <td><span class="type-badge type-bug">Bug</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/swarm.html">Swarm</a>, <a href="../abilities/insomnia.html">Insomnia</a>, <a href="../abilities/sniper.html">Sniper</a></td>
@@ -830,8 +823,8 @@
           data-hoenn-dex=""
           data-nat-dex="168"
           data-href="../pokedex/ariados.html">
-        <td>168</td>
-        <td><img src="../assets/game/graphics/pokemon/ariados/anim_front.png" alt="Ariados front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/ariados/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/ariados/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/ariados/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">168</span></td>
+        <td><span role="img" aria-label="Ariados front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/ariados/anim_front.png');--s:url('../assets/game/graphics/pokemon/ariados/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/ariados/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/ariados/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/ariados.html">Ariados</a></td>
         <td><span class="type-badge type-bug">Bug</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/swarm.html">Swarm</a>, <a href="../abilities/unnerve.html">Unnerve</a>, <a href="../abilities/sniper.html">Sniper</a></td>
@@ -840,8 +833,8 @@
           data-hoenn-dex=""
           data-nat-dex="169"
           data-href="../pokedex/crobat.html">
-        <td>169</td>
-        <td><img src="../assets/game/graphics/pokemon/crobat/anim_front.png" alt="Crobat front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/crobat/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/crobat/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/crobat/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">169</span></td>
+        <td><span role="img" aria-label="Crobat front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/crobat/anim_front.png');--s:url('../assets/game/graphics/pokemon/crobat/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/crobat/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/crobat/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/crobat.html">Crobat</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-flying">Flying</span></td>
         <td><a href="../abilities/inner-focus.html">Inner Focus</a>, <a href="../abilities/infiltrator.html">Infiltrator</a></td>
@@ -850,8 +843,8 @@
           data-hoenn-dex=""
           data-nat-dex="194"
           data-href="../pokedex/wooper-paldea.html">
-        <td>194</td>
-        <td><img src="../assets/game/graphics/pokemon/wooper/paldea/front.png" alt="Wooper (Paldean) front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/wooper/paldea/front__shiny.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">194</span></td>
+        <td><span role="img" aria-label="Wooper (Paldean) front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/wooper/paldea/front.png');--s:url('../assets/game/graphics/pokemon/wooper/paldea/front__shiny.png')"></span></td>
         <td><a href="../pokedex/wooper-paldea.html">Wooper<span class="species-form">(Paldean)</span></a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/poison-point.html">Poison Point</a>, <a href="../abilities/water-absorb.html">Water Absorb</a>, <a href="../abilities/unaware.html">Unaware</a></td>
@@ -860,8 +853,8 @@
           data-hoenn-dex=""
           data-nat-dex="269"
           data-href="../pokedex/dustox.html">
-        <td>269</td>
-        <td><img src="../assets/game/graphics/pokemon/dustox/anim_front.png" alt="Dustox front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/dustox/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/dustox/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/dustox/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">269</span></td>
+        <td><span role="img" aria-label="Dustox front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/dustox/anim_front.png');--s:url('../assets/game/graphics/pokemon/dustox/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/dustox/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/dustox/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/dustox.html">Dustox</a></td>
         <td><span class="type-badge type-bug">Bug</span> <span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/shield-dust.html">Shield Dust</a>, <a href="../abilities/wonder-skin.html">Wonder Skin</a>, <a href="../abilities/compound-eyes.html">Compound Eyes</a></td>
@@ -870,8 +863,8 @@
           data-hoenn-dex=""
           data-nat-dex="316"
           data-href="../pokedex/gulpin.html">
-        <td>316</td>
-        <td><img src="../assets/game/graphics/pokemon/gulpin/anim_front.png" alt="Gulpin front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/gulpin/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/gulpin/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/gulpin/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">316</span></td>
+        <td><span role="img" aria-label="Gulpin front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/gulpin/anim_front.png');--s:url('../assets/game/graphics/pokemon/gulpin/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/gulpin/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/gulpin/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/gulpin.html">Gulpin</a></td>
         <td><span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/liquid-ooze.html">Liquid Ooze</a>, <a href="../abilities/sticky-hold.html">Sticky Hold</a>, <a href="../abilities/gluttony.html">Gluttony</a></td>
@@ -880,8 +873,8 @@
           data-hoenn-dex=""
           data-nat-dex="317"
           data-href="../pokedex/swalot.html">
-        <td>317</td>
-        <td><img src="../assets/game/graphics/pokemon/swalot/anim_front.png" alt="Swalot front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/swalot/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/swalot/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/swalot/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">317</span></td>
+        <td><span role="img" aria-label="Swalot front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/swalot/anim_front.png');--s:url('../assets/game/graphics/pokemon/swalot/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/swalot/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/swalot/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/swalot.html">Swalot</a></td>
         <td><span class="type-badge type-poison">Poison</span></td>
         <td><a href="../abilities/liquid-ooze.html">Liquid Ooze</a>, <a href="../abilities/sticky-hold.html">Sticky Hold</a>, <a href="../abilities/gluttony.html">Gluttony</a></td>
@@ -890,8 +883,8 @@
           data-hoenn-dex=""
           data-nat-dex="980"
           data-href="../pokedex/clodsire.html">
-        <td>980</td>
-        <td><img src="../assets/game/graphics/pokemon/clodsire/anim_front.png" alt="Clodsire front sprite" style="image-rendering:pixelated;max-width:64px;height:auto;" data-shiny="../assets/game/graphics/pokemon/clodsire/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/clodsire/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/clodsire/anim_front__shiny__hover.png"></td>
+        <td><span class="dex-h"></span><span class="dex-n">980</span></td>
+        <td><span role="img" aria-label="Clodsire front sprite" class="sprite-bg px-sprite" style="--n:url('../assets/game/graphics/pokemon/clodsire/anim_front.png');--s:url('../assets/game/graphics/pokemon/clodsire/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/clodsire/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/clodsire/anim_front__shiny__hover.png')"></span></td>
         <td><a href="../pokedex/clodsire.html">Clodsire</a></td>
         <td><span class="type-badge type-poison">Poison</span> <span class="type-badge type-ground">Ground</span></td>
         <td><a href="../abilities/poison-point.html">Poison Point</a>, <a href="../abilities/water-absorb.html">Water Absorb</a>, <a href="../abilities/unaware.html">Unaware</a></td>
@@ -913,12 +906,12 @@
   <div class="table-scroll">
   <table id="type-moves-table" class="sortable-table">
     <thead><tr>
-      <th data-sort="text">Name</th>
-      <th data-sort="text">Type</th>
-      <th data-sort="text">Category</th>
-      <th data-sort="number">Power</th>
-      <th data-sort="number">Accuracy</th>
-      <th data-sort="number">PP</th>
+      <th data-sort="text" class="sortable sort-asc">Name</th>
+      <th data-sort="text" class="sortable">Type</th>
+      <th data-sort="text" class="sortable">Category</th>
+      <th data-sort="number" class="sortable">Power</th>
+      <th data-sort="number" class="sortable">Accuracy</th>
+      <th data-sort="number" class="sortable">PP</th>
     </tr></thead>
     <tbody>
       <tr data-search-text="Acid"
@@ -1357,36 +1350,30 @@ view: {toggleId: 'type-view-slider', headerId: 'type-dex-header', numberCol: 0, 
       });
     }
     function obstagoonBindSpriteHover() {
-      // Delegated on body so it covers every page's sprite lists and survives re-renders.
-      // Scope to the card itself, not a bare li: an evolution li holds the card plus the arrow/method text, and li-scope would swap the sprite from anywhere in the row. Cross-link cards (no card class) scope to their own <a>.
-      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, .cross-link-grid > li > a, .sprite-card, figure, section[data-href], .roster-cmon, .roster-mon') : null);
-      const restore = (img) => { if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; delete img.dataset.base; } };
-      const swap = (scope, toHover) => {
-        const img = scope && scope.querySelector('img[data-hover]');
-        if (!img) return;
-        if (!toHover) return restore(img);
-        // Skip if already swapped, so a repeat mouseover (touch fires with null relatedTarget) can't capture the hover frame as the base.
-        if (img.dataset.base) return;
-        img.dataset.base = img.src;
-        img.onerror = () => restore(img);
-        img.src = img.dataset.hover;
+      // Desktop hover is CSS; touch has none, so flag the pressed sprite and let CSS animate it while a card is held.
+      const spriteOf = (t) => {
+        if (!t || t.nodeType !== 1) return null;
+        const card = t.closest('a, tr, .roster-mon');
+        return (card && card.querySelector('.sprite-bg')) || t.closest('.sprite-bg');
       };
-      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
-      document.body.addEventListener('mouseover', (e) => {
-        const scope = scopeOf(e.target);
-        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
-      });
-      document.body.addEventListener('mouseout', (e) => {
-        const scope = scopeOf(e.target);
-        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
-      });
-      // Touch has no hover, so swap the sprite while a card is pressed and restore on release.
-      document.body.addEventListener('touchstart', (e) => { const scope = scopeOf(e.target); if (scope) swap(scope, true); }, {passive: true});
-      const endTouch = (e) => { const scope = scopeOf(e.target); if (scope) swap(scope, false); };
-      document.body.addEventListener('touchend', endTouch, {passive: true});
-      document.body.addEventListener('touchcancel', endTouch, {passive: true});
-      // A tap on mobile swaps without a matching mouseout, so restore every sprite when the page shows (incl. bfcache back-nav).
-      window.addEventListener('pageshow', () => document.querySelectorAll('img[data-hover]').forEach(restore));
+      const press = (e, on) => { const s = spriteOf(e.target); if (s) s.classList.toggle('sprite-pressed', on); };
+      document.body.addEventListener('touchstart', (e) => press(e, true), {passive: true});
+      const end = (e) => press(e, false);
+      document.body.addEventListener('touchend', end, {passive: true});
+      document.body.addEventListener('touchcancel', end, {passive: true});
+      // A tap swaps without a matching release on bfcache back-nav, so clear every pressed sprite on pageshow.
+      window.addEventListener('pageshow', () => document.querySelectorAll('.sprite-pressed').forEach((el) => el.classList.remove('sprite-pressed')));
+    }
+    function obstagoonPreloadSprites() {
+      // Warm a sprite's other variants (hover, shiny) at idle once it nears the viewport, so first hover/toggle is instant.
+      if (!('IntersectionObserver' in window)) return;
+      const idle = window.requestIdleCallback || ((f) => setTimeout(f, 0));
+      const io = new IntersectionObserver((entries, obs) => entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        obs.unobserve(e.target);
+        idle(() => (e.target.getAttribute('style') || '').match(/url\('[^']+'\)/g)?.forEach((u) => { new Image().src = u.slice(5, -2); }));
+      }), { rootMargin: '200px' });
+      document.querySelectorAll('.sprite-bg').forEach((s) => io.observe(s));
     }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
@@ -1405,7 +1392,7 @@ view: {toggleId: 'type-view-slider', headerId: 'type-dex-header', numberCol: 0, 
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonPreloadSprites(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -1413,7 +1400,7 @@ view: {toggleId: 'type-view-slider', headerId: 'type-dex-header', numberCol: 0, 
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
-      obstagoonApplyShiny();
+      obstagoonPreloadSprites();
     }
   </script>
 </body>

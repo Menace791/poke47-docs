@@ -7,7 +7,8 @@
   <meta property="og:description" content="Expansion-native documentation for Poké47.">
   <meta property="og:image" content="https://menace791.github.io/poke47-docs/assets/og-image.gif">
   <meta property="og:type" content="website">
-  <meta name="twitter:card" content="summary_large_image">  <link rel="stylesheet" href="../assets/style.css">
+  <meta name="twitter:card" content="summary_large_image">  <script>try{var r=document.documentElement;if(sessionStorage.getItem('obstagoon:dexview')==='all')r.classList.add('dex-all');if(sessionStorage.getItem('obstagoon:shinyview')==='shiny')r.classList.add('shiny-on');}catch(e){}</script>
+  <link rel="stylesheet" href="../assets/style.css">
   <script>
     // Casefold + diacritic-strip + non-alphanumeric strip so "basculinwhitestriped" matches "Basculin (White-Striped)".
     window.obstagoonNormalize = (s) => (s || '').toLowerCase()
@@ -35,23 +36,13 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
-    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    // Site-wide shiny sprite preference; the "Shiny" link in the Level Cap description toggles it.
     window.obstagoonShinyView = {
       get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
       set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
       toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
     };
-    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
-    window.obstagoonApplyShiny = () => {
-      const shiny = obstagoonShinyView.get() === 'shiny';
-      document.documentElement.classList.toggle('shiny-on', shiny);
-      document.querySelectorAll('img[data-shiny]').forEach((img) => {
-        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
-        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
-        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
-        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
-      });
-    };
+    window.obstagoonApplyShiny = () => document.documentElement.classList.toggle('shiny-on', obstagoonShinyView.get() === 'shiny');
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -59,6 +50,7 @@
       const countEl = opts.countId ? document.getElementById(opts.countId) : null;
       let currentView = obstagoonDexView.get(opts.default || 'hoenn');
       const apply = () => {
+        document.documentElement.classList.toggle('dex-all', currentView === 'all');
         let count = 0;
         sections.forEach((el) => {
           const show = currentView === 'all' || !!el.dataset.hoennDex;
@@ -93,7 +85,7 @@
         .map((c) => c.kind ? c : {kind: defaultKind || 'Pokémon', name: c.name});
       if (saved.search) input.value = saved.search;
       let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
-      let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
+      let activeDir = ['asc', 'desc'].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
       const view = opts.view || null;
       let currentView = view ? obstagoonDexView.get(view.default) : null;
       const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -102,10 +94,7 @@
         ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
       });
       const applyView = () => {
-        if (!view) return;
-        rows.forEach((el) => { el.cells[view.numberCol].textContent = (currentView === 'hoenn' ? el.dataset.hoennDex : el.dataset.natDex) || ''; });
-        const header = view.headerId ? document.getElementById(view.headerId) : null;
-        if (header) header.textContent = view.labels[currentView];
+        if (view) document.documentElement.classList.toggle('dex-all', currentView === 'all');
       };
 
       const formCellTargets = ['spriteHtml', 'nameHtml', 'typesHtml', 'abilitiesHtml'];
@@ -230,6 +219,10 @@
         const headers = Array.from(document.querySelectorAll(opts.tableSelector + ' thead th'));
         const original = Array.from(tbody.querySelectorAll('tr'));
         const cellValue = (tr, i, kind) => {
+          if (kind === 'number' && view && i === view.numberCol) {
+            const n = parseFloat((currentView === 'hoenn' ? tr.dataset.hoennDex : tr.dataset.natDex) || '');
+            return isNaN(n) ? -Infinity : n;
+          }
           const text = tr.cells[i].textContent.trim();
           if (kind === 'number') { const n = parseFloat(text); return isNaN(n) ? -Infinity : n; }
           return text.toLowerCase();
@@ -251,8 +244,8 @@
           if (!th.dataset.sort) return;
           th.classList.add('sortable');
           th.addEventListener('click', () => {
-            activeDir = i !== activeCol ? 'asc' : activeDir === 'asc' ? 'desc' : activeDir === 'desc' ? '' : 'asc';
-            activeCol = activeDir ? i : -1;
+            activeDir = i === activeCol && activeDir === 'asc' ? 'desc' : 'asc';
+            activeCol = i;
             applySort();
             persist();
           });
@@ -297,9 +290,9 @@
 <section class="card encounter-block" id="rusturf-tunnel">
     <h3>Land</h3>
         <ul class="encounter-cards">
-<li><a href="../pokedex/munna.html" class="encounter-entry mon-card type-psychic"><img src="../assets/game/graphics/pokemon/munna/anim_front.png" alt="Munna" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/munna/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/munna/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/munna/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Munna</span><span class="encounter-meta">Lv. 6-8 · 90%</span></span>
-    </a></li><li><a href="../pokedex/noibat.html" class="encounter-entry mon-card type-flying type2-dragon mon-dual"><img src="../assets/game/graphics/pokemon/noibat/anim_front.png" alt="Noibat" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/noibat/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/noibat/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/noibat/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Noibat</span><span class="encounter-meta">Lv. 6-10 · 6%</span></span>
-    </a></li><li><a href="../pokedex/carbink.html" class="encounter-entry mon-card type-rock type2-psychic mon-dual"><img src="../assets/game/graphics/pokemon/carbink/anim_front.png" alt="Carbink" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/carbink/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/carbink/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/carbink/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Carbink</span><span class="encounter-meta">Lv. 8 · 4%</span></span>
+<li><a href="../pokedex/munna.html" class="encounter-entry mon-card type-psychic"><span role="img" aria-label="Munna" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/munna/anim_front.png');--s:url('../assets/game/graphics/pokemon/munna/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/munna/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/munna/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Munna</span><span class="encounter-meta">Lv. 6-8 · 90%</span></span>
+    </a></li><li><a href="../pokedex/noibat.html" class="encounter-entry mon-card type-flying type2-dragon mon-dual"><span role="img" aria-label="Noibat" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/noibat/anim_front.png');--s:url('../assets/game/graphics/pokemon/noibat/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/noibat/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/noibat/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Noibat</span><span class="encounter-meta">Lv. 6-10 · 6%</span></span>
+    </a></li><li><a href="../pokedex/carbink.html" class="encounter-entry mon-card type-rock type2-psychic mon-dual"><span role="img" aria-label="Carbink" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/carbink/anim_front.png');--s:url('../assets/game/graphics/pokemon/carbink/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/carbink/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/carbink/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Carbink</span><span class="encounter-meta">Lv. 8 · 4%</span></span>
     </a></li>    </ul>
 
     <h3>Items</h3>
@@ -349,9 +342,9 @@
       <li class="roster-row">
 <a href="../trainerdex/trainer-grunt-rusturf-tunnel.html" class="roster-tpic-link"><img src="../assets/game/graphics/trainers/front_pics/aqua_grunt_m.png" alt="Grunt" class="roster-tpic"></a>        <div class="roster-body">
           <div class="roster-head"><a class="roster-name" href="../trainerdex/trainer-grunt-rusturf-tunnel.html">Grunt</a><span class="muted small-text">Team Aqua</span><span class="muted small-text">· Singles</span><span class="roster-caret" aria-hidden="true">&#9656;</span></div>
-<div class="roster-tier-compact" data-tier="0">  <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/purrloin.html" title="Purrloin Lv. 11"><img src="../assets/game/graphics/pokemon/purrloin/anim_front.png" alt="Purrloin" class="roster-mon-sprite" data-shiny="../assets/game/graphics/pokemon/purrloin/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/purrloin/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/purrloin/anim_front__shiny__hover.png"><span class="roster-mon-lvl">Lv. 11</span></a></div>
+<div class="roster-tier-compact" data-tier="0">  <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/purrloin.html" title="Purrloin Lv. 11"><span role="img" aria-label="Purrloin" class="sprite-bg roster-mon-sprite" style="--n:url('../assets/game/graphics/pokemon/purrloin/anim_front.png');--s:url('../assets/game/graphics/pokemon/purrloin/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/purrloin/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/purrloin/anim_front__shiny__hover.png')"></span><span class="roster-mon-lvl">Lv. 11</span></a></div>
 </div>          <div class="roster-expand" hidden><div class="roster-tier-team" data-tier="0"><div class="roster-team"><div class="roster-mon" data-href="../pokedex/purrloin.html">
-      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/purrloin/anim_front.png" alt="Purrloin" class="roster-mon-sprite" data-shiny="../assets/game/graphics/pokemon/purrloin/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/purrloin/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/purrloin/anim_front__shiny__hover.png"><span class="roster-mon-name">Purrloin</span></span>
+      <span class="roster-mon-head"><span role="img" aria-label="Purrloin" class="sprite-bg roster-mon-sprite" style="--n:url('../assets/game/graphics/pokemon/purrloin/anim_front.png');--s:url('../assets/game/graphics/pokemon/purrloin/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/purrloin/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/purrloin/anim_front__shiny__hover.png')"></span><span class="roster-mon-name">Purrloin</span></span>
 <span class="roster-mon-lvl">Lv. 11</span><span class="roster-mon-attr"><a href="../abilities/limber.html">Limber</a></span><div class="roster-mon-moves"><a href="../moves/growl.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Growl</span></a><a href="../moves/guard-swap.html" class="move-card type-psychic"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Guard Swap</span></a><a href="../moves/fury-swipes.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Fury Swipes</span></a><a href="../moves/snarl.html" class="move-card type-dark"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Snarl</span></a></div>    </div></div>
 </div></div>
         </div>
@@ -359,13 +352,13 @@
       <li class="roster-row">
 <a href="../trainerdex/trainer-mike-2.html" class="roster-tpic-link"><img src="../assets/game/graphics/trainers/front_pics/hiker.png" alt="Mike" class="roster-tpic"></a>        <div class="roster-body">
           <div class="roster-head"><a class="roster-name" href="../trainerdex/trainer-mike-2.html">Mike</a><span class="muted small-text">Hiker</span><span class="muted small-text">· Singles</span><span class="roster-caret" aria-hidden="true">&#9656;</span></div>
-<div class="roster-tier-compact" data-tier="0">  <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/roggenrola.html" title="Roggenrola Lv. 16"><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola" class="roster-mon-sprite" data-shiny="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png"><span class="roster-mon-lvl">Lv. 16</span></a><a class="roster-cmon" href="../pokedex/roggenrola.html" title="Roggenrola Lv. 16"><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola" class="roster-mon-sprite" data-shiny="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png"><span class="roster-mon-lvl">Lv. 16</span></a><a class="roster-cmon" href="../pokedex/timburr.html" title="Timburr Lv. 16"><img src="../assets/game/graphics/pokemon/timburr/anim_front.png" alt="Timburr" class="roster-mon-sprite" data-shiny="../assets/game/graphics/pokemon/timburr/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/timburr/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/timburr/anim_front__shiny__hover.png"><span class="roster-mon-lvl">Lv. 16</span></a></div>
+<div class="roster-tier-compact" data-tier="0">  <div class="roster-team roster-team--compact"><a class="roster-cmon" href="../pokedex/roggenrola.html" title="Roggenrola Lv. 16"><span role="img" aria-label="Roggenrola" class="sprite-bg roster-mon-sprite" style="--n:url('../assets/game/graphics/pokemon/roggenrola/anim_front.png');--s:url('../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png')"></span><span class="roster-mon-lvl">Lv. 16</span></a><a class="roster-cmon" href="../pokedex/roggenrola.html" title="Roggenrola Lv. 16"><span role="img" aria-label="Roggenrola" class="sprite-bg roster-mon-sprite" style="--n:url('../assets/game/graphics/pokemon/roggenrola/anim_front.png');--s:url('../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png')"></span><span class="roster-mon-lvl">Lv. 16</span></a><a class="roster-cmon" href="../pokedex/timburr.html" title="Timburr Lv. 16"><span role="img" aria-label="Timburr" class="sprite-bg roster-mon-sprite" style="--n:url('../assets/game/graphics/pokemon/timburr/anim_front.png');--s:url('../assets/game/graphics/pokemon/timburr/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/timburr/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/timburr/anim_front__shiny__hover.png')"></span><span class="roster-mon-lvl">Lv. 16</span></a></div>
 </div>          <div class="roster-expand" hidden><div class="roster-tier-team" data-tier="0"><div class="roster-team"><div class="roster-mon" data-href="../pokedex/roggenrola.html">
-      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola" class="roster-mon-sprite" data-shiny="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png"><span class="roster-mon-name">Roggenrola</span></span>
+      <span class="roster-mon-head"><span role="img" aria-label="Roggenrola" class="sprite-bg roster-mon-sprite" style="--n:url('../assets/game/graphics/pokemon/roggenrola/anim_front.png');--s:url('../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png')"></span><span class="roster-mon-name">Roggenrola</span></span>
 <span class="roster-mon-lvl">Lv. 16</span><span class="roster-mon-attr"><a href="../abilities/weak-armor.html">Weak Armor</a></span><div class="roster-mon-moves"><a href="../moves/power-gem.html" class="move-card type-rock"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Power Gem</span></a><a href="../moves/sandstorm.html" class="move-card type-rock"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Sandstorm</span></a><a href="../moves/smack-down.html" class="move-card type-rock"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Smack Down</span></a><a href="../moves/thunder-wave.html" class="move-card type-electric"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Thunder Wave</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/roggenrola.html">
-      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola" class="roster-mon-sprite" data-shiny="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png"><span class="roster-mon-name">Roggenrola</span></span>
+      <span class="roster-mon-head"><span role="img" aria-label="Roggenrola" class="sprite-bg roster-mon-sprite" style="--n:url('../assets/game/graphics/pokemon/roggenrola/anim_front.png');--s:url('../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png')"></span><span class="roster-mon-name">Roggenrola</span></span>
 <span class="roster-mon-lvl">Lv. 16</span><span class="roster-mon-attr"><a href="../abilities/weak-armor.html">Weak Armor</a></span><div class="roster-mon-moves"><a href="../moves/power-gem.html" class="move-card type-rock"><img src="../assets/game/graphics/interface/category_special.png" alt="Special" class="move-cat-icon"><span class="stab">Power Gem</span></a><a href="../moves/sandstorm.html" class="move-card type-rock"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Sandstorm</span></a><a href="../moves/smack-down.html" class="move-card type-rock"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Smack Down</span></a><a href="../moves/thunder-wave.html" class="move-card type-electric"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Thunder Wave</span></a></div>    </div><div class="roster-mon" data-href="../pokedex/timburr.html">
-      <span class="roster-mon-head"><img src="../assets/game/graphics/pokemon/timburr/anim_front.png" alt="Timburr" class="roster-mon-sprite" data-shiny="../assets/game/graphics/pokemon/timburr/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/timburr/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/timburr/anim_front__shiny__hover.png"><span class="roster-mon-name">Timburr</span></span>
+      <span class="roster-mon-head"><span role="img" aria-label="Timburr" class="sprite-bg roster-mon-sprite" style="--n:url('../assets/game/graphics/pokemon/timburr/anim_front.png');--s:url('../assets/game/graphics/pokemon/timburr/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/timburr/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/timburr/anim_front__shiny__hover.png')"></span><span class="roster-mon-name">Timburr</span></span>
 <span class="roster-mon-lvl">Lv. 16</span><span class="roster-mon-attr"><a href="../abilities/iron-fist.html">Iron Fist</a></span><div class="roster-mon-moves"><a href="../moves/low-kick.html" class="move-card type-fighting"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span class="stab">Low Kick</span></a><a href="../moves/heavy-slam.html" class="move-card type-steel"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Heavy Slam</span></a><a href="../moves/bulk-up.html" class="move-card type-fighting"><img src="../assets/game/graphics/interface/category_status.png" alt="Status" class="move-cat-icon"><span>Bulk Up</span></a><a href="../moves/chip-away.html" class="move-card type-normal"><img src="../assets/game/graphics/interface/category_physical.png" alt="Physical" class="move-cat-icon"><span>Chip Away</span></a></div>    </div></div>
 </div></div>
         </div>
@@ -469,36 +462,30 @@
       });
     }
     function obstagoonBindSpriteHover() {
-      // Delegated on body so it covers every page's sprite lists and survives re-renders.
-      // Scope to the card itself, not a bare li: an evolution li holds the card plus the arrow/method text, and li-scope would swap the sprite from anywhere in the row. Cross-link cards (no card class) scope to their own <a>.
-      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, .cross-link-grid > li > a, .sprite-card, figure, section[data-href], .roster-cmon, .roster-mon') : null);
-      const restore = (img) => { if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; delete img.dataset.base; } };
-      const swap = (scope, toHover) => {
-        const img = scope && scope.querySelector('img[data-hover]');
-        if (!img) return;
-        if (!toHover) return restore(img);
-        // Skip if already swapped, so a repeat mouseover (touch fires with null relatedTarget) can't capture the hover frame as the base.
-        if (img.dataset.base) return;
-        img.dataset.base = img.src;
-        img.onerror = () => restore(img);
-        img.src = img.dataset.hover;
+      // Desktop hover is CSS; touch has none, so flag the pressed sprite and let CSS animate it while a card is held.
+      const spriteOf = (t) => {
+        if (!t || t.nodeType !== 1) return null;
+        const card = t.closest('a, tr, .roster-mon');
+        return (card && card.querySelector('.sprite-bg')) || t.closest('.sprite-bg');
       };
-      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
-      document.body.addEventListener('mouseover', (e) => {
-        const scope = scopeOf(e.target);
-        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
-      });
-      document.body.addEventListener('mouseout', (e) => {
-        const scope = scopeOf(e.target);
-        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
-      });
-      // Touch has no hover, so swap the sprite while a card is pressed and restore on release.
-      document.body.addEventListener('touchstart', (e) => { const scope = scopeOf(e.target); if (scope) swap(scope, true); }, {passive: true});
-      const endTouch = (e) => { const scope = scopeOf(e.target); if (scope) swap(scope, false); };
-      document.body.addEventListener('touchend', endTouch, {passive: true});
-      document.body.addEventListener('touchcancel', endTouch, {passive: true});
-      // A tap on mobile swaps without a matching mouseout, so restore every sprite when the page shows (incl. bfcache back-nav).
-      window.addEventListener('pageshow', () => document.querySelectorAll('img[data-hover]').forEach(restore));
+      const press = (e, on) => { const s = spriteOf(e.target); if (s) s.classList.toggle('sprite-pressed', on); };
+      document.body.addEventListener('touchstart', (e) => press(e, true), {passive: true});
+      const end = (e) => press(e, false);
+      document.body.addEventListener('touchend', end, {passive: true});
+      document.body.addEventListener('touchcancel', end, {passive: true});
+      // A tap swaps without a matching release on bfcache back-nav, so clear every pressed sprite on pageshow.
+      window.addEventListener('pageshow', () => document.querySelectorAll('.sprite-pressed').forEach((el) => el.classList.remove('sprite-pressed')));
+    }
+    function obstagoonPreloadSprites() {
+      // Warm a sprite's other variants (hover, shiny) at idle once it nears the viewport, so first hover/toggle is instant.
+      if (!('IntersectionObserver' in window)) return;
+      const idle = window.requestIdleCallback || ((f) => setTimeout(f, 0));
+      const io = new IntersectionObserver((entries, obs) => entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        obs.unobserve(e.target);
+        idle(() => (e.target.getAttribute('style') || '').match(/url\('[^']+'\)/g)?.forEach((u) => { new Image().src = u.slice(5, -2); }));
+      }), { rootMargin: '200px' });
+      document.querySelectorAll('.sprite-bg').forEach((s) => io.observe(s));
     }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
@@ -517,7 +504,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonPreloadSprites(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -525,7 +512,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
-      obstagoonApplyShiny();
+      obstagoonPreloadSprites();
     }
   </script>
 </body>

@@ -7,7 +7,8 @@
   <meta property="og:description" content="Expansion-native documentation for Poké47.">
   <meta property="og:image" content="https://menace791.github.io/poke47-docs/assets/og-image.gif">
   <meta property="og:type" content="website">
-  <meta name="twitter:card" content="summary_large_image">  <link rel="stylesheet" href="../assets/style.css">
+  <meta name="twitter:card" content="summary_large_image">  <script>try{var r=document.documentElement;if(sessionStorage.getItem('obstagoon:dexview')==='all')r.classList.add('dex-all');if(sessionStorage.getItem('obstagoon:shinyview')==='shiny')r.classList.add('shiny-on');}catch(e){}</script>
+  <link rel="stylesheet" href="../assets/style.css">
   <script>
     // Casefold + diacritic-strip + non-alphanumeric strip so "basculinwhitestriped" matches "Basculin (White-Striped)".
     window.obstagoonNormalize = (s) => (s || '').toLowerCase()
@@ -35,23 +36,13 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
-    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    // Site-wide shiny sprite preference; the "Shiny" link in the Level Cap description toggles it.
     window.obstagoonShinyView = {
       get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
       set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
       toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
     };
-    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
-    window.obstagoonApplyShiny = () => {
-      const shiny = obstagoonShinyView.get() === 'shiny';
-      document.documentElement.classList.toggle('shiny-on', shiny);
-      document.querySelectorAll('img[data-shiny]').forEach((img) => {
-        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
-        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
-        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
-        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
-      });
-    };
+    window.obstagoonApplyShiny = () => document.documentElement.classList.toggle('shiny-on', obstagoonShinyView.get() === 'shiny');
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -59,6 +50,7 @@
       const countEl = opts.countId ? document.getElementById(opts.countId) : null;
       let currentView = obstagoonDexView.get(opts.default || 'hoenn');
       const apply = () => {
+        document.documentElement.classList.toggle('dex-all', currentView === 'all');
         let count = 0;
         sections.forEach((el) => {
           const show = currentView === 'all' || !!el.dataset.hoennDex;
@@ -93,7 +85,7 @@
         .map((c) => c.kind ? c : {kind: defaultKind || 'Pokémon', name: c.name});
       if (saved.search) input.value = saved.search;
       let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
-      let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
+      let activeDir = ['asc', 'desc'].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
       const view = opts.view || null;
       let currentView = view ? obstagoonDexView.get(view.default) : null;
       const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -102,10 +94,7 @@
         ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
       });
       const applyView = () => {
-        if (!view) return;
-        rows.forEach((el) => { el.cells[view.numberCol].textContent = (currentView === 'hoenn' ? el.dataset.hoennDex : el.dataset.natDex) || ''; });
-        const header = view.headerId ? document.getElementById(view.headerId) : null;
-        if (header) header.textContent = view.labels[currentView];
+        if (view) document.documentElement.classList.toggle('dex-all', currentView === 'all');
       };
 
       const formCellTargets = ['spriteHtml', 'nameHtml', 'typesHtml', 'abilitiesHtml'];
@@ -230,6 +219,10 @@
         const headers = Array.from(document.querySelectorAll(opts.tableSelector + ' thead th'));
         const original = Array.from(tbody.querySelectorAll('tr'));
         const cellValue = (tr, i, kind) => {
+          if (kind === 'number' && view && i === view.numberCol) {
+            const n = parseFloat((currentView === 'hoenn' ? tr.dataset.hoennDex : tr.dataset.natDex) || '');
+            return isNaN(n) ? -Infinity : n;
+          }
           const text = tr.cells[i].textContent.trim();
           if (kind === 'number') { const n = parseFloat(text); return isNaN(n) ? -Infinity : n; }
           return text.toLowerCase();
@@ -251,8 +244,8 @@
           if (!th.dataset.sort) return;
           th.classList.add('sortable');
           th.addEventListener('click', () => {
-            activeDir = i !== activeCol ? 'asc' : activeDir === 'asc' ? 'desc' : activeDir === 'desc' ? '' : 'asc';
-            activeCol = activeDir ? i : -1;
+            activeDir = i === activeCol && activeDir === 'asc' ? 'desc' : 'asc';
+            activeCol = i;
             applySort();
             persist();
           });
@@ -297,48 +290,48 @@
 <section class="card encounter-block" id="gauntlet-island-south">
 <h2>Gauntlet Island South</h2>    <h3>Land</h3>
         <ul class="encounter-cards">
-<li><a href="../pokedex/lillipup.html" class="encounter-entry mon-card type-normal"><img src="../assets/game/graphics/pokemon/lillipup/anim_front.png" alt="Lillipup" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/lillipup/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/lillipup/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/lillipup/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Lillipup</span><span class="encounter-meta">Lv. 5-6 · 20%</span></span>
-    </a></li><li><a href="../pokedex/mudbray.html" class="encounter-entry mon-card type-ground"><img src="../assets/game/graphics/pokemon/mudbray/anim_front.png" alt="Mudbray" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/mudbray/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/mudbray/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/mudbray/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Mudbray</span><span class="encounter-meta">Lv. 5-6 · 20%</span></span>
-    </a></li><li><a href="../pokedex/sewaddle.html" class="encounter-entry mon-card type-bug type2-grass mon-dual"><img src="../assets/game/graphics/pokemon/sewaddle/anim_front.png" alt="Sewaddle" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/sewaddle/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sewaddle/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sewaddle/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Sewaddle</span><span class="encounter-meta">Lv. 6-7 · 10%</span></span>
-    </a></li><li><a href="../pokedex/venipede.html" class="encounter-entry mon-card type-bug type2-poison mon-dual"><img src="../assets/game/graphics/pokemon/venipede/anim_front.png" alt="Venipede" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/venipede/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/venipede/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/venipede/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Venipede</span><span class="encounter-meta">Lv. 5-6 · 10%</span></span>
-    </a></li><li><a href="../pokedex/foongus.html" class="encounter-entry mon-card type-grass type2-poison mon-dual"><img src="../assets/game/graphics/pokemon/foongus/anim_front.png" alt="Foongus" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/foongus/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/foongus/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/foongus/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Foongus</span><span class="encounter-meta">Lv. 6 · 10%</span></span>
-    </a></li><li><a href="../pokedex/deerling.html" class="encounter-entry mon-card type-normal type2-grass mon-dual"><img src="../assets/game/graphics/pokemon/deerling/anim_front.png" alt="Deerling (Spring)" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/deerling/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/deerling/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/deerling/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Deerling (Spring)</span><span class="encounter-meta">Lv. 6-7 · 10%</span></span>
-    </a></li><li><a href="../pokedex/hoppip.html" class="encounter-entry mon-card type-grass type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/hoppip/anim_front.png" alt="Hoppip" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/hoppip/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/hoppip/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/hoppip/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Hoppip</span><span class="encounter-meta">Lv. 5-7 · 5%</span></span>
-    </a></li><li><a href="../pokedex/joltik.html" class="encounter-entry mon-card type-bug type2-electric mon-dual"><img src="../assets/game/graphics/pokemon/joltik/anim_front.png" alt="Joltik" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/joltik/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/joltik/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/joltik/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Joltik</span><span class="encounter-meta">Lv. 6 · 5%</span></span>
-    </a></li><li><a href="../pokedex/snivy.html" class="encounter-entry mon-card type-grass"><img src="../assets/game/graphics/pokemon/snivy/anim_front.png" alt="Snivy" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/snivy/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/snivy/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/snivy/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Snivy</span><span class="encounter-meta">Lv. 6 · 4%</span></span>
-    </a></li><li><a href="../pokedex/froakie.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/froakie/anim_front.png" alt="Froakie" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/froakie/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/froakie/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/froakie/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Froakie</span><span class="encounter-meta">Lv. 5 · 4%</span></span>
-    </a></li><li><a href="../pokedex/vullaby.html" class="encounter-entry mon-card type-dark type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/vullaby/anim_front.png" alt="Vullaby" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/vullaby/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/vullaby/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/vullaby/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Vullaby</span><span class="encounter-meta">Lv. 6 · 2%</span></span>
+<li><a href="../pokedex/lillipup.html" class="encounter-entry mon-card type-normal"><span role="img" aria-label="Lillipup" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/lillipup/anim_front.png');--s:url('../assets/game/graphics/pokemon/lillipup/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/lillipup/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/lillipup/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Lillipup</span><span class="encounter-meta">Lv. 5-6 · 20%</span></span>
+    </a></li><li><a href="../pokedex/mudbray.html" class="encounter-entry mon-card type-ground"><span role="img" aria-label="Mudbray" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/mudbray/anim_front.png');--s:url('../assets/game/graphics/pokemon/mudbray/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/mudbray/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/mudbray/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Mudbray</span><span class="encounter-meta">Lv. 5-6 · 20%</span></span>
+    </a></li><li><a href="../pokedex/sewaddle.html" class="encounter-entry mon-card type-bug type2-grass mon-dual"><span role="img" aria-label="Sewaddle" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/sewaddle/anim_front.png');--s:url('../assets/game/graphics/pokemon/sewaddle/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/sewaddle/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/sewaddle/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Sewaddle</span><span class="encounter-meta">Lv. 6-7 · 10%</span></span>
+    </a></li><li><a href="../pokedex/venipede.html" class="encounter-entry mon-card type-bug type2-poison mon-dual"><span role="img" aria-label="Venipede" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/venipede/anim_front.png');--s:url('../assets/game/graphics/pokemon/venipede/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/venipede/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/venipede/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Venipede</span><span class="encounter-meta">Lv. 5-6 · 10%</span></span>
+    </a></li><li><a href="../pokedex/foongus.html" class="encounter-entry mon-card type-grass type2-poison mon-dual"><span role="img" aria-label="Foongus" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/foongus/anim_front.png');--s:url('../assets/game/graphics/pokemon/foongus/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/foongus/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/foongus/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Foongus</span><span class="encounter-meta">Lv. 6 · 10%</span></span>
+    </a></li><li><a href="../pokedex/deerling.html" class="encounter-entry mon-card type-normal type2-grass mon-dual"><span role="img" aria-label="Deerling (Spring)" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/deerling/anim_front.png');--s:url('../assets/game/graphics/pokemon/deerling/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/deerling/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/deerling/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Deerling (Spring)</span><span class="encounter-meta">Lv. 6-7 · 10%</span></span>
+    </a></li><li><a href="../pokedex/hoppip.html" class="encounter-entry mon-card type-grass type2-flying mon-dual"><span role="img" aria-label="Hoppip" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/hoppip/anim_front.png');--s:url('../assets/game/graphics/pokemon/hoppip/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/hoppip/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/hoppip/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Hoppip</span><span class="encounter-meta">Lv. 5-7 · 5%</span></span>
+    </a></li><li><a href="../pokedex/joltik.html" class="encounter-entry mon-card type-bug type2-electric mon-dual"><span role="img" aria-label="Joltik" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/joltik/anim_front.png');--s:url('../assets/game/graphics/pokemon/joltik/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/joltik/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/joltik/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Joltik</span><span class="encounter-meta">Lv. 6 · 5%</span></span>
+    </a></li><li><a href="../pokedex/snivy.html" class="encounter-entry mon-card type-grass"><span role="img" aria-label="Snivy" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/snivy/anim_front.png');--s:url('../assets/game/graphics/pokemon/snivy/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/snivy/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/snivy/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Snivy</span><span class="encounter-meta">Lv. 6 · 4%</span></span>
+    </a></li><li><a href="../pokedex/froakie.html" class="encounter-entry mon-card type-water"><span role="img" aria-label="Froakie" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/froakie/anim_front.png');--s:url('../assets/game/graphics/pokemon/froakie/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/froakie/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/froakie/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Froakie</span><span class="encounter-meta">Lv. 5 · 4%</span></span>
+    </a></li><li><a href="../pokedex/vullaby.html" class="encounter-entry mon-card type-dark type2-flying mon-dual"><span role="img" aria-label="Vullaby" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/vullaby/anim_front.png');--s:url('../assets/game/graphics/pokemon/vullaby/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/vullaby/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/vullaby/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Vullaby</span><span class="encounter-meta">Lv. 6 · 2%</span></span>
     </a></li>    </ul>
 
     <h3>Rock Smash</h3>
         <ul class="encounter-cards">
-<li><a href="../pokedex/roggenrola.html" class="encounter-entry mon-card type-rock"><img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="Roggenrola" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Roggenrola</span><span class="encounter-meta">Lv. 5 · 100%</span></span>
+<li><a href="../pokedex/roggenrola.html" class="encounter-entry mon-card type-rock"><span role="img" aria-label="Roggenrola" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/roggenrola/anim_front.png');--s:url('../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Roggenrola</span><span class="encounter-meta">Lv. 5 · 100%</span></span>
     </a></li>    </ul>
 
     <h3>Water</h3>
         <ul class="encounter-cards">
-<li><a href="../pokedex/finneon.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/finneon/anim_front.png" alt="Finneon" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/finneon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/finneon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/finneon/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Finneon</span><span class="encounter-meta">Lv. 7-10 · 60%</span></span>
-    </a></li><li><a href="../pokedex/wishiwashi.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/wishiwashi/anim_front.png" alt="Wishiwashi (Solo)" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/wishiwashi/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Wishiwashi (Solo)</span><span class="encounter-meta">Lv. 8-10 · 30%</span></span>
-    </a></li><li><a href="../pokedex/shellos-east.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/shellos/east/anim_front.png" alt="Shellos (East Sea)" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/shellos/east/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/shellos/east/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/shellos/east/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Shellos (East Sea)</span><span class="encounter-meta">Lv. 7-8 · 10%</span></span>
+<li><a href="../pokedex/finneon.html" class="encounter-entry mon-card type-water"><span role="img" aria-label="Finneon" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/finneon/anim_front.png');--s:url('../assets/game/graphics/pokemon/finneon/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/finneon/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/finneon/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Finneon</span><span class="encounter-meta">Lv. 7-10 · 60%</span></span>
+    </a></li><li><a href="../pokedex/wishiwashi.html" class="encounter-entry mon-card type-water"><span role="img" aria-label="Wishiwashi (Solo)" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/wishiwashi/anim_front.png');--s:url('../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/wishiwashi/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Wishiwashi (Solo)</span><span class="encounter-meta">Lv. 8-10 · 30%</span></span>
+    </a></li><li><a href="../pokedex/shellos-east.html" class="encounter-entry mon-card type-water"><span role="img" aria-label="Shellos (East Sea)" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/shellos/east/anim_front.png');--s:url('../assets/game/graphics/pokemon/shellos/east/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/shellos/east/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/shellos/east/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Shellos (East Sea)</span><span class="encounter-meta">Lv. 7-8 · 10%</span></span>
     </a></li>    </ul>
 
     <h3>Fishing</h3>
           <h4>Old Rod</h4>
       <ul class="encounter-cards">
-<li><a href="../pokedex/finneon.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/finneon/anim_front.png" alt="Finneon" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/finneon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/finneon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/finneon/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Finneon</span><span class="encounter-meta">Lv. 5-7 · 70%</span></span>
-    </a></li><li><a href="../pokedex/wishiwashi.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/wishiwashi/anim_front.png" alt="Wishiwashi (Solo)" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/wishiwashi/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Wishiwashi (Solo)</span><span class="encounter-meta">Lv. 5-7 · 30%</span></span>
+<li><a href="../pokedex/finneon.html" class="encounter-entry mon-card type-water"><span role="img" aria-label="Finneon" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/finneon/anim_front.png');--s:url('../assets/game/graphics/pokemon/finneon/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/finneon/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/finneon/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Finneon</span><span class="encounter-meta">Lv. 5-7 · 70%</span></span>
+    </a></li><li><a href="../pokedex/wishiwashi.html" class="encounter-entry mon-card type-water"><span role="img" aria-label="Wishiwashi (Solo)" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/wishiwashi/anim_front.png');--s:url('../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/wishiwashi/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Wishiwashi (Solo)</span><span class="encounter-meta">Lv. 5-7 · 30%</span></span>
     </a></li>      </ul>
       <h4>Good Rod</h4>
       <ul class="encounter-cards">
-<li><a href="../pokedex/finneon.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/finneon/anim_front.png" alt="Finneon" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/finneon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/finneon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/finneon/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Finneon</span><span class="encounter-meta">Lv. 8 · 60%</span></span>
-    </a></li><li><a href="../pokedex/mareanie.html" class="encounter-entry mon-card type-poison type2-water mon-dual"><img src="../assets/game/graphics/pokemon/mareanie/anim_front.png" alt="Mareanie" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/mareanie/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/mareanie/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/mareanie/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Mareanie</span><span class="encounter-meta">Lv. 9 · 20%</span></span>
-    </a></li><li><a href="../pokedex/wishiwashi.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/wishiwashi/anim_front.png" alt="Wishiwashi (Solo)" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/wishiwashi/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Wishiwashi (Solo)</span><span class="encounter-meta">Lv. 8 · 20%</span></span>
+<li><a href="../pokedex/finneon.html" class="encounter-entry mon-card type-water"><span role="img" aria-label="Finneon" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/finneon/anim_front.png');--s:url('../assets/game/graphics/pokemon/finneon/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/finneon/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/finneon/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Finneon</span><span class="encounter-meta">Lv. 8 · 60%</span></span>
+    </a></li><li><a href="../pokedex/mareanie.html" class="encounter-entry mon-card type-poison type2-water mon-dual"><span role="img" aria-label="Mareanie" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/mareanie/anim_front.png');--s:url('../assets/game/graphics/pokemon/mareanie/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/mareanie/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/mareanie/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Mareanie</span><span class="encounter-meta">Lv. 9 · 20%</span></span>
+    </a></li><li><a href="../pokedex/wishiwashi.html" class="encounter-entry mon-card type-water"><span role="img" aria-label="Wishiwashi (Solo)" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/wishiwashi/anim_front.png');--s:url('../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/wishiwashi/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Wishiwashi (Solo)</span><span class="encounter-meta">Lv. 8 · 20%</span></span>
     </a></li>      </ul>
       <h4>Super Rod</h4>
       <ul class="encounter-cards">
-<li><a href="../pokedex/mareanie.html" class="encounter-entry mon-card type-poison type2-water mon-dual"><img src="../assets/game/graphics/pokemon/mareanie/anim_front.png" alt="Mareanie" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/mareanie/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/mareanie/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/mareanie/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Mareanie</span><span class="encounter-meta">Lv. 8 · 40%</span></span>
-    </a></li><li><a href="../pokedex/wishiwashi.html" class="encounter-entry mon-card type-water"><img src="../assets/game/graphics/pokemon/wishiwashi/anim_front.png" alt="Wishiwashi (Solo)" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/wishiwashi/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Wishiwashi (Solo)</span><span class="encounter-meta">Lv. 10 · 40%</span></span>
-    </a></li><li><a href="../pokedex/bruxish.html" class="encounter-entry mon-card type-water type2-psychic mon-dual"><img src="../assets/game/graphics/pokemon/bruxish/anim_front.png" alt="Bruxish" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/bruxish/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/bruxish/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/bruxish/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Bruxish</span><span class="encounter-meta">Lv. 10 · 20%</span></span>
+<li><a href="../pokedex/mareanie.html" class="encounter-entry mon-card type-poison type2-water mon-dual"><span role="img" aria-label="Mareanie" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/mareanie/anim_front.png');--s:url('../assets/game/graphics/pokemon/mareanie/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/mareanie/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/mareanie/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Mareanie</span><span class="encounter-meta">Lv. 8 · 40%</span></span>
+    </a></li><li><a href="../pokedex/wishiwashi.html" class="encounter-entry mon-card type-water"><span role="img" aria-label="Wishiwashi (Solo)" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/wishiwashi/anim_front.png');--s:url('../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/wishiwashi/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/wishiwashi/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Wishiwashi (Solo)</span><span class="encounter-meta">Lv. 10 · 40%</span></span>
+    </a></li><li><a href="../pokedex/bruxish.html" class="encounter-entry mon-card type-water type2-psychic mon-dual"><span role="img" aria-label="Bruxish" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/bruxish/anim_front.png');--s:url('../assets/game/graphics/pokemon/bruxish/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/bruxish/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/bruxish/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Bruxish</span><span class="encounter-meta">Lv. 10 · 20%</span></span>
     </a></li>      </ul>
 
     <h3>Items</h3>
@@ -385,22 +378,22 @@
 <section class="card encounter-block" id="gauntlet-island-southwest">
 <h2>Gauntlet Island Southwest</h2>    <h3>Land</h3>
         <ul class="encounter-cards">
-<li><a href="../pokedex/boldore.html" class="encounter-entry mon-card type-rock"><img src="../assets/game/graphics/pokemon/boldore/anim_front.png" alt="Boldore" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/boldore/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/boldore/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/boldore/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Boldore</span><span class="encounter-meta">Lv. 23-26 · 20%</span></span>
-    </a></li><li><a href="../pokedex/mudsdale.html" class="encounter-entry mon-card type-ground"><img src="../assets/game/graphics/pokemon/mudsdale/anim_front.png" alt="Mudsdale" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/mudsdale/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/mudsdale/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/mudsdale/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Mudsdale</span><span class="encounter-meta">Lv. 23-26 · 20%</span></span>
-    </a></li><li><a href="../pokedex/mandibuzz.html" class="encounter-entry mon-card type-dark type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/mandibuzz/anim_front.png" alt="Mandibuzz" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/mandibuzz/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/mandibuzz/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/mandibuzz/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Mandibuzz</span><span class="encounter-meta">Lv. 24 · 14%</span></span>
-    </a></li><li><a href="../pokedex/watchog.html" class="encounter-entry mon-card type-normal"><img src="../assets/game/graphics/pokemon/watchog/anim_front.png" alt="Watchog" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/watchog/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/watchog/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/watchog/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Watchog</span><span class="encounter-meta">Lv. 22-23 · 10%</span></span>
-    </a></li><li><a href="../pokedex/sigilyph.html" class="encounter-entry mon-card type-psychic type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/sigilyph/anim_front.png" alt="Sigilyph" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/sigilyph/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/sigilyph/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/sigilyph/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Sigilyph</span><span class="encounter-meta">Lv. 25 · 10%</span></span>
-    </a></li><li><a href="../pokedex/golett.html" class="encounter-entry mon-card type-ground type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/golett/anim_front.png" alt="Golett" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/golett/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/golett/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/golett/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Golett</span><span class="encounter-meta">Lv. 25 · 10%</span></span>
-    </a></li><li><a href="../pokedex/braviary-hisui.html" class="encounter-entry mon-card type-psychic type2-flying mon-dual"><img src="../assets/game/graphics/pokemon/braviary/hisui/front.png" alt="Braviary (Hisuian)" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/braviary/hisui/front__shiny.png"><span class="encounter-info"><span class="name">Braviary (Hisuian)</span><span class="encounter-meta">Lv. 26 · 5%</span></span>
-    </a></li><li><a href="../pokedex/runerigus.html" class="encounter-entry mon-card type-ground type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/runerigus/front.png" alt="Runerigus" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/runerigus/front__shiny.png"><span class="encounter-info"><span class="name">Runerigus</span><span class="encounter-meta">Lv. 25 · 5%</span></span>
-    </a></li><li><a href="../pokedex/bronzong.html" class="encounter-entry mon-card type-steel type2-psychic mon-dual"><img src="../assets/game/graphics/pokemon/bronzong/anim_front.png" alt="Bronzong" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/bronzong/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/bronzong/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/bronzong/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Bronzong</span><span class="encounter-meta">Lv. 24 · 4%</span></span>
-    </a></li><li><a href="../pokedex/trevenant.html" class="encounter-entry mon-card type-ghost type2-grass mon-dual"><img src="../assets/game/graphics/pokemon/trevenant/anim_front.png" alt="Trevenant" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/trevenant/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/trevenant/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/trevenant/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Trevenant</span><span class="encounter-meta">Lv. 24 · 2%</span></span>
+<li><a href="../pokedex/boldore.html" class="encounter-entry mon-card type-rock"><span role="img" aria-label="Boldore" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/boldore/anim_front.png');--s:url('../assets/game/graphics/pokemon/boldore/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/boldore/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/boldore/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Boldore</span><span class="encounter-meta">Lv. 23-26 · 20%</span></span>
+    </a></li><li><a href="../pokedex/mudsdale.html" class="encounter-entry mon-card type-ground"><span role="img" aria-label="Mudsdale" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/mudsdale/anim_front.png');--s:url('../assets/game/graphics/pokemon/mudsdale/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/mudsdale/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/mudsdale/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Mudsdale</span><span class="encounter-meta">Lv. 23-26 · 20%</span></span>
+    </a></li><li><a href="../pokedex/mandibuzz.html" class="encounter-entry mon-card type-dark type2-flying mon-dual"><span role="img" aria-label="Mandibuzz" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/mandibuzz/anim_front.png');--s:url('../assets/game/graphics/pokemon/mandibuzz/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/mandibuzz/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/mandibuzz/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Mandibuzz</span><span class="encounter-meta">Lv. 24 · 14%</span></span>
+    </a></li><li><a href="../pokedex/watchog.html" class="encounter-entry mon-card type-normal"><span role="img" aria-label="Watchog" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/watchog/anim_front.png');--s:url('../assets/game/graphics/pokemon/watchog/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/watchog/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/watchog/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Watchog</span><span class="encounter-meta">Lv. 22-23 · 10%</span></span>
+    </a></li><li><a href="../pokedex/sigilyph.html" class="encounter-entry mon-card type-psychic type2-flying mon-dual"><span role="img" aria-label="Sigilyph" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/sigilyph/anim_front.png');--s:url('../assets/game/graphics/pokemon/sigilyph/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/sigilyph/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/sigilyph/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Sigilyph</span><span class="encounter-meta">Lv. 25 · 10%</span></span>
+    </a></li><li><a href="../pokedex/golett.html" class="encounter-entry mon-card type-ground type2-ghost mon-dual"><span role="img" aria-label="Golett" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/golett/anim_front.png');--s:url('../assets/game/graphics/pokemon/golett/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/golett/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/golett/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Golett</span><span class="encounter-meta">Lv. 25 · 10%</span></span>
+    </a></li><li><a href="../pokedex/braviary-hisui.html" class="encounter-entry mon-card type-psychic type2-flying mon-dual"><span role="img" aria-label="Braviary (Hisuian)" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/braviary/hisui/front.png');--s:url('../assets/game/graphics/pokemon/braviary/hisui/front__shiny.png')"></span><span class="encounter-info"><span class="name">Braviary (Hisuian)</span><span class="encounter-meta">Lv. 26 · 5%</span></span>
+    </a></li><li><a href="../pokedex/runerigus.html" class="encounter-entry mon-card type-ground type2-ghost mon-dual"><span role="img" aria-label="Runerigus" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/runerigus/front.png');--s:url('../assets/game/graphics/pokemon/runerigus/front__shiny.png')"></span><span class="encounter-info"><span class="name">Runerigus</span><span class="encounter-meta">Lv. 25 · 5%</span></span>
+    </a></li><li><a href="../pokedex/bronzong.html" class="encounter-entry mon-card type-steel type2-psychic mon-dual"><span role="img" aria-label="Bronzong" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/bronzong/anim_front.png');--s:url('../assets/game/graphics/pokemon/bronzong/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/bronzong/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/bronzong/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Bronzong</span><span class="encounter-meta">Lv. 24 · 4%</span></span>
+    </a></li><li><a href="../pokedex/trevenant.html" class="encounter-entry mon-card type-ghost type2-grass mon-dual"><span role="img" aria-label="Trevenant" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/trevenant/anim_front.png');--s:url('../assets/game/graphics/pokemon/trevenant/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/trevenant/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/trevenant/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Trevenant</span><span class="encounter-meta">Lv. 24 · 2%</span></span>
     </a></li>    </ul>
 
     <h3>Rock Smash</h3>
         <ul class="encounter-cards">
-<li><a href="../pokedex/boldore.html" class="encounter-entry mon-card type-rock"><img src="../assets/game/graphics/pokemon/boldore/anim_front.png" alt="Boldore" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/boldore/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/boldore/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/boldore/anim_front__shiny__hover.png"><span class="encounter-info"><span class="name">Boldore</span><span class="encounter-meta">Lv. 22 · 95%</span></span>
-    </a></li><li><a href="../pokedex/runerigus.html" class="encounter-entry mon-card type-ground type2-ghost mon-dual"><img src="../assets/game/graphics/pokemon/runerigus/front.png" alt="Runerigus" class="encounter-sprite" data-shiny="../assets/game/graphics/pokemon/runerigus/front__shiny.png"><span class="encounter-info"><span class="name">Runerigus</span><span class="encounter-meta">Lv. 23 · 5%</span></span>
+<li><a href="../pokedex/boldore.html" class="encounter-entry mon-card type-rock"><span role="img" aria-label="Boldore" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/boldore/anim_front.png');--s:url('../assets/game/graphics/pokemon/boldore/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/boldore/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/boldore/anim_front__shiny__hover.png')"></span><span class="encounter-info"><span class="name">Boldore</span><span class="encounter-meta">Lv. 22 · 95%</span></span>
+    </a></li><li><a href="../pokedex/runerigus.html" class="encounter-entry mon-card type-ground type2-ghost mon-dual"><span role="img" aria-label="Runerigus" class="sprite-bg encounter-sprite" style="--n:url('../assets/game/graphics/pokemon/runerigus/front.png');--s:url('../assets/game/graphics/pokemon/runerigus/front__shiny.png')"></span><span class="encounter-info"><span class="name">Runerigus</span><span class="encounter-meta">Lv. 23 · 5%</span></span>
     </a></li>    </ul>
 
     <h3>Items</h3>
@@ -539,36 +532,30 @@
       });
     }
     function obstagoonBindSpriteHover() {
-      // Delegated on body so it covers every page's sprite lists and survives re-renders.
-      // Scope to the card itself, not a bare li: an evolution li holds the card plus the arrow/method text, and li-scope would swap the sprite from anywhere in the row. Cross-link cards (no card class) scope to their own <a>.
-      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, .cross-link-grid > li > a, .sprite-card, figure, section[data-href], .roster-cmon, .roster-mon') : null);
-      const restore = (img) => { if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; delete img.dataset.base; } };
-      const swap = (scope, toHover) => {
-        const img = scope && scope.querySelector('img[data-hover]');
-        if (!img) return;
-        if (!toHover) return restore(img);
-        // Skip if already swapped, so a repeat mouseover (touch fires with null relatedTarget) can't capture the hover frame as the base.
-        if (img.dataset.base) return;
-        img.dataset.base = img.src;
-        img.onerror = () => restore(img);
-        img.src = img.dataset.hover;
+      // Desktop hover is CSS; touch has none, so flag the pressed sprite and let CSS animate it while a card is held.
+      const spriteOf = (t) => {
+        if (!t || t.nodeType !== 1) return null;
+        const card = t.closest('a, tr, .roster-mon');
+        return (card && card.querySelector('.sprite-bg')) || t.closest('.sprite-bg');
       };
-      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
-      document.body.addEventListener('mouseover', (e) => {
-        const scope = scopeOf(e.target);
-        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
-      });
-      document.body.addEventListener('mouseout', (e) => {
-        const scope = scopeOf(e.target);
-        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
-      });
-      // Touch has no hover, so swap the sprite while a card is pressed and restore on release.
-      document.body.addEventListener('touchstart', (e) => { const scope = scopeOf(e.target); if (scope) swap(scope, true); }, {passive: true});
-      const endTouch = (e) => { const scope = scopeOf(e.target); if (scope) swap(scope, false); };
-      document.body.addEventListener('touchend', endTouch, {passive: true});
-      document.body.addEventListener('touchcancel', endTouch, {passive: true});
-      // A tap on mobile swaps without a matching mouseout, so restore every sprite when the page shows (incl. bfcache back-nav).
-      window.addEventListener('pageshow', () => document.querySelectorAll('img[data-hover]').forEach(restore));
+      const press = (e, on) => { const s = spriteOf(e.target); if (s) s.classList.toggle('sprite-pressed', on); };
+      document.body.addEventListener('touchstart', (e) => press(e, true), {passive: true});
+      const end = (e) => press(e, false);
+      document.body.addEventListener('touchend', end, {passive: true});
+      document.body.addEventListener('touchcancel', end, {passive: true});
+      // A tap swaps without a matching release on bfcache back-nav, so clear every pressed sprite on pageshow.
+      window.addEventListener('pageshow', () => document.querySelectorAll('.sprite-pressed').forEach((el) => el.classList.remove('sprite-pressed')));
+    }
+    function obstagoonPreloadSprites() {
+      // Warm a sprite's other variants (hover, shiny) at idle once it nears the viewport, so first hover/toggle is instant.
+      if (!('IntersectionObserver' in window)) return;
+      const idle = window.requestIdleCallback || ((f) => setTimeout(f, 0));
+      const io = new IntersectionObserver((entries, obs) => entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        obs.unobserve(e.target);
+        idle(() => (e.target.getAttribute('style') || '').match(/url\('[^']+'\)/g)?.forEach((u) => { new Image().src = u.slice(5, -2); }));
+      }), { rootMargin: '200px' });
+      document.querySelectorAll('.sprite-bg').forEach((s) => io.observe(s));
     }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
@@ -587,7 +574,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonPreloadSprites(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -595,7 +582,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
-      obstagoonApplyShiny();
+      obstagoonPreloadSprites();
     }
   </script>
 </body>

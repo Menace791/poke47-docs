@@ -7,7 +7,8 @@
   <meta property="og:description" content="Expansion-native documentation for Poké47.">
   <meta property="og:image" content="https://menace791.github.io/poke47-docs/assets/og-image.gif">
   <meta property="og:type" content="website">
-  <meta name="twitter:card" content="summary_large_image">  <link rel="stylesheet" href="../assets/style.css">
+  <meta name="twitter:card" content="summary_large_image">  <script>try{var r=document.documentElement;if(sessionStorage.getItem('obstagoon:dexview')==='all')r.classList.add('dex-all');if(sessionStorage.getItem('obstagoon:shinyview')==='shiny')r.classList.add('shiny-on');}catch(e){}</script>
+  <link rel="stylesheet" href="../assets/style.css">
   <script>
     // Casefold + diacritic-strip + non-alphanumeric strip so "basculinwhitestriped" matches "Basculin (White-Striped)".
     window.obstagoonNormalize = (s) => (s || '').toLowerCase()
@@ -35,23 +36,13 @@
       },
       set: (v) => { try { sessionStorage.setItem('obstagoon:dexview', v); } catch (e) {} },
     };
-    // Site-wide shiny sprite preference. No toggle is placed yet; flip with obstagoonShinyView.toggle().
+    // Site-wide shiny sprite preference; the "Shiny" link in the Level Cap description toggles it.
     window.obstagoonShinyView = {
       get: () => { try { return sessionStorage.getItem('obstagoon:shinyview') === 'shiny' ? 'shiny' : 'normal'; } catch (e) { return 'normal'; } },
       set: (v) => { try { sessionStorage.setItem('obstagoon:shinyview', v === 'shiny' ? 'shiny' : 'normal'); } catch (e) {} obstagoonApplyShiny(); },
       toggle: () => obstagoonShinyView.set(obstagoonShinyView.get() === 'shiny' ? 'normal' : 'shiny'),
     };
-    // Swap every sprite carrying a shiny variant to/from its shiny art, keeping the hover frame in sync.
-    window.obstagoonApplyShiny = () => {
-      const shiny = obstagoonShinyView.get() === 'shiny';
-      document.documentElement.classList.toggle('shiny-on', shiny);
-      document.querySelectorAll('img[data-shiny]').forEach((img) => {
-        if (img.dataset.normalSrc === undefined) img.dataset.normalSrc = img.getAttribute('src') || '';
-        if (img.dataset.normalHover === undefined && img.dataset.hover) img.dataset.normalHover = img.dataset.hover;
-        img.setAttribute('src', shiny ? img.dataset.shiny : img.dataset.normalSrc);
-        if (img.dataset.shinyHover) img.dataset.hover = shiny ? img.dataset.shinyHover : img.dataset.normalHover;
-      });
-    };
+    window.obstagoonApplyShiny = () => document.documentElement.classList.toggle('shiny-on', obstagoonShinyView.get() === 'shiny');
     // Lightweight dex toggle for section-list pages (no search/sort): hides non-Hoenn sections in Hoenn view.
     window.obstagoonBindSectionView = (opts) => {
       const slider = document.getElementById(opts.toggleId);
@@ -59,6 +50,7 @@
       const countEl = opts.countId ? document.getElementById(opts.countId) : null;
       let currentView = obstagoonDexView.get(opts.default || 'hoenn');
       const apply = () => {
+        document.documentElement.classList.toggle('dex-all', currentView === 'all');
         let count = 0;
         sections.forEach((el) => {
           const show = currentView === 'all' || !!el.dataset.hoennDex;
@@ -93,7 +85,7 @@
         .map((c) => c.kind ? c : {kind: defaultKind || 'Pokémon', name: c.name});
       if (saved.search) input.value = saved.search;
       let activeCol = Number.isInteger(saved.sortCol) ? saved.sortCol : (opts.defaultSortCol ?? 0);
-      let activeDir = ['asc', 'desc', ''].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
+      let activeDir = ['asc', 'desc'].includes(saved.sortDir) ? saved.sortDir : (opts.defaultSortDir ?? 'asc');
       const view = opts.view || null;
       let currentView = view ? obstagoonDexView.get(view.default) : null;
       const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -102,10 +94,7 @@
         ...(opts.tableSelector ? {sortCol: activeCol, sortDir: activeDir} : {}),
       });
       const applyView = () => {
-        if (!view) return;
-        rows.forEach((el) => { el.cells[view.numberCol].textContent = (currentView === 'hoenn' ? el.dataset.hoennDex : el.dataset.natDex) || ''; });
-        const header = view.headerId ? document.getElementById(view.headerId) : null;
-        if (header) header.textContent = view.labels[currentView];
+        if (view) document.documentElement.classList.toggle('dex-all', currentView === 'all');
       };
 
       const formCellTargets = ['spriteHtml', 'nameHtml', 'typesHtml', 'abilitiesHtml'];
@@ -230,6 +219,10 @@
         const headers = Array.from(document.querySelectorAll(opts.tableSelector + ' thead th'));
         const original = Array.from(tbody.querySelectorAll('tr'));
         const cellValue = (tr, i, kind) => {
+          if (kind === 'number' && view && i === view.numberCol) {
+            const n = parseFloat((currentView === 'hoenn' ? tr.dataset.hoennDex : tr.dataset.natDex) || '');
+            return isNaN(n) ? -Infinity : n;
+          }
           const text = tr.cells[i].textContent.trim();
           if (kind === 'number') { const n = parseFloat(text); return isNaN(n) ? -Infinity : n; }
           return text.toLowerCase();
@@ -251,8 +244,8 @@
           if (!th.dataset.sort) return;
           th.classList.add('sortable');
           th.addEventListener('click', () => {
-            activeDir = i !== activeCol ? 'asc' : activeDir === 'asc' ? 'desc' : activeDir === 'desc' ? '' : 'asc';
-            activeCol = activeDir ? i : -1;
+            activeDir = i === activeCol && activeDir === 'asc' ? 'desc' : 'asc';
+            activeCol = i;
             applySort();
             persist();
           });
@@ -308,110 +301,110 @@
     <h3>Level-Up <span class="muted small-text">14</span></h3>
     <ul class="cross-link-grid">
 <li><a href="../pokedex/araquanid.html" class="mon-card type-water type2-bug mon-dual">
-<img src="../assets/game/graphics/pokemon/araquanid/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/araquanid/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/araquanid/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/araquanid/anim_front__shiny__hover.png">  <span class="name">Araquanid</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/araquanid/anim_front.png');--s:url('../assets/game/graphics/pokemon/araquanid/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/araquanid/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/araquanid/anim_front__shiny__hover.png')"></span>  <span class="name">Araquanid</span>
 </a></li><li><a href="../pokedex/bastiodon.html" class="mon-card type-rock type2-steel mon-dual">
-<img src="../assets/game/graphics/pokemon/bastiodon/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/bastiodon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/bastiodon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/bastiodon/anim_front__shiny__hover.png">  <span class="name">Bastiodon</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/bastiodon/anim_front.png');--s:url('../assets/game/graphics/pokemon/bastiodon/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/bastiodon/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/bastiodon/anim_front__shiny__hover.png')"></span>  <span class="name">Bastiodon</span>
 </a></li><li><a href="../pokedex/gallade.html" class="mon-card type-psychic type2-fighting mon-dual">
-<img src="../assets/game/graphics/pokemon/gallade/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/gallade/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/gallade/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/gallade/anim_front__shiny__hover.png">  <span class="name">Gallade</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/gallade/anim_front.png');--s:url('../assets/game/graphics/pokemon/gallade/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/gallade/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/gallade/anim_front__shiny__hover.png')"></span>  <span class="name">Gallade</span>
 </a></li><li><a href="../pokedex/hitmontop.html" class="mon-card type-fighting">
-<img src="../assets/game/graphics/pokemon/hitmontop/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/hitmontop/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/hitmontop/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/hitmontop/anim_front__shiny__hover.png">  <span class="name">Hitmontop</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/hitmontop/anim_front.png');--s:url('../assets/game/graphics/pokemon/hitmontop/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/hitmontop/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/hitmontop/anim_front__shiny__hover.png')"></span>  <span class="name">Hitmontop</span>
 </a></li><li><a href="../pokedex/kingler.html" class="mon-card type-water">
-<img src="../assets/game/graphics/pokemon/kingler/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/kingler/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/kingler/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/kingler/anim_front__shiny__hover.png">  <span class="name">Kingler</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/kingler/anim_front.png');--s:url('../assets/game/graphics/pokemon/kingler/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/kingler/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/kingler/anim_front__shiny__hover.png')"></span>  <span class="name">Kingler</span>
 </a></li><li><a href="../pokedex/mantine.html" class="mon-card type-water type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/mantine/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/mantine/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/mantine/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/mantine/anim_front__shiny__hover.png">  <span class="name">Mantine</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/mantine/anim_front.png');--s:url('../assets/game/graphics/pokemon/mantine/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/mantine/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/mantine/anim_front__shiny__hover.png')"></span>  <span class="name">Mantine</span>
 </a></li><li><a href="../pokedex/mantyke.html" class="mon-card type-water type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/mantyke/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/mantyke/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/mantyke/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/mantyke/anim_front__shiny__hover.png">  <span class="name">Mantyke</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/mantyke/anim_front.png');--s:url('../assets/game/graphics/pokemon/mantyke/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/mantyke/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/mantyke/anim_front__shiny__hover.png')"></span>  <span class="name">Mantyke</span>
 </a></li><li><a href="../pokedex/mareanie.html" class="mon-card type-poison type2-water mon-dual">
-<img src="../assets/game/graphics/pokemon/mareanie/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/mareanie/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/mareanie/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/mareanie/anim_front__shiny__hover.png">  <span class="name">Mareanie</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/mareanie/anim_front.png');--s:url('../assets/game/graphics/pokemon/mareanie/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/mareanie/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/mareanie/anim_front__shiny__hover.png')"></span>  <span class="name">Mareanie</span>
 </a></li><li><a href="../pokedex/mienfoo.html" class="mon-card type-fighting">
-<img src="../assets/game/graphics/pokemon/mienfoo/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/mienfoo/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/mienfoo/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/mienfoo/anim_front__shiny__hover.png">  <span class="name">Mienfoo</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/mienfoo/anim_front.png');--s:url('../assets/game/graphics/pokemon/mienfoo/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/mienfoo/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/mienfoo/anim_front__shiny__hover.png')"></span>  <span class="name">Mienfoo</span>
 </a></li><li><a href="../pokedex/mienshao.html" class="mon-card type-fighting">
-<img src="../assets/game/graphics/pokemon/mienshao/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/mienshao/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/mienshao/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/mienshao/anim_front__shiny__hover.png">  <span class="name">Mienshao</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/mienshao/anim_front.png');--s:url('../assets/game/graphics/pokemon/mienshao/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/mienshao/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/mienshao/anim_front__shiny__hover.png')"></span>  <span class="name">Mienshao</span>
 </a></li><li><a href="../pokedex/mr-mime.html" class="mon-card type-psychic type2-fairy mon-dual">
-<img src="../assets/game/graphics/pokemon/mr_mime/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/mr_mime/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/mr_mime/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/mr_mime/anim_front__shiny__hover.png">  <span class="name">Mr. Mime</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/mr_mime/anim_front.png');--s:url('../assets/game/graphics/pokemon/mr_mime/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/mr_mime/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/mr_mime/anim_front__shiny__hover.png')"></span>  <span class="name">Mr. Mime</span>
 </a></li><li><a href="../pokedex/shieldon.html" class="mon-card type-rock type2-steel mon-dual">
-<img src="../assets/game/graphics/pokemon/shieldon/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/shieldon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/shieldon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/shieldon/anim_front__shiny__hover.png">  <span class="name">Shieldon</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/shieldon/anim_front.png');--s:url('../assets/game/graphics/pokemon/shieldon/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/shieldon/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/shieldon/anim_front__shiny__hover.png')"></span>  <span class="name">Shieldon</span>
 </a></li><li><a href="../pokedex/torterra.html" class="mon-card type-grass type2-ground mon-dual">
-<img src="../assets/game/graphics/pokemon/torterra/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/torterra/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/torterra/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/torterra/anim_front__shiny__hover.png">  <span class="name">Torterra</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/torterra/anim_front.png');--s:url('../assets/game/graphics/pokemon/torterra/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/torterra/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/torterra/anim_front__shiny__hover.png')"></span>  <span class="name">Torterra</span>
 </a></li><li><a href="../pokedex/toxapex.html" class="mon-card type-poison type2-water mon-dual">
-<img src="../assets/game/graphics/pokemon/toxapex/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/toxapex/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/toxapex/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/toxapex/anim_front__shiny__hover.png">  <span class="name">Toxapex</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/toxapex/anim_front.png');--s:url('../assets/game/graphics/pokemon/toxapex/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/toxapex/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/toxapex/anim_front__shiny__hover.png')"></span>  <span class="name">Toxapex</span>
 </a></li>    </ul>
     <h3>Egg <span class="muted small-text">37</span></h3>
     <ul class="cross-link-grid">
 <li><a href="../pokedex/aegislash.html" class="mon-card type-steel type2-ghost mon-dual">
-<img src="../assets/game/graphics/pokemon/aegislash/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/aegislash/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/aegislash/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/aegislash/anim_front__shiny__hover.png">  <span class="name">Aegislash</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/aegislash/anim_front.png');--s:url('../assets/game/graphics/pokemon/aegislash/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/aegislash/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/aegislash/anim_front__shiny__hover.png')"></span>  <span class="name">Aegislash</span>
 </a></li><li><a href="../pokedex/bastiodon.html" class="mon-card type-rock type2-steel mon-dual">
-<img src="../assets/game/graphics/pokemon/bastiodon/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/bastiodon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/bastiodon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/bastiodon/anim_front__shiny__hover.png">  <span class="name">Bastiodon</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/bastiodon/anim_front.png');--s:url('../assets/game/graphics/pokemon/bastiodon/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/bastiodon/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/bastiodon/anim_front__shiny__hover.png')"></span>  <span class="name">Bastiodon</span>
 </a></li><li><a href="../pokedex/bewear.html" class="mon-card type-normal type2-fighting mon-dual">
-<img src="../assets/game/graphics/pokemon/bewear/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/bewear/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/bewear/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/bewear/anim_front__shiny__hover.png">  <span class="name">Bewear</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/bewear/anim_front.png');--s:url('../assets/game/graphics/pokemon/bewear/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/bewear/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/bewear/anim_front__shiny__hover.png')"></span>  <span class="name">Bewear</span>
 </a></li><li><a href="../pokedex/boldore.html" class="mon-card type-rock">
-<img src="../assets/game/graphics/pokemon/boldore/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/boldore/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/boldore/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/boldore/anim_front__shiny__hover.png">  <span class="name">Boldore</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/boldore/anim_front.png');--s:url('../assets/game/graphics/pokemon/boldore/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/boldore/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/boldore/anim_front__shiny__hover.png')"></span>  <span class="name">Boldore</span>
 </a></li><li><a href="../pokedex/conkeldurr.html" class="mon-card type-fighting">
-<img src="../assets/game/graphics/pokemon/conkeldurr/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/conkeldurr/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/conkeldurr/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/conkeldurr/anim_front__shiny__hover.png">  <span class="name">Conkeldurr</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/conkeldurr/anim_front.png');--s:url('../assets/game/graphics/pokemon/conkeldurr/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/conkeldurr/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/conkeldurr/anim_front__shiny__hover.png')"></span>  <span class="name">Conkeldurr</span>
 </a></li><li><a href="../pokedex/crabominable.html" class="mon-card type-fighting type2-ice mon-dual">
-<img src="../assets/game/graphics/pokemon/crabominable/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/crabominable/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/crabominable/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/crabominable/anim_front__shiny__hover.png">  <span class="name">Crabominable</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/crabominable/anim_front.png');--s:url('../assets/game/graphics/pokemon/crabominable/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/crabominable/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/crabominable/anim_front__shiny__hover.png')"></span>  <span class="name">Crabominable</span>
 </a></li><li><a href="../pokedex/crabrawler.html" class="mon-card type-fighting">
-<img src="../assets/game/graphics/pokemon/crabrawler/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/crabrawler/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/crabrawler/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/crabrawler/anim_front__shiny__hover.png">  <span class="name">Crabrawler</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/crabrawler/anim_front.png');--s:url('../assets/game/graphics/pokemon/crabrawler/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/crabrawler/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/crabrawler/anim_front__shiny__hover.png')"></span>  <span class="name">Crabrawler</span>
 </a></li><li><a href="../pokedex/crustle.html" class="mon-card type-bug type2-rock mon-dual">
-<img src="../assets/game/graphics/pokemon/crustle/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/crustle/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/crustle/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/crustle/anim_front__shiny__hover.png">  <span class="name">Crustle</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/crustle/anim_front.png');--s:url('../assets/game/graphics/pokemon/crustle/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/crustle/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/crustle/anim_front__shiny__hover.png')"></span>  <span class="name">Crustle</span>
 </a></li><li><a href="../pokedex/doublade.html" class="mon-card type-steel type2-ghost mon-dual">
-<img src="../assets/game/graphics/pokemon/doublade/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/doublade/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/doublade/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/doublade/anim_front__shiny__hover.png">  <span class="name">Doublade</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/doublade/anim_front.png');--s:url('../assets/game/graphics/pokemon/doublade/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/doublade/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/doublade/anim_front__shiny__hover.png')"></span>  <span class="name">Doublade</span>
 </a></li><li><a href="../pokedex/dwebble.html" class="mon-card type-bug type2-rock mon-dual">
-<img src="../assets/game/graphics/pokemon/dwebble/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/dwebble/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/dwebble/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/dwebble/anim_front__shiny__hover.png">  <span class="name">Dwebble</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/dwebble/anim_front.png');--s:url('../assets/game/graphics/pokemon/dwebble/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/dwebble/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/dwebble/anim_front__shiny__hover.png')"></span>  <span class="name">Dwebble</span>
 </a></li><li><a href="../pokedex/geodude.html" class="mon-card type-rock type2-ground mon-dual">
-<img src="../assets/game/graphics/pokemon/geodude/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/geodude/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/geodude/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/geodude/anim_front__shiny__hover.png">  <span class="name">Geodude</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/geodude/anim_front.png');--s:url('../assets/game/graphics/pokemon/geodude/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/geodude/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/geodude/anim_front__shiny__hover.png')"></span>  <span class="name">Geodude</span>
 </a></li><li><a href="../pokedex/geodude-alola.html" class="mon-card type-rock type2-electric mon-dual">
-<img src="../assets/game/graphics/pokemon/geodude/alola/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/geodude/alola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/geodude/alola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/geodude/alola/anim_front__shiny__hover.png">  <span class="name">Geodude (Alolan)</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/geodude/alola/anim_front.png');--s:url('../assets/game/graphics/pokemon/geodude/alola/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/geodude/alola/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/geodude/alola/anim_front__shiny__hover.png')"></span>  <span class="name">Geodude (Alolan)</span>
 </a></li><li><a href="../pokedex/gigalith.html" class="mon-card type-rock">
-<img src="../assets/game/graphics/pokemon/gigalith/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/gigalith/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/gigalith/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/gigalith/anim_front__shiny__hover.png">  <span class="name">Gigalith</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/gigalith/anim_front.png');--s:url('../assets/game/graphics/pokemon/gigalith/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/gigalith/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/gigalith/anim_front__shiny__hover.png')"></span>  <span class="name">Gigalith</span>
 </a></li><li><a href="../pokedex/golem.html" class="mon-card type-rock type2-ground mon-dual">
-<img src="../assets/game/graphics/pokemon/golem/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/golem/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/golem/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/golem/anim_front__shiny__hover.png">  <span class="name">Golem</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/golem/anim_front.png');--s:url('../assets/game/graphics/pokemon/golem/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/golem/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/golem/anim_front__shiny__hover.png')"></span>  <span class="name">Golem</span>
 </a></li><li><a href="../pokedex/golem-alola.html" class="mon-card type-rock type2-electric mon-dual">
-<img src="../assets/game/graphics/pokemon/golem/alola/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/golem/alola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/golem/alola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/golem/alola/anim_front__shiny__hover.png">  <span class="name">Golem (Alolan)</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/golem/alola/anim_front.png');--s:url('../assets/game/graphics/pokemon/golem/alola/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/golem/alola/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/golem/alola/anim_front__shiny__hover.png')"></span>  <span class="name">Golem (Alolan)</span>
 </a></li><li><a href="../pokedex/golisopod.html" class="mon-card type-bug type2-water mon-dual">
-<img src="../assets/game/graphics/pokemon/golisopod/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/golisopod/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/golisopod/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/golisopod/anim_front__shiny__hover.png">  <span class="name">Golisopod</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/golisopod/anim_front.png');--s:url('../assets/game/graphics/pokemon/golisopod/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/golisopod/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/golisopod/anim_front__shiny__hover.png')"></span>  <span class="name">Golisopod</span>
 </a></li><li><a href="../pokedex/graveler.html" class="mon-card type-rock type2-ground mon-dual">
-<img src="../assets/game/graphics/pokemon/graveler/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/graveler/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/graveler/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/graveler/anim_front__shiny__hover.png">  <span class="name">Graveler</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/graveler/anim_front.png');--s:url('../assets/game/graphics/pokemon/graveler/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/graveler/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/graveler/anim_front__shiny__hover.png')"></span>  <span class="name">Graveler</span>
 </a></li><li><a href="../pokedex/graveler-alola.html" class="mon-card type-rock type2-electric mon-dual">
-<img src="../assets/game/graphics/pokemon/graveler/alola/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/graveler/alola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/graveler/alola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/graveler/alola/anim_front__shiny__hover.png">  <span class="name">Graveler (Alolan)</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/graveler/alola/anim_front.png');--s:url('../assets/game/graphics/pokemon/graveler/alola/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/graveler/alola/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/graveler/alola/anim_front__shiny__hover.png')"></span>  <span class="name">Graveler (Alolan)</span>
 </a></li><li><a href="../pokedex/grotle.html" class="mon-card type-grass">
-<img src="../assets/game/graphics/pokemon/grotle/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/grotle/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/grotle/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/grotle/anim_front__shiny__hover.png">  <span class="name">Grotle</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/grotle/anim_front.png');--s:url('../assets/game/graphics/pokemon/grotle/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/grotle/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/grotle/anim_front__shiny__hover.png')"></span>  <span class="name">Grotle</span>
 </a></li><li><a href="../pokedex/gurdurr.html" class="mon-card type-fighting">
-<img src="../assets/game/graphics/pokemon/gurdurr/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/gurdurr/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/gurdurr/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/gurdurr/anim_front__shiny__hover.png">  <span class="name">Gurdurr</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/gurdurr/anim_front.png');--s:url('../assets/game/graphics/pokemon/gurdurr/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/gurdurr/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/gurdurr/anim_front__shiny__hover.png')"></span>  <span class="name">Gurdurr</span>
 </a></li><li><a href="../pokedex/honedge.html" class="mon-card type-steel type2-ghost mon-dual">
-<img src="../assets/game/graphics/pokemon/honedge/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/honedge/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/honedge/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/honedge/anim_front__shiny__hover.png">  <span class="name">Honedge</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/honedge/anim_front.png');--s:url('../assets/game/graphics/pokemon/honedge/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/honedge/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/honedge/anim_front__shiny__hover.png')"></span>  <span class="name">Honedge</span>
 </a></li><li><a href="../pokedex/mantine.html" class="mon-card type-water type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/mantine/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/mantine/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/mantine/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/mantine/anim_front__shiny__hover.png">  <span class="name">Mantine</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/mantine/anim_front.png');--s:url('../assets/game/graphics/pokemon/mantine/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/mantine/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/mantine/anim_front__shiny__hover.png')"></span>  <span class="name">Mantine</span>
 </a></li><li><a href="../pokedex/mantyke.html" class="mon-card type-water type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/mantyke/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/mantyke/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/mantyke/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/mantyke/anim_front__shiny__hover.png">  <span class="name">Mantyke</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/mantyke/anim_front.png');--s:url('../assets/game/graphics/pokemon/mantyke/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/mantyke/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/mantyke/anim_front__shiny__hover.png')"></span>  <span class="name">Mantyke</span>
 </a></li><li><a href="../pokedex/nosepass.html" class="mon-card type-rock">
-<img src="../assets/game/graphics/pokemon/nosepass/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/nosepass/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/nosepass/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/nosepass/anim_front__shiny__hover.png">  <span class="name">Nosepass</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/nosepass/anim_front.png');--s:url('../assets/game/graphics/pokemon/nosepass/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/nosepass/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/nosepass/anim_front__shiny__hover.png')"></span>  <span class="name">Nosepass</span>
 </a></li><li><a href="../pokedex/paras.html" class="mon-card type-bug type2-grass mon-dual">
-<img src="../assets/game/graphics/pokemon/paras/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/paras/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/paras/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/paras/anim_front__shiny__hover.png">  <span class="name">Paras</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/paras/anim_front.png');--s:url('../assets/game/graphics/pokemon/paras/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/paras/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/paras/anim_front__shiny__hover.png')"></span>  <span class="name">Paras</span>
 </a></li><li><a href="../pokedex/parasect.html" class="mon-card type-bug type2-ghost mon-dual">
-<img src="../assets/game/graphics/pokemon/parasect/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/parasect/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/parasect/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/parasect/anim_front__shiny__hover.png">  <span class="name">Parasect</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/parasect/anim_front.png');--s:url('../assets/game/graphics/pokemon/parasect/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/parasect/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/parasect/anim_front__shiny__hover.png')"></span>  <span class="name">Parasect</span>
 </a></li><li><a href="../pokedex/pelipper.html" class="mon-card type-water type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/pelipper/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/pelipper/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/pelipper/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/pelipper/anim_front__shiny__hover.png">  <span class="name">Pelipper</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/pelipper/anim_front.png');--s:url('../assets/game/graphics/pokemon/pelipper/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/pelipper/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/pelipper/anim_front__shiny__hover.png')"></span>  <span class="name">Pelipper</span>
 </a></li><li><a href="../pokedex/probopass.html" class="mon-card type-rock type2-electric mon-dual">
-<img src="../assets/game/graphics/pokemon/probopass/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/probopass/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/probopass/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/probopass/anim_front__shiny__hover.png">  <span class="name">Probopass</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/probopass/anim_front.png');--s:url('../assets/game/graphics/pokemon/probopass/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/probopass/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/probopass/anim_front__shiny__hover.png')"></span>  <span class="name">Probopass</span>
 </a></li><li><a href="../pokedex/roggenrola.html" class="mon-card type-rock">
-<img src="../assets/game/graphics/pokemon/roggenrola/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png">  <span class="name">Roggenrola</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/roggenrola/anim_front.png');--s:url('../assets/game/graphics/pokemon/roggenrola/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/roggenrola/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/roggenrola/anim_front__shiny__hover.png')"></span>  <span class="name">Roggenrola</span>
 </a></li><li><a href="../pokedex/shieldon.html" class="mon-card type-rock type2-steel mon-dual">
-<img src="../assets/game/graphics/pokemon/shieldon/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/shieldon/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/shieldon/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/shieldon/anim_front__shiny__hover.png">  <span class="name">Shieldon</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/shieldon/anim_front.png');--s:url('../assets/game/graphics/pokemon/shieldon/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/shieldon/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/shieldon/anim_front__shiny__hover.png')"></span>  <span class="name">Shieldon</span>
 </a></li><li><a href="../pokedex/stufful.html" class="mon-card type-normal type2-fighting mon-dual">
-<img src="../assets/game/graphics/pokemon/stufful/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/stufful/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/stufful/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/stufful/anim_front__shiny__hover.png">  <span class="name">Stufful</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/stufful/anim_front.png');--s:url('../assets/game/graphics/pokemon/stufful/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/stufful/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/stufful/anim_front__shiny__hover.png')"></span>  <span class="name">Stufful</span>
 </a></li><li><a href="../pokedex/timburr.html" class="mon-card type-fighting">
-<img src="../assets/game/graphics/pokemon/timburr/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/timburr/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/timburr/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/timburr/anim_front__shiny__hover.png">  <span class="name">Timburr</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/timburr/anim_front.png');--s:url('../assets/game/graphics/pokemon/timburr/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/timburr/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/timburr/anim_front__shiny__hover.png')"></span>  <span class="name">Timburr</span>
 </a></li><li><a href="../pokedex/torterra.html" class="mon-card type-grass type2-ground mon-dual">
-<img src="../assets/game/graphics/pokemon/torterra/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/torterra/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/torterra/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/torterra/anim_front__shiny__hover.png">  <span class="name">Torterra</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/torterra/anim_front.png');--s:url('../assets/game/graphics/pokemon/torterra/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/torterra/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/torterra/anim_front__shiny__hover.png')"></span>  <span class="name">Torterra</span>
 </a></li><li><a href="../pokedex/turtonator.html" class="mon-card type-fire type2-dragon mon-dual">
-<img src="../assets/game/graphics/pokemon/turtonator/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/turtonator/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/turtonator/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/turtonator/anim_front__shiny__hover.png">  <span class="name">Turtonator</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/turtonator/anim_front.png');--s:url('../assets/game/graphics/pokemon/turtonator/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/turtonator/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/turtonator/anim_front__shiny__hover.png')"></span>  <span class="name">Turtonator</span>
 </a></li><li><a href="../pokedex/turtwig.html" class="mon-card type-grass">
-<img src="../assets/game/graphics/pokemon/turtwig/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/turtwig/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/turtwig/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/turtwig/anim_front__shiny__hover.png">  <span class="name">Turtwig</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/turtwig/anim_front.png');--s:url('../assets/game/graphics/pokemon/turtwig/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/turtwig/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/turtwig/anim_front__shiny__hover.png')"></span>  <span class="name">Turtwig</span>
 </a></li><li><a href="../pokedex/wimpod.html" class="mon-card type-bug type2-water mon-dual">
-<img src="../assets/game/graphics/pokemon/wimpod/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/wimpod/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/wimpod/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/wimpod/anim_front__shiny__hover.png">  <span class="name">Wimpod</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/wimpod/anim_front.png');--s:url('../assets/game/graphics/pokemon/wimpod/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/wimpod/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/wimpod/anim_front__shiny__hover.png')"></span>  <span class="name">Wimpod</span>
 </a></li><li><a href="../pokedex/wingull.html" class="mon-card type-water type2-flying mon-dual">
-<img src="../assets/game/graphics/pokemon/wingull/anim_front.png" alt="" class="sprite" data-shiny="../assets/game/graphics/pokemon/wingull/anim_front__shiny.png" data-hover="../assets/game/graphics/pokemon/wingull/anim_front__hover.png" data-shiny-hover="../assets/game/graphics/pokemon/wingull/anim_front__shiny__hover.png">  <span class="name">Wingull</span>
+<span aria-hidden="true" class="sprite-bg sprite" style="--n:url('../assets/game/graphics/pokemon/wingull/anim_front.png');--s:url('../assets/game/graphics/pokemon/wingull/anim_front__shiny.png');--h:url('../assets/game/graphics/pokemon/wingull/anim_front__hover.png');--sh:url('../assets/game/graphics/pokemon/wingull/anim_front__shiny__hover.png')"></span>  <span class="name">Wingull</span>
 </a></li>    </ul>
 </section>
   </main>
@@ -511,36 +504,30 @@
       });
     }
     function obstagoonBindSpriteHover() {
-      // Delegated on body so it covers every page's sprite lists and survives re-renders.
-      // Scope to the card itself, not a bare li: an evolution li holds the card plus the arrow/method text, and li-scope would swap the sprite from anywhere in the row. Cross-link cards (no card class) scope to their own <a>.
-      const scopeOf = (n) => (n && n.nodeType === 1 ? n.closest('.encounter-entry, .form-entry, .species-inline-link, tr, .cross-link-grid > li > a, .sprite-card, figure, section[data-href], .roster-cmon, .roster-mon') : null);
-      const restore = (img) => { if (img.dataset.base) { img.onerror = null; img.src = img.dataset.base; delete img.dataset.base; } };
-      const swap = (scope, toHover) => {
-        const img = scope && scope.querySelector('img[data-hover]');
-        if (!img) return;
-        if (!toHover) return restore(img);
-        // Skip if already swapped, so a repeat mouseover (touch fires with null relatedTarget) can't capture the hover frame as the base.
-        if (img.dataset.base) return;
-        img.dataset.base = img.src;
-        img.onerror = () => restore(img);
-        img.src = img.dataset.hover;
+      // Desktop hover is CSS; touch has none, so flag the pressed sprite and let CSS animate it while a card is held.
+      const spriteOf = (t) => {
+        if (!t || t.nodeType !== 1) return null;
+        const card = t.closest('a, tr, .roster-mon');
+        return (card && card.querySelector('.sprite-bg')) || t.closest('.sprite-bg');
       };
-      // relatedTarget guard ignores moves within a scope so the swap doesn't flicker.
-      document.body.addEventListener('mouseover', (e) => {
-        const scope = scopeOf(e.target);
-        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, true);
-      });
-      document.body.addEventListener('mouseout', (e) => {
-        const scope = scopeOf(e.target);
-        if (scope && scopeOf(e.relatedTarget) !== scope) swap(scope, false);
-      });
-      // Touch has no hover, so swap the sprite while a card is pressed and restore on release.
-      document.body.addEventListener('touchstart', (e) => { const scope = scopeOf(e.target); if (scope) swap(scope, true); }, {passive: true});
-      const endTouch = (e) => { const scope = scopeOf(e.target); if (scope) swap(scope, false); };
-      document.body.addEventListener('touchend', endTouch, {passive: true});
-      document.body.addEventListener('touchcancel', endTouch, {passive: true});
-      // A tap on mobile swaps without a matching mouseout, so restore every sprite when the page shows (incl. bfcache back-nav).
-      window.addEventListener('pageshow', () => document.querySelectorAll('img[data-hover]').forEach(restore));
+      const press = (e, on) => { const s = spriteOf(e.target); if (s) s.classList.toggle('sprite-pressed', on); };
+      document.body.addEventListener('touchstart', (e) => press(e, true), {passive: true});
+      const end = (e) => press(e, false);
+      document.body.addEventListener('touchend', end, {passive: true});
+      document.body.addEventListener('touchcancel', end, {passive: true});
+      // A tap swaps without a matching release on bfcache back-nav, so clear every pressed sprite on pageshow.
+      window.addEventListener('pageshow', () => document.querySelectorAll('.sprite-pressed').forEach((el) => el.classList.remove('sprite-pressed')));
+    }
+    function obstagoonPreloadSprites() {
+      // Warm a sprite's other variants (hover, shiny) at idle once it nears the viewport, so first hover/toggle is instant.
+      if (!('IntersectionObserver' in window)) return;
+      const idle = window.requestIdleCallback || ((f) => setTimeout(f, 0));
+      const io = new IntersectionObserver((entries, obs) => entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        obs.unobserve(e.target);
+        idle(() => (e.target.getAttribute('style') || '').match(/url\('[^']+'\)/g)?.forEach((u) => { new Image().src = u.slice(5, -2); }));
+      }), { rootMargin: '200px' });
+      document.querySelectorAll('.sprite-bg').forEach((s) => io.observe(s));
     }
     function obstagoonBindLinkedHotspots() {
       // Hover-mirror encounter-map hotspots and matching link-grid tiles via shared href.
@@ -559,7 +546,7 @@
       });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonApplyShiny(); });
+      document.addEventListener('DOMContentLoaded', () => { obstagoonBindFilters(); obstagoonBindClearHit(); obstagoonBindRoster(); obstagoonBindRowLinks(); obstagoonBindLinkedHotspots(); obstagoonBindSpriteHover(); obstagoonPreloadSprites(); });
     } else {
       obstagoonBindFilters();
       obstagoonBindClearHit();
@@ -567,7 +554,7 @@
       obstagoonBindRowLinks();
       obstagoonBindLinkedHotspots();
       obstagoonBindSpriteHover();
-      obstagoonApplyShiny();
+      obstagoonPreloadSprites();
     }
   </script>
 </body>
